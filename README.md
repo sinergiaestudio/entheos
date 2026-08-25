@@ -53,7 +53,7 @@ Más información en [Arquitectura](ARCHITECTURE.md), [Modelo de datos](docs/DAT
 
 Requisitos:
 
-- Node.js 22.13 o superior.
+- Node.js 24 o superior.
 - Linux o un entorno compatible con GNU `timeout` y `flock`.
 
 ```bash

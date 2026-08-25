@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Entheos</string>
+    <string name="health_permissions_rationale">Entheos usa estos permisos únicamente para mostrar y sincronizar en tu historial las métricas que elijas desde Health Connect. No modifica los datos de origen ni solicita permisos de escritura.</string>
+</resources>

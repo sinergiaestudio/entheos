@@ -1,0 +1,292 @@
+openapi: 3.1.0
+info:
+  title: Entheos API
+  version: 0.2.0
+  description: >-
+    API privada para la historia clínica personal. No interpreta resultados ni
+    reemplaza una consulta profesional. Toda respuesta conserva procedencia.
+servers:
+  - url: /
+security:
+  - platformIdentity: []
+paths:
+  /api/health/overview:
+    get:
+      summary: Obtener vista clínica completa
+      operationId: getHealthOverview
+      responses:
+        "200":
+          description: Vista autorizada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Overview"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/health/record:
+    post:
+      summary: Registrar un dato declarado por el paciente
+      operationId: createClinicalRecord
+      parameters:
+        - in: header
+          name: X-Idempotency-Key
+          required: false
+          schema:
+            type: string
+            maxLength: 120
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind]
+              properties:
+                kind:
+                  type: string
+                  enum: [weight, blood_pressure, activity, sleep, symptom, clinical_fact, nutrition_day, timeline, lab_result, profile]
+              additionalProperties: true
+      responses:
+        "201":
+          description: Registro creado
+        "400":
+          description: Datos inválidos
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/health/documents:
+    post:
+      summary: Guardar un documento original privado
+      operationId: uploadClinicalDocument
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                title:
+                  type: string
+                documentType:
+                  type: string
+                studyDate:
+                  type: string
+                  format: date
+                institution:
+                  type: string
+                description:
+                  type: string
+      responses:
+        "201":
+          description: Original y metadatos guardados
+        "409":
+          description: Documento duplicado por hash
+        "413":
+          description: Supera 25 MB
+        "415":
+          description: Formato no admitido
+  /api/health/documents/{id}:
+    get:
+      summary: Ver o descargar un original autorizado
+      operationId: getClinicalDocument
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: download
+          required: false
+          schema:
+            type: integer
+            enum: [1]
+      responses:
+        "200":
+          description: Contenido binario
+        "404":
+          description: Ausente o fuera del ámbito autorizado
+  /api/health/backup:
+    get:
+      summary: Descargar respaldo estructurado
+      operationId: exportBackup
+      responses:
+        "200":
+          description: JSON de respaldo
+    post:
+      summary: Validar o aplicar un respaldo
+      operationId: restoreBackup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mode, backup]
+              properties:
+                mode:
+                  type: string
+                  enum: [preview, apply]
+                backup:
+                  type: object
+      responses:
+        "200":
+          description: Vista previa o restauración completada
+        "409":
+          description: Respaldo repetido o intento incompleto
+  /api/health/integrations:
+    get:
+      summary: Listar conexiones y estado por fuente
+      operationId: listHealthIntegrations
+      responses:
+        "200":
+          description: Conexiones autorizadas del paciente actual, sin secretos
+    post:
+      summary: Crear un código de vinculación o revocar una conexión
+      operationId: manageHealthIntegration
+      responses:
+        "201":
+          description: Código de un solo uso creado
+        "200":
+          description: Conexión revocada
+  /api/health/connectors/pair:
+    post:
+      summary: Intercambiar un código de un solo uso desde Entheos Bridge
+      operationId: pairHealthConnector
+      security: []
+      responses:
+        "201":
+          description: Token de conector emitido una única vez
+        "400":
+          description: Código inválido o vencido
+  /api/health/connectors/health-connect/status:
+    post:
+      summary: Informar disponibilidad, permisos y estado del puente Android
+      operationId: updateHealthConnectStatus
+      security:
+        - connectorToken: []
+      responses:
+        "200":
+          description: Estado actualizado
+  /api/health/connectors/health-connect/sync:
+    post:
+      summary: Sincronizar un lote idempotente de Health Connect
+      operationId: syncHealthConnect
+      security:
+        - connectorToken: []
+      responses:
+        "200":
+          description: Lote aceptado o reconocido como duplicado
+        "422":
+          description: Registro inválido
+  /api/v1/patient-summary:
+    get:
+      summary: Obtener resumen clínico de lectura
+      operationId: getPatientSummary
+      security:
+        - platformIdentity: []
+        - bearerToken: []
+      responses:
+        "200":
+          description: Resumen con fuentes y fecha de generación
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /mcp:
+    post:
+      summary: Transporte MCP HTTP stateless
+      operationId: callMcp
+      security:
+        - bearerToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [jsonrpc, method]
+              properties:
+                jsonrpc:
+                  const: "2.0"
+                id:
+                  oneOf:
+                    - type: string
+                    - type: integer
+                    - type: "null"
+                method:
+                  type: string
+                params:
+                  type: object
+      responses:
+        "200":
+          description: Respuesta JSON-RPC
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+components:
+  securitySchemes:
+    platformIdentity:
+      type: apiKey
+      in: header
+      name: oai-authenticated-user-email
+      description: Encabezado interno inyectado por la plataforma; un cliente no debe construirlo.
+    bearerToken:
+      type: http
+      scheme: bearer
+      bearerFormat: msh
+    connectorToken:
+      type: http
+      scheme: bearer
+      bearerFormat: EntheosConnector
+  responses:
+    Unauthorized:
+      description: Falta identidad o scope autorizado
+  schemas:
+    Overview:
+      type: object
+      required: [user, weights, pressures, activities, sleeps, symptoms, facts, timeline, documents, nutrition, suggestions, audits, laboratory, generatedAt]
+      properties:
+        user:
+          type: object
+        profile:
+          oneOf:
+            - type: object
+            - type: "null"
+        weights:
+          type: array
+          items: { type: object }
+        pressures:
+          type: array
+          items: { type: object }
+        activities:
+          type: array
+          items: { type: object }
+        sleeps:
+          type: array
+          items: { type: object }
+        symptoms:
+          type: array
+          items: { type: object }
+        facts:
+          type: array
+          items: { type: object }
+        timeline:
+          type: array
+          items: { type: object }
+        documents:
+          type: array
+          items: { type: object }
+        nutrition:
+          type: object
+        suggestions:
+          type: array
+          items: { type: object }
+        audits:
+          type: array
+          items: { type: object }
+        laboratory:
+          type: object
+        generatedAt:
+          type: string
+          format: date-time

@@ -1,0 +1,29 @@
+{
+  "notice": "FICTITIOUS DATA ONLY — never replace this file with a real backup",
+  "profile": {
+    "displayName": "Paciente Ejemplo",
+    "birthDate": "1990-01-15",
+    "heightCm": 170,
+    "clinicalSummary": "Ejemplo sin valor clínico."
+  },
+  "records": [
+    {
+      "kind": "weight",
+      "effectiveAt": "2026-01-10T09:00:00.000Z",
+      "weightKg": 75.2
+    },
+    {
+      "kind": "blood_pressure",
+      "effectiveAt": "2026-01-10T09:05:00.000Z",
+      "readings": [
+        { "systolic": 118, "diastolic": 76, "pulse": 68 }
+      ]
+    },
+    {
+      "kind": "sleep",
+      "effectiveAt": "2026-01-10T11:00:00.000Z",
+      "hours": 7.5,
+      "quality": 4
+    }
+  ]
+}

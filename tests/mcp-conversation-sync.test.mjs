@@ -3,6 +3,9 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const mcp = readFileSync(new URL("../app/mcp/route.ts", import.meta.url), "utf8");
+const bridge = readFileSync(new URL("../app/api/entheos-mcp/route.ts", import.meta.url), "utf8");
+const wellKnown = readFileSync(new URL("../app/[...wellKnown]/route.ts", import.meta.url), "utf8");
+const mcpConfig = readFileSync(new URL("../mcp.json", import.meta.url), "utf8");
 const oauth = readFileSync(new URL("../db/oauth.ts", import.meta.url), "utf8");
 const sync = readFileSync(new URL("../db/conversation-sync.ts", import.meta.url), "utf8");
 
@@ -32,4 +35,11 @@ test("Conversation sync enforces approval, idempotency and document hashing", ()
   assert.match(sync, /payloadHash/);
   assert.match(sync, /sha256\(bytes\)/);
   assert.match(sync, /patient_confirmed/);
+});
+
+test("Sites-compatible API bridge reuses the MCP implementation", () => {
+  assert.match(bridge, /export \{ GET, POST \} from "@\/app\/mcp\/route"/);
+  assert.match(wellKnown, /const mcpPath = "\/api\/entheos-mcp"/);
+  assert.match(wellKnown, /resource: `\$\{origin\}\$\{mcpPath\}`/);
+  assert.match(mcpConfig, /\/api\/entheos-mcp/);
 });

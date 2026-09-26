@@ -1,18 +1,20 @@
 import { jsonResponse } from "@/db/clinical";
 
+const scopes = ["health.read", "documents.read", "documents.write", "observations.write", "profile.write"];
+
 export async function GET(request: Request, context: { params: Promise<{ wellKnown: string[] }> }) {
   const { wellKnown } = await context.params;
   const path = `/${wellKnown.join("/")}`;
   const origin = new URL(request.url).origin;
   if (path === "/.well-known/oauth-protected-resource") return jsonResponse({
     resource: `${origin}/mcp`, authorization_servers: [origin],
-    scopes_supported: ["health.read", "documents.read"], bearer_methods_supported: ["header"],
+    scopes_supported: scopes, bearer_methods_supported: ["header"],
   });
   if (path === "/.well-known/oauth-authorization-server") return jsonResponse({
     issuer: origin, authorization_endpoint: `${origin}/oauth/authorize`, token_endpoint: `${origin}/oauth/token`,
     registration_endpoint: `${origin}/oauth/register`, response_types_supported: ["code"],
     grant_types_supported: ["authorization_code", "refresh_token"], token_endpoint_auth_methods_supported: ["none"],
-    code_challenge_methods_supported: ["S256"], scopes_supported: ["health.read", "documents.read"],
+    code_challenge_methods_supported: ["S256"], scopes_supported: scopes,
   });
   if (path === "/.well-known/assetlinks.json") return jsonResponse([
     {

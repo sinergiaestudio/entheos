@@ -1,0 +1,30 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "entheos-health-sync",
+  "version": "0.3.0",
+  "description": "Sincroniza conversaciones y archivos clínicos autorizados con la historia personal de salud Entheos.",
+  "author": {
+    "name": "Ariel Marcelo Gómez",
+    "url": "https://github.com/sinergiaestudio/entheos"
+  },
+  "homepage": "https://seguimiento-nutricional-marcelo.arielmarcelogomez7.chatgpt.site",
+  "repository": "https://github.com/sinergiaestudio/entheos",
+  "keywords": ["salud", "historia-clinica", "documentos", "nutricion", "seguimiento"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Entheos",
+        "shortDescription": "Tu salud en contexto",
+        "longDescription": "Consulta y actualiza tu historia personal de salud desde ChatGPT, conservando procedencia, fechas clínicas y documentos originales.",
+        "developerName": "Ariel Marcelo Gómez",
+        "category": "productivity",
+        "capabilities": ["read", "write", "file-upload"],
+        "websiteURL": "https://seguimiento-nutricional-marcelo.arielmarcelogomez7.chatgpt.site",
+        "privacyPolicyURL": "https://seguimiento-nutricional-marcelo.arielmarcelogomez7.chatgpt.site/privacy",
+        "termsOfServiceURL": "https://seguimiento-nutricional-marcelo.arielmarcelogomez7.chatgpt.site/terms",
+        "defaultPrompt": "Revisá mis novedades de salud y enviá a Entheos sólo lo que yo apruebe expresamente.",
+        "brandColor": "#287A5B"
+      }
+    }
+  }
+}

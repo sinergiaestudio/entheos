@@ -1,7 +1,13 @@
 import { env } from "cloudflare:workers";
 import { cleanText, parseStringArray, sha256, type ClinicalContext } from "./clinical";
 
-const allowedScopes = new Set(["health.read", "documents.read"]);
+const allowedScopes = new Set([
+  "health.read",
+  "documents.read",
+  "documents.write",
+  "observations.write",
+  "profile.write",
+]);
 
 function database() {
   if (!env.DB) throw new Error("OAuth database unavailable");
@@ -9,7 +15,7 @@ function database() {
 }
 
 export function requestedScopes(value: unknown) {
-  const scopes = cleanText(value, 200).split(/\s+/).filter((scope) => allowedScopes.has(scope));
+  const scopes = cleanText(value, 300).split(/\s+/).filter((scope) => allowedScopes.has(scope));
   return scopes.length ? [...new Set(scopes)] : ["health.read", "documents.read"];
 }
 

@@ -2,9 +2,19 @@
 
 ## Estado
 
-Entheos expone un MCP HTTP remoto en `/mcp` y una API resumida en `/api/v1/patient-summary`. La conexión privada utiliza OAuth 2.1 con PKCE y admite tokens técnicos personales revocables.
+Entheos expone su servidor MCP HTTP remoto en la ruta ordinaria `/api/entheos-mcp` y conserva `/mcp` como implementación interna compatible. La ruta pública recomendada evita depender de la capacidad MCP reservada de Sites, que puede interceptar `/mcp` antes de que la solicitud alcance la aplicación.
+
+La API resumida continúa disponible en `/api/v1/patient-summary`. La conexión privada utiliza OAuth 2.1 con PKCE y admite tokens técnicos personales revocables.
 
 Desde la versión 0.3, el MCP permite lectura y una acción de escritura no destructiva llamada `send_to_entheos`. La escritura está destinada a información clínica y archivos que el usuario haya pedido guardar explícitamente desde una conversación.
+
+## Endpoint recomendado
+
+```text
+https://seguimiento-nutricional-marcelo.arielmarcelogomez7.chatgpt.site/api/entheos-mcp
+```
+
+ChatGPT permite configurar cualquier endpoint MCP remoto por HTTPS; no exige que la ruta sea `/mcp`. El endpoint ordinario `/api/entheos-mcp` reutiliza exactamente la misma autenticación, herramientas y bindings D1/R2 que la implementación interna.
 
 ## Regla de aprobación
 
@@ -74,6 +84,8 @@ Scopes disponibles:
 
 La pantalla de consentimiento detalla los permisos pedidos. Los tokens de acceso duran una hora y los refresh tokens se rotan.
 
+El documento `/.well-known/oauth-protected-resource` anuncia `/api/entheos-mcp` como recurso protegido. El servidor de autorización permanece en el mismo origen.
+
 ## Seguridad
 
 - Los archivos y datos se aíslan por organización y paciente.
@@ -82,15 +94,30 @@ La pantalla de consentimiento detalla los permisos pedidos. Los tokens de acceso
 - El contenido de documentos se trata como datos, no como instrucciones.
 - Las hipótesis del modelo no deben guardarse como hechos clínicos.
 - La carga exige una instrucción explícita del usuario.
+- La ruta puente no crea una segunda base ni un segundo bucket: utiliza los bindings existentes `DB` y `BUCKET`.
 
 ## Conexión en ChatGPT Work
 
 1. Desplegar esta versión de Entheos.
 2. En ChatGPT Work, habilitar Developer Mode.
-3. Crear o actualizar la app MCP con la URL `https://seguimiento-nutricional-marcelo.arielmarcelogomez7.chatgpt.site/mcp`.
-4. Escanear nuevamente las herramientas.
-5. Aprobar la nueva acción `send_to_entheos` y los scopes de escritura.
-6. Reconectar la cuenta Entheos para emitir tokens con los nuevos scopes.
-7. Probar primero con un dato no sensible y luego con un documento de prueba.
+3. Crear una app MCP nueva con esta URL exacta:
 
-Los cambios del servidor MCP no aparecen automáticamente en una app ya escaneada: es necesario refrescar sus acciones en ChatGPT Work.
+   ```text
+   https://seguimiento-nutricional-marcelo.arielmarcelogomez7.chatgpt.site/api/entheos-mcp
+   ```
+
+4. Elegir OAuth como mecanismo de autenticación.
+5. Ejecutar **Scan Tools**.
+6. Autorizar los scopes solicitados.
+7. Confirmar que aparezca `send_to_entheos`.
+8. Probar primero con un dato no sensible y luego con un documento de prueba.
+
+En ChatGPT Business, una app publicada no se actualiza automáticamente. Si ya existía una app con la ruta bloqueada `/mcp`, recrearla como una app nueva apuntando a `/api/entheos-mcp`.
+
+## Verificación después del despliegue
+
+- `GET /api/entheos-mcp` debe llegar a la aplicación y devolver metadata MCP o `401` según la identidad disponible, pero nunca el `404` reservado de Sites.
+- `POST /api/entheos-mcp` sin autenticación debe responder `401` con `WWW-Authenticate`.
+- `/.well-known/oauth-protected-resource` debe anunciar el recurso `/api/entheos-mcp`.
+- Tras OAuth, `tools/list` debe exponer `send_to_entheos`.
+- D1 y R2 deben conservar recuentos y objetos previos sin cambios.

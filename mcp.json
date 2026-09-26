@@ -3,7 +3,7 @@
   "mcpServers": {
     "entheos": {
       "type": "streamable-http",
-      "url": "https://seguimiento-nutricional-marcelo.arielmarcelogomez7.chatgpt.site/mcp"
+      "url": "https://seguimiento-nutricional-marcelo.arielmarcelogomez7.chatgpt.site/api/entheos-mcp"
     }
   }
 }

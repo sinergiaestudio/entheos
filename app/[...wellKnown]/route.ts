@@ -1,13 +1,14 @@
 import { jsonResponse } from "@/db/clinical";
 
 const scopes = ["health.read", "documents.read", "documents.write", "observations.write", "profile.write"];
+const mcpPath = "/api/entheos-mcp";
 
 export async function GET(request: Request, context: { params: Promise<{ wellKnown: string[] }> }) {
   const { wellKnown } = await context.params;
   const path = `/${wellKnown.join("/")}`;
   const origin = new URL(request.url).origin;
   if (path === "/.well-known/oauth-protected-resource") return jsonResponse({
-    resource: `${origin}/mcp`, authorization_servers: [origin],
+    resource: `${origin}${mcpPath}`, authorization_servers: [origin],
     scopes_supported: scopes, bearer_methods_supported: ["header"],
   });
   if (path === "/.well-known/oauth-authorization-server") return jsonResponse({

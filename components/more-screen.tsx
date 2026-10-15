@@ -148,7 +148,7 @@ function LaboratoryPanel({ data, saveRecord, onChanged, notify }: { data: Overvi
         <td><button className="icon-action" onClick={() => setExpandedPanel(open ? "" : study.id)}>{open ? "−" : "+"}</button></td>
       </tr>;
     })}</tbody></table></div> : <EmptyState icon="spark" title="Sin estudios" text="Los paneles de laboratorio aparecerán acá." />}
-  </section></section>{editing && <LabEditor result={editing} onClose={() => setEditing(null)} notify={notify} onSaved={async () => { setEditing(null); await onChanged(); }} />}</div>;
+  </section>{editing && <LabEditor result={editing} onClose={() => setEditing(null)} notify={notify} onSaved={async () => { setEditing(null); await onChanged(); }} />}</div>;
 }
 
 function LabFields({ result }: { result?: LabResult }) {

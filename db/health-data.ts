@@ -554,28 +554,55 @@ export async function recordClinical(context: ClinicalContext, payload: AnyRow) 
     const resultText = cleanText(payload.resultText, 120);
     const date = validDate(payload.date);
     if (!analyte || !resultText || !date) throw new ClinicalInputError("Completá estudio, resultado y fecha.");
-    const panelId = rowId("lab");
+
+    const panelTitle = cleanText(payload.panelTitle, 200) || "Laboratorio manual";
+    const institution = cleanText(payload.institution, 160) || null;
+    const requestedPanelId = cleanText(payload.panelId, 120);
+    const requestedPanel = requestedPanelId
+      ? await database.prepare(`SELECT id FROM lab_panels
+          WHERE id = ? AND patient_id = ? AND organization_id = ? AND deleted_at IS NULL`)
+        .bind(requestedPanelId, context.patientId, context.organizationId)
+        .first<{ id: string }>()
+      : null;
+    const matchingPanel = requestedPanel || (requestedPanelId
+      ? null
+      : await database.prepare(`SELECT id FROM lab_panels
+          WHERE patient_id = ? AND organization_id = ? AND title = ?
+            AND substr(effective_at, 1, 10) = ? AND COALESCE(institution, '') = ?
+            AND deleted_at IS NULL
+          ORDER BY created_at ASC LIMIT 1`)
+        .bind(context.patientId, context.organizationId, panelTitle, date, institution || "")
+        .first<{ id: string }>());
+    const panelId = matchingPanel?.id || rowId("lab");
     const resultId = rowId("lbr");
-    await database.batch([
-      database.prepare(`INSERT INTO lab_panels
+    const statements: D1PreparedStatement[] = [];
+
+    if (!matchingPanel) {
+      statements.push(database.prepare(`INSERT INTO lab_panels
         (id, organization_id, patient_id, title, effective_at, institution, status,
         verification_status, created_by, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, 'final', 'declared', ?, ?, ?)`)
-        .bind(panelId, context.organizationId, context.patientId,
-          cleanText(payload.panelTitle, 200) || "Laboratorio manual", date,
-          cleanText(payload.institution, 160) || null, context.userId, now, now),
-      database.prepare(`INSERT INTO lab_results
-        (id, organization_id, patient_id, panel_id, analyte, result_text, result_numeric,
-        unit, reference_range, flag, method, verification_status, created_by, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'declared', ?, ?, ?)`)
-        .bind(resultId, context.organizationId, context.patientId, panelId, analyte, resultText,
-          finiteNumber(payload.resultNumeric, -1000000, 1000000), cleanText(payload.unit, 40) || null,
-          cleanText(payload.referenceRange, 120) || null,
-          ["low", "normal", "high"].includes(String(payload.flag)) ? String(payload.flag) : null,
-          cleanText(payload.method, 120) || null, context.userId, now, now),
-    ]);
-    await writeAudit(context, "create", "lab_result", resultId, { source: "patient" });
-    return { panelId, resultId };
+        .bind(panelId, context.organizationId, context.patientId, panelTitle, date,
+          institution, context.userId, now, now));
+    }
+
+    statements.push(database.prepare(`INSERT INTO lab_results
+      (id, organization_id, patient_id, panel_id, analyte, result_text, result_numeric,
+      unit, reference_range, flag, method, verification_status, created_by, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'declared', ?, ?, ?)`)
+      .bind(resultId, context.organizationId, context.patientId, panelId, analyte, resultText,
+        finiteNumber(payload.resultNumeric, -1000000, 1000000), cleanText(payload.unit, 40) || null,
+        cleanText(payload.referenceRange, 120) || null,
+        ["low", "normal", "high"].includes(String(payload.flag)) ? String(payload.flag) : null,
+        cleanText(payload.method, 120) || null, context.userId, now, now));
+
+    await database.batch(statements);
+    await writeAudit(context, "create", "lab_result", resultId, {
+      source: "patient",
+      panelId,
+      reusedPanel: Boolean(matchingPanel),
+    });
+    return { panelId, resultId, createdPanel: !matchingPanel };
   }
 
   if (kind === "profile") {

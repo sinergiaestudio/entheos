@@ -95,6 +95,33 @@ function LaboratoryPanel({ data, saveRecord, onChanged, notify }: { data: Overvi
     }).sort((a, b) => a[0].analyte.localeCompare(b[0].analyte, "es-AR"));
   }, [data.laboratory.results, flag, panelById, query]);
 
+  const studies = useMemo(() => {
+    const resultsByPanel = new Map<string, LabResult[]>();
+    for (const result of data.laboratory.results) {
+      resultsByPanel.set(result.panel_id, [...(resultsByPanel.get(result.panel_id) || []), result]);
+    }
+    const map = new Map<string, {
+      id: string;
+      effectiveAt: string;
+      title: string;
+      institution: string | null;
+      results: LabResult[];
+    }>();
+    for (const panel of data.laboratory.panels) {
+      const key = [panel.effective_at.slice(0, 10), panel.institution || "", panel.title].join("\u0001");
+      const study = map.get(key) || {
+        id: key,
+        effectiveAt: panel.effective_at,
+        title: panel.title,
+        institution: panel.institution,
+        results: [],
+      };
+      study.results.push(...(resultsByPanel.get(panel.id) || []));
+      map.set(key, study);
+    }
+    return [...map.values()].sort((a, b) => Date.parse(b.effectiveAt) - Date.parse(a.effectiveAt) || a.title.localeCompare(b.title, "es-AR"));
+  }, [data.laboratory.panels, data.laboratory.results]);
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); const form = event.currentTarget; const values = new FormData(form); setBusy(true);
     const ok = await saveRecord(labPayload(values)); setBusy(false); if (ok) { form.reset(); setShowForm(false); }
@@ -106,7 +133,22 @@ function LaboratoryPanel({ data, saveRecord, onChanged, notify }: { data: Overvi
     notify(response.ok ? "Resultado eliminado." : body.error || "No pudimos eliminarlo."); if (response.ok) await onChanged();
   }
 
-  return <div><PanelHeading kicker="DATOS ESTRUCTURADOS" title="Laboratorio" text="Primero ves los últimos indicadores generales; después podés abrir cada estudio. El rango mostrado siempre es el informado por el laboratorio de origen." /><div className="section-heading"><div><p className="eyebrow">ÚLTIMOS DATOS GENERALES</p><h2>{groups.length} indicador{groups.length === 1 ? "" : "es"}</h2></div><button className="secondary-action" onClick={() => setShowForm((value) => !value)}><Icon name={showForm ? "close" : "plus"} size={17} />{showForm ? "Cerrar" : "Agregar resultado"}</button></div><div className="compact-filters"><label className="search-field"><Icon name="search" size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar indicador…" /></label><select value={flag} onChange={(event) => setFlag(event.target.value)}><option value="all">Todos los estados</option><option value="flagged">Marcados por el informe</option><option value="normal">Dentro del rango informado</option><option value="high">Alto</option><option value="low">Bajo</option></select></div>{groups.length ? <div className="table-scroll"><table className="data-table lab-overview-table"><thead><tr><th>Indicador</th><th>Último resultado</th><th>Rango del informe</th><th>Tendencia</th><th>Fecha / fuente</th><th>Gestión</th></tr></thead><tbody>{groups.map((results) => { const latest = results[0]; const panel = panelById[latest.panel_id]; return <tr key={latest.analyte}><td><strong>{latest.analyte}</strong><small>{results.length} referencia{results.length === 1 ? "" : "s"} histórica{results.length === 1 ? "" : "s"}</small></td><td><strong className={`lab-value flag-${latest.flag || "none"}`}>{latest.result_text}{latest.unit ? ` ${latest.unit}` : ""}</strong><span className={`status-pill ${latest.flag === "high" || latest.flag === "low" ? "suspended" : "complete"}`}>{labFlagLabel(latest.flag)}</span></td><td><span>{latest.reference_range || "No informado"}</span></td><td><MiniLabTrend results={results} panelById={panelById} /></td><td>{formatDate(panel?.effective_at)}<small>{panel?.institution || sourceLabel("document", latest.verification_status)}</small></td><td><div className="row-actions"><button onClick={() => setEditing(latest)}>Editar</button><button className="danger" onClick={() => void remove(latest)}>Eliminar</button></div></td></tr>; })}</tbody></table></div> : <EmptyState icon="spark" title="Sin indicadores en esta vista" text="Cambiá el filtro o agregá un resultado estructurado." />}{showForm && <form className="inline-entry-form" onSubmit={submit}><h3>Nuevo resultado</h3><LabFields /><button className="primary-action submit-action" disabled={busy}><Icon name="plus" size={18} />{busy ? "Guardando…" : "Agregar resultado"}</button></form>}<section className="lab-study-history"><div className="section-heading"><div><p className="eyebrow">HISTORIAL DE ESTUDIOS</p><h2>{data.laboratory.panels.length} estudio{data.laboratory.panels.length === 1 ? "" : "s"}</h2></div></div>{data.laboratory.panels.length ? <div className="table-scroll"><table className="data-table compact-table"><thead><tr><th>Fecha</th><th>Estudio</th><th>Institución</th><th>Resultados</th><th>Estado</th><th /></tr></thead><tbody>{data.laboratory.panels.map((panel) => { const results = data.laboratory.results.filter((result) => result.panel_id === panel.id); const open = expandedPanel === panel.id; return <tr className={open ? "expanded" : ""} key={panel.id}><td>{formatDate(panel.effective_at)}</td><td><strong>{panel.title}</strong>{open && <div className="panel-results">{results.map((result) => <span key={result.id}><b>{result.analyte}</b>{result.result_text}{result.unit ? ` ${result.unit}` : ""}</span>)}</div>}</td><td>{panel.institution || "—"}</td><td>{results.length}</td><td><span className="status-pill complete">Estructurado</span></td><td><button className="icon-action" onClick={() => setExpandedPanel(open ? "" : panel.id)}>{open ? "−" : "+"}</button></td></tr>; })}</tbody></table></div> : <EmptyState icon="spark" title="Sin estudios" text="Los paneles de laboratorio aparecerán acá." />}</section>{editing && <LabEditor result={editing} onClose={() => setEditing(null)} notify={notify} onSaved={async () => { setEditing(null); await onChanged(); }} />}</div>;
+  return <div><PanelHeading kicker="DATOS ESTRUCTURADOS" title="Laboratorio" text="Primero ves los últimos indicadores generales; después podés abrir cada estudio. El rango mostrado siempre es el informado por el laboratorio de origen." /><div className="section-heading"><div><p className="eyebrow">ÚLTIMOS DATOS GENERALES</p><h2>{groups.length} indicador{groups.length === 1 ? "" : "es"}</h2></div><button className="secondary-action" onClick={() => setShowForm((value) => !value)}><Icon name={showForm ? "close" : "plus"} size={17} />{showForm ? "Cerrar" : "Agregar resultado"}</button></div><div className="compact-filters"><label className="search-field"><Icon name="search" size={18} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar indicador…" /></label><select value={flag} onChange={(event) => setFlag(event.target.value)}><option value="all">Todos los estados</option><option value="flagged">Marcados por el informe</option><option value="normal">Dentro del rango informado</option><option value="high">Alto</option><option value="low">Bajo</option></select></div>{groups.length ? <div className="table-scroll"><table className="data-table lab-overview-table"><thead><tr><th>Indicador</th><th>Último resultado</th><th>Rango del informe</th><th>Tendencia</th><th>Fecha / fuente</th><th>Gestión</th></tr></thead><tbody>{groups.map((results) => { const latest = results[0]; const panel = panelById[latest.panel_id]; return <tr key={latest.analyte}><td><strong>{latest.analyte}</strong><small>{results.length} referencia{results.length === 1 ? "" : "s"} histórica{results.length === 1 ? "" : "s"}</small></td><td><strong className={`lab-value flag-${latest.flag || "none"}`}>{latest.result_text}{latest.unit ? ` ${latest.unit}` : ""}</strong><span className={`status-pill ${latest.flag === "high" || latest.flag === "low" ? "suspended" : "complete"}`}>{labFlagLabel(latest.flag)}</span></td><td><span>{latest.reference_range || "No informado"}</span></td><td><MiniLabTrend results={results} panelById={panelById} /></td><td>{formatDate(panel?.effective_at)}<small>{panel?.institution || sourceLabel("document", latest.verification_status)}</small></td><td><div className="row-actions"><button onClick={() => setEditing(latest)}>Editar</button><button className="danger" onClick={() => void remove(latest)}>Eliminar</button></div></td></tr>; })}</tbody></table></div> : <EmptyState icon="spark" title="Sin indicadores en esta vista" text="Cambiá el filtro o agregá un resultado estructurado." />}{showForm && <form className="inline-entry-form" onSubmit={submit}><h3>Nuevo resultado</h3><LabFields /><button className="primary-action submit-action" disabled={busy}><Icon name="plus" size={18} />{busy ? "Guardando…" : "Agregar resultado"}</button></form>}<section className="lab-study-history">
+    <div className="section-heading">
+      <div><p className="eyebrow">HISTORIAL DE ESTUDIOS</p><h2>{studies.length} estudio{studies.length === 1 ? "" : "s"}</h2></div>
+    </div>
+    {studies.length ? <div className="table-scroll"><table className="data-table compact-table"><thead><tr><th>Fecha</th><th>Estudio</th><th>Institución</th><th>Resultados</th><th>Estado</th><th /></tr></thead><tbody>{studies.map((study) => {
+      const open = expandedPanel === study.id;
+      return <tr className={open ? "expanded" : ""} key={study.id}>
+        <td>{formatDate(study.effectiveAt)}</td>
+        <td><strong>{study.title}</strong>{open && <div className="panel-results">{study.results.map((result) => <span key={result.id}><b>{result.analyte}</b>{result.result_text}{result.unit ? ` ${result.unit}` : ""}</span>)}</div>}</td>
+        <td>{study.institution || "—"}</td>
+        <td>{study.results.length}</td>
+        <td><span className="status-pill complete">Estructurado</span></td>
+        <td><button className="icon-action" onClick={() => setExpandedPanel(open ? "" : study.id)}>{open ? "−" : "+"}</button></td>
+      </tr>;
+    })}</tbody></table></div> : <EmptyState icon="spark" title="Sin estudios" text="Los paneles de laboratorio aparecerán acá." />}
+  </section>{editing && <LabEditor result={editing} onClose={() => setEditing(null)} notify={notify} onSaved={async () => { setEditing(null); await onChanged(); }} />}</div>;
 }
 
 function LabFields({ result }: { result?: LabResult }) {

@@ -57,6 +57,10 @@
 - [Matriz de confianza de identidad, verificación HTTP y propuesta de rulesets gratuitos](SEGURIDAD_G1B_Y_RAMAS.md) — **documentación para aprobación, no entorno auditado ni reglas aplicadas**.
 - Smoke local restringido a loopback: `scripts/anatheos-loopback-smoke.mjs` (por defecto sin credenciales ni PHI; ejecutar solo contra servidor local con ANATHEOS deshabilitado). Test de seguridad de URL: `tests/anatheos-g1b-safety.test.mjs`.
 
+## Evaluación OSS DICOM G2a-B
+
+- [Spike aislado Cornerstone3D v5.13.1](CORNERSTONE_SPIKE_G2A_2026-10-26.md) — prototipo cliente en `spikes/anatheos-cornerstone/` y workflow de bundling/licencias. **No modifica** el visor estable, no acredita CT/RM comprimido ni multiframe, ni validación Slicer.
+
 ## Tablero de ingeniería
 
 - **PR piloto, borrador, no fusionar:** [#5](https://github.com/sinergiaestudio/entheos/pull/5).

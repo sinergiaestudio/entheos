@@ -14,6 +14,18 @@ PR #26 fusionado con método `merge` exclusivamente a la rama piloto. **HEAD ini
 - Issues #7, #8, #9, #20 continúan ABIERTOS; el cierre administrativo de Issue #25 depende de registro y revisión de Dirección. Los apartados históricos posteriores o anteriores que declaran `sin fusionar` describen un checkpoint previo, no contradicen este hito.
 - **Este propio commit documental** debe superar su CI separada antes de certificar el HEAD final de la rama piloto. Consultar [acta de integración](INTEGRACION_ISSUE_25_2026-10-26.md).
 
+## Checkpoint G2a-B Cornerstone OSS · 26/10/2026 (PR separado)
+
+- Rama `anatheos/issue-8-cornerstone-oss-spike` desde piloto `19c945cf69ff69daa95804639a4aabc9ce9ad7db`. Se preparó prototipo cliente Vite y workflow independiente para instalar solo en CI efímera los paquetes Cornerstone 5.13.1, auditar licencias declaradas y comprobar bundling WASM/worker. Referencia [CORNERSTONE_SPIKE_G2A_2026-10-26.md](CORNERSTONE_SPIKE_G2A_2026-10-26.md).
+- **CI pendiente** para evaluar resultado real de npm/build; aún no hay pruebas de decodificación CT/RM, compressed/multiframe, Slicer, memoria, Vitext Workers remoto ni diagnóstico. No sustituye P1A ni añade dependencias al proyecto estable.
+- G1B #7 y protección de ramas #20 continúan bloqueando publicación y cambios de settings; Site y main intactos.
+
+## Evidencia G2a-B OSS · 26/10/2026 (solo spike aislado)
+
+- Versiones exactas Cornerstone/loader 5.13.1 instalaron en CI sin persistencia. [Build Vite #40375181411](https://github.com/sinergiaestudio/entheos/actions/runs/40375181411) PASS, [Build Vinext+Worker temporal #40375633236](https://github.com/sinergiaestudio/entheos/actions/runs/40375633236) PASS sobre `a1853db165b451c852a8cc4524809da9fc7757a3`. [CI general #40375633364](https://github.com/sinergiaestudio/entheos/actions/runs/40375633364): **60/60 PASS**.
+- **No interpretar bundling como funcionalidad de decodificador**: existen advertencias de módulos `fs`/`path` externalizados en código de WASM y chunks grandes; faltan runtime real, pruebas CT/MR/multiframe/comprimidos, licencias transitivas, RAM y comparación Slicer. P1A sin cambios, PR DRAFT sin merge, Issue #8 ABIERTO.
+- Sin paquetes añadidos a dependencias de producción, sin datos clínicos, flag, Site, remotos, pagos ni Settings cambiados. Este commit documental requiere CI del SHA final.
+
 ## Panel ejecutivo
 
 | Dimensión | Estado verificable al elaborar este registro | Evidencia |

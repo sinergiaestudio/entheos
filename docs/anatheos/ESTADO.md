@@ -25,6 +25,15 @@
 | Licencias/APIs pagas | Ninguna incorporada al prototipo de ANATHEOS en rama | código inicial y política D-002 |
 | Gobierno de proyecto | Plan, arquitectura, QA, decisiones, protocolo e issues creados | docs/anatheos |
 
+## Checkpoint G2a-A · 2026-10-26 (Issue #8; rama de trabajo, no integrada)
+
+- Rama `anatheos/issue-8-import-intake`, derivada de `feature/anatheos-3d-owner-pilot` en SHA `f66ffaa919b26ab3f4290499009b46812df957ab`.
+- `lib/anatheos/dicom-intake.ts`: preflight Part10 máx. 64 KiB, exclusión temprana de sintaxis no admitidas, presupuesto 600 archivos / 32 MB por archivo / 320 MB total, lectura serializada, cancelación cooperativa, exclusión de geometrías incompatibles y reporte sin etiquetas arbitrarias de DICOM. El lector P1A sigue siendo quien decodifica píxeles, **no fue sustituido**.
+- `components/anatheos/dicom-browser.tsx` usa el nuevo contrato y ofrece cancelación de lectura; `tests/anatheos-intake.test.mjs` añade casos adversariales sintéticos y privacidad.
+- [Matriz de formatos y spike de decoder OSS](DECODIFICADOR_G2A.md). Cornerstone3D/dicom-image-loader como candidato preferente para spike; ni instalado ni aprobado definitivamente. P-002 continúa propuesta sin adopción.
+- No se integraron PR #21/#22/#23, todavía draft, para evitar mezclas de ramas de revisión. Futuras integraciones deberán conciliar README/ESTADO y correr CI de la combinación.
+- **CI del SHA final: registrar después de abrir PR y verificar logs.** No hay validación Slicer, datos clínicos ni despliegue; G1B sigue bloqueado por procedencia confiable de identidad.
+
 ## Mapa de trabajo (gates)
 
 - **G0 — En curso:** documentación e Issues organizados; pendiente auditar consistencia final y acordar inicio de chat técnico.

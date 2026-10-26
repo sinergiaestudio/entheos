@@ -74,6 +74,12 @@ Se incorporaron al gate normalización iterativa de rutas percent-encoded y dobl
 - Un test local de rutas no ANATHEOS demuestra que el helper no altera esas respuestas; **no equivale a regresión funcional exhaustiva** de Entheos productivo. El entrypoint Worker de CI usa el mismo archivo fuente `worker/index.ts` que el build del proyecto, pero no demuestra que el Site remoto emplee idéntica ruta de ejecución/identidad.
 - G1B ON y confianza de header permanecen **BLOCKED**. Se requiere evidencia del borde Sites y recursos D1/R2 independientes antes de cualquier habilitación.
 
+## 5 ter. Documentación oficial de identidad Sites vs prueba de procedencia
+
+La guía oficial [ChatGPT Sites · Data and connections](https://learn.chatgpt.com/docs/sites/data-and-connections) (consultada 26/10/2026) señala que el flujo de Sign in with ChatGPT es administrado por Sites y que la plataforma comunica al servidor el correo autenticado mediante `oai-authenticated-user-email`, con nombre opcional. Esto **fundamenta el contrato nominal de cabeceras**, pero el texto consultado **no especifica ni demuestra** qué ocurre si un cliente externo suministra deliberadamente la misma cabecera: eliminación, sustitución, preferencia, o duplicados. **Por ello G1B sigue BLOCKED** hasta una prueba real, aislada y autorizada de cabeceras adversariales con flag ON, anónimo/tercero/propietario y bindings segregados.
+
+Posibles mitigaciones a diseñar si no se verifica el borde: validación de sesión con origen verificable o proxy confiable que filtre/sobrescriba cabeceras de cliente. **No se adoptó ninguno todavía**; no introducir una solución sin revisar el protocolo de Sites.
+
 ## 6. Salida y decisión solicitada
 
 - Integrar en piloto **solo tras revisión del PR** y CI final exitoso; no cerrar #7 por pruebas con flag OFF.

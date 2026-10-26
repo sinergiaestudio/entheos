@@ -37,14 +37,20 @@
 
 ## 5. Criterios y evidencia de aceptación pendientes
 
-- CI de `lint`, `typecheck`, `npm test` (incluye build) **en el SHA final combinado**; registrar run/link/resultados PASS/FAIL/SKIP. No sumar conteos de PR independientes.
+- **CI conjunta de código verificada:** [GitHub Actions #40355584304](https://github.com/sinergiaestudio/entheos/actions/runs/40355584304), HEAD `79166c8c0234f76f804ba6a083c2ccec1be11a0b`, **60/60 PASS, 0 FAIL, 0 SKIPPED**, lint (1 advertencia ajena al módulo), typecheck y build PASS. La integración combinada se verificó en una única ejecución, sin sumar suites independientes. Este commit de documentación requiere nueva ejecución para afirmar éxito del HEAD final.
 - Revisión independiente de PR temporal y comparación con `main` y piloto base, revisión contra suites cruzadas y conflictos.
 - Confirmar con Dirección aceptación de la combinación, **antes de cualquier incorporación a piloto**. No fusionar PR #21–#24 ni PR temporal sin aprobación expresa.
 - G1B: pruebas HTTP reales de anónimo/tercero/titular, falsificación de cabeceras y aislamiento D1/R2 antes de cualquier habilitación remota.
 - Issue #20: propuesta de reglas de protección de ramas; ajustes de Settings solo con aprobación explícita.
 - Issues #8/#9/#10: decoder externo, datasets públicos desidentificados y geometría Slicer permanecen pendientes.
 
-## 6. Rollback y exclusiones
+## 6. Seguridad transversal documentada
+
+- [SEGURIDAD_G1B_Y_RAMAS.md](SEGURIDAD_G1B_Y_RAMAS.md) presenta matriz de prueba HTTP/anónimo/tercero/owner, amenaza de cabeceras de identidad y propuesta de reglas GitHub Free para `main` y piloto (sin aplicar settings).
+- `scripts/anatheos-loopback-smoke.mjs` solo permite HTTP loopback literal para control OFF. Su `--self-test` y los tests estáticos de URL pasaron en CI conjunto; **no se ejecutó una sesión HTTP real** ni validación de autenticación por el Site. El script deliberadamente no permite URLs remotas.
+- Resultado de comparación con la rama piloto: 26 archivos modificados o nuevos, 51 commits adelante / 0 atrás por conservar historias originales con merge commits; sin nuevas dependencias ni cambios de DB/R2.
+
+## 7. Rollback y exclusiones
 
 El rollback de esta etapa consiste en dejar el PR temporal en DRAFT o cerrarlo y descartar la rama experimental; **no implica rollback de producción**, pues no se alteró `main`, la integración ni el Site. No se abrieron endpoints públicos. Cualquier paso posterior de fusión o despliegue necesita acto separado y revisión aprobatoria de Dirección.
 

@@ -245,6 +245,19 @@ export function buildVolume(input: DicomSlice[]): DicomVolume {
   }
   const slices = [...input].sort((a, b) =>
     dot(a.imagePosition, normal) - dot(b.imagePosition, normal));
+  for (const slice of slices) {
+    const displacement: Vector3 = [
+      slice.imagePosition[0] - reference.imagePosition[0],
+      slice.imagePosition[1] - reference.imagePosition[1],
+      slice.imagePosition[2] - reference.imagePosition[2],
+    ];
+    const alongNormal = dot(displacement, normal);
+    const inPlane: Vector3 = displacement.map((v, i) =>
+      v - alongNormal * normal[i]) as Vector3;
+    if (norm(inPlane) > 0.1) {
+      fail("Desplazamiento en el plano (gantry tilt u otra geometría); requiere remuestreo.");
+    }
+  }
   const distances = slices.slice(1).map((slice, i) =>
     dot(slice.imagePosition, normal) - dot(slices[i].imagePosition, normal));
   const sorted = [...distances].sort((a, b) => a - b);

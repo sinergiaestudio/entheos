@@ -92,8 +92,12 @@ function readText(buffer: ArrayBuffer, value: Element) {
 }
 
 function parseNumbers(raw: string, count: number): number[] {
-  const numbers = raw.split("\\").map((value) => Number(value.trim()));
-  if (numbers.length !== count || numbers.some((n) => !Number.isFinite(n))) {
+  const parts = raw.split("\\").map((value) => value.trim());
+  if (parts.length !== count || parts.some((part) => part === "")) {
+    fail("Metadatos geométricos incompletos o inválidos.");
+  }
+  const numbers = parts.map(Number);
+  if (numbers.some((n) => !Number.isFinite(n))) {
     fail("Metadatos geométricos incompletos o inválidos.");
   }
   return numbers;

@@ -25,6 +25,16 @@
 | Licencias/APIs pagas | Ninguna incorporada al prototipo de ANATHEOS en rama | código inicial y política D-002 |
 | Gobierno de proyecto | Plan, arquitectura, QA, decisiones, protocolo e issues creados | docs/anatheos |
 
+## Checkpoint de auditoría G0 · 2026-10-26 (propuesta en PR de #6)
+
+- Baseline de `main` antes del trabajo: `8e7602280d6c4fddc234c1973537839592683798`.
+- Baseline de integración antes del trabajo: `f66ffaa919b26ab3f4290499009b46812df957ab`, 26 commits por delante y ninguno detrás de `main`.
+- Workflow inicial [40333568854](https://github.com/sinergiaestudio/entheos/actions/runs/40333568854): `success` en ese SHA, incluyendo lint, typecheck y `npm test` (build y tests). Los checks del PR de G0 son **pendientes de comprobación independiente**.
+- PR #5: abierto y borrador, base `main`, sin merge; **no fusionar**.
+- Protección de `main` y piloto: `protected=false`. Issue #20 sigue P0; no modificar settings sin autorización.
+- [Acta de auditoría](AUDITORIA_G0_2026-10-26.md): inventario, limitaciones y matriz de dependencias. La rama `anatheos/issue-6-g0-audit` propone prueba estática de enlaces y decisiones; **no** constituye revisión médica ni test de acceso real.
+- **G0 permanece EN REVISIÓN hasta CI del HEAD del PR, revisión y aceptación.** No se creó entorno remoto ni se utilizaron estudios reales.
+
 ## Mapa de trabajo (gates)
 
 - **G0 — En curso:** documentación e Issues organizados; pendiente auditar consistencia final y acordar inicio de chat técnico.

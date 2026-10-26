@@ -38,6 +38,14 @@ try {
     ["implicit-le-ct-single-frame", { scenario: 79, layer: 1,
       syntax: "1.2.840.10008.1.2" },
       { rows: 3, columns: 4, pixels: [100, 101, 102, 110, 111, 123] }],
+    ["oblique-explicit-le-ct", { scenario: 80, layer: 2,
+      orientation: [0.70710678119,0.70710678119,0,-0.70710678119,0.70710678119,0],
+      position: [11,13,25], pixelSpacing: [2,3] },
+      { rows: 3, columns: 4, pixels: [200, 201, 202, 210, 211, 223],
+        positionLps: [11,13,25],
+        rowCosines: [0.70710678119,0.70710678119,0],
+        columnCosines: [-0.70710678119,0.70710678119,0],
+        voxelLps: [13.82842712476,18.65685424952,25] }],
   ]) {
     const bytes = makeSyntheticDicom(options);
     const t0 = Date.now();
@@ -81,6 +89,36 @@ try {
     assert.equal(measured.intercept, -1000);
     assert.deepEqual(measured.transformedSamples, expected.pixels.map(v => v - 1000));
     assert.ok(Number.isFinite(measured.durationMs) && measured.durationMs >= 0);
+    // DICOM PS3.3 patient-space voxel-center equation. Internal synthetic
+    // oracle only: 3D Slicer external verification remains a separate gate.
+    const plane = measured.imagePlane;
+    assert.ok(plane, "Cornerstone did not expose imagePlaneModule");
+    assert.equal(plane.rowPixelSpacing, 2);
+    assert.equal(plane.columnPixelSpacing, 3);
+    const knownOrigin = expected.positionLps ?? [10,20,30];
+    const knownRow = expected.rowCosines ?? [1,0,0];
+    const knownColumn = expected.columnCosines ?? [0,1,0];
+    for (let axis=0; axis<3; axis++) {
+      assert.ok(Math.abs(plane.imagePositionPatient[axis]-knownOrigin[axis]) < 1e-7);
+      assert.ok(Math.abs(plane.rowCosines[axis]-knownRow[axis]) < 1e-7);
+      assert.ok(Math.abs(plane.columnCosines[axis]-knownColumn[axis]) < 1e-7);
+    }
+    const voxelLps = [0,1,2].map(axis =>
+      plane.imagePositionPatient[axis] +
+      2*plane.columnPixelSpacing*plane.rowCosines[axis] +
+      1*plane.rowPixelSpacing*plane.columnCosines[axis]);
+    const expectedLps = expected.voxelLps ?? [16,22,30];
+    for (let axis=0;axis<3;axis++) {
+      assert.ok(Math.abs(voxelLps[axis]-expectedLps[axis]) < 1e-6);
+    }
+    const voxelRas = [-voxelLps[0],-voxelLps[1],voxelLps[2]];
+    const expectedRas = [-expectedLps[0],-expectedLps[1],expectedLps[2]];
+    for (let axis=0;axis<3;axis++) {
+      assert.ok(Math.abs(voxelRas[axis]-expectedRas[axis]) < 1e-6);
+    }
+    report.voxelLpsMm = voxelLps;
+    report.voxelRasMm = voxelRas;
+
     await page.locator("#clear").click();
     const afterClear = await page.evaluate(() => window.__anatheosProbe);
     assert.equal(afterClear.state, "cleared");

@@ -40,6 +40,12 @@ PR #26 fusionado con método `merge` exclusivamente a la rama piloto. **HEAD ini
 - Las reglas de GitHub Free para repos públicos no suponen un nuevo servicio pago. Es necesaria autorización adicional de Dirección para activar; ningún check demuestra aún bloqueo efectivo de push/merge. PR #5 continúa DRAFT y no fusionado.
 - El despliegue de Entheos puede depender de mecanismo externo al workflow `.github/workflows/ci.yml`; no activar protecciones sin inventario operativo. #20 ABIERTO.
 
+## QA conjunta PR #29 · 26/10/2026 (rama temporal, sin merge)
+
+- [CI #40374336543](https://github.com/sinergiaestudio/entheos/actions/runs/40374336543) sobre `f37b6c8dfc34fd021a5f2936c4cb404a3f6d9199`: **70/70 PASS**, 0 FAIL/SKIPPED/CANCELLED; HTTP local **23/23 PASS**; lint/typecheck/build PASS. [Acta](INTEGRACION_G1B_20_2026-10-26.md).
+- La CI conjunta prueba el código de ambos PR en HEAD combinado, no habilita el flag ON ni demuestra identidad/proxy/recursos D1/R2 remotos. La prueba de `push` piloto solo podrá realizarse **tras un futuro merge autorizado**.
+- PR #27, #28 y #29 DRAFT, sin fusión; sin settings modificados ni uso clínico. Este registro documental requiere su propia CI de HEAD.
+
 ## Panel ejecutivo
 
 | Dimensión | Estado verificable al elaborar este registro | Evidencia |

@@ -45,7 +45,7 @@ jobs:
       - name: Build ephemeral Cornerstone client route through Vinext and Cloudflare Worker
         run: bash spikes/anatheos-cornerstone/vinext-probe.sh
       - name: Install Chromium free browser binary in ephemeral CI
-        run: ./node_modules/.bin/playwright install --with-deps chromium
+        run: ./node_modules/.bin/playwright install --only-shell chromium
       - name: Decode synthetic Part10 pixels in actual Chromium with Cornerstone
         run: bash spikes/anatheos-cornerstone/chromium-local-ci.sh
       - name: Prove no tracked lockfile or Entheos dependency change

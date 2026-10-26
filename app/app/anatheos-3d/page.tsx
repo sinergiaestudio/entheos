@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AnatheosDicomBrowser } from "@/components/anatheos/dicom-browser";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireChatGPTUser } from "../../chatgpt-auth";
@@ -15,14 +16,14 @@ const capabilities = [
   {
     step: "01",
     title: "Importación de estudios",
-    detail: "Futura lectura de series DICOM de TC y RM con control de integridad, geometría y procedencia.",
-    status: "Pendiente de implementación",
+    detail: "Lector local inicial para DICOM Part 10 sin compresión, con geometría y agrupación de series.",
+    status: "Implementación inicial, sin validación clínica",
   },
   {
     step: "02",
     title: "Reconstrucción multiplanar",
-    detail: "Visualización sincronizada en planos axial, coronal y sagital, y renderizado volumétrico.",
-    status: "Pendiente de implementación",
+    detail: "Cortes axial y ortogonales para series alineadas con los ejes; renderizado volumétrico pendiente.",
+    status: "Implementación limitada a series compatibles",
   },
   {
     step: "03",
@@ -57,22 +58,25 @@ export default async function Anatheos3DOwnerPilotPage() {
           <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">ANATHEOS 3D</h1>
           <p className="mt-4 max-w-3xl text-base leading-7 text-[#496356]">
             Plataforma experimental de reconstrucción médica tridimensional. Esta pantalla
-            confirma el aislamiento de acceso por propietario; el motor de reconstrucción
-            DICOM todavía no está implementado ni habilitado.
+            restringida al propietario. El piloto incluye un lector local limitado
+            de cortes DICOM para exploración, sin renderizado volumétrico 3D todavía.
           </p>
         </header>
 
         <section aria-labelledby="estado" className="mb-10 rounded-2xl border border-[#cbd9d0] bg-white p-6">
           <h2 id="estado" className="text-lg font-semibold">Estado del piloto</h2>
           <p className="mt-2 text-sm leading-6 text-[#53675d]">
-            Acceso autorizado para {user.displayName}. No se han cargado ni procesado
-            estudios médicos desde este módulo. Sin suscripciones ni API externas de pago.
+            Acceso autorizado para {user.displayName}. Los archivos seleccionados
+            se procesan en la memoria del navegador y no se envían al servidor.
+            Sin suscripciones ni API externas de pago.
           </p>
           <p className="mt-2 text-sm leading-6 text-[#53675d]">
-            Próximo objetivo: visor multiplanar y reconstrucción volumétrica a partir de
-            series DICOM de prueba anonimizadas, con verificación frente a 3D Slicer.
+            Próximo objetivo: validar la geometría y la visualización multiplanar
+            con estudios públicos desidentificados, comparándolas con 3D Slicer.
           </p>
         </section>
+
+        <div className="mb-10"><AnatheosDicomBrowser /></div>
 
         <section aria-labelledby="hoja-ruta">
           <h2 id="hoja-ruta" className="mb-4 text-xl font-semibold">Módulos previstos</h2>

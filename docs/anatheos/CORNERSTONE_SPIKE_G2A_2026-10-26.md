@@ -18,6 +18,15 @@
 - Workflow `.github/workflows/anatheos-cornerstone-spike.yml`: en PR propio y paths del spike, usa npm público y paquetes exactos 5.13.1 **solo en CI efímera** con `--no-save --package-lock=false`; verifica manifiestos/codec y produce bundle cliente, controlando `git diff --exit-code -- package.json package-lock.json`. **No constituye lockfile reproducible definitivo**; no se instala en el producto.
 - `audit.mjs` registra licencias declaradas de paquetes directos y codecs, y presencia de artefactos WASM. **No certifica el árbol transitivo completo**. Los resultados reales del workflow quedan a verificar en SHA final.
 
+## 2 bis. Resultados concretos de los dos builds OSS
+
+- **Primer SHA `a5d672efdc88dbaf94fc5e6c446e94386ed56179`:** CI general [#40375181265](https://github.com/sinergiaestudio/entheos/actions/runs/40375181265), `completed/success`, **60 tests / 60 PASS / 0 FAIL / 0 SKIPPED**, lint, typecheck, build PASS (un warning nuevo de import `statSync` sin uso en el spike, eliminado después).
+- **Primer build Vite aislado:** [Actions #40375181411](https://github.com/sinergiaestudio/entheos/actions/runs/40375181411), `completed/success`; los cuatro paquetes reales **5.13.1** instalaron correctamente. Las licencias npm declaradas fueron core/metadata/utils/dicom-loader MIT; codec-charls MIT, codec-libjpeg-turbo-8bit ISC, codec-libjxl BSD-3-Clause, codec-openjpeg MIT y codec-openjph MIT; 2/2/2/2/1 archivos WASM detectados.
+- **Segundo SHA de código `a1853db165b451c852a8cc4524809da9fc7757a3`:** [Actions #40375633236](https://github.com/sinergiaestudio/entheos/actions/runs/40375633236), `completed/success`: Vite aislado compiló; además, **Vinext + Cloudflare Worker construyó exitosamente una ruta React `client-only` temporal**, que no se incorpora al producto ni se ejecuta con pacientes. El paso verificó que package.json y lockfile no fueron modificados.
+- **Hallazgo de bundling no bloqueante para la fase de compilación, pero P1 para runtime:** Rollup/Vite emitió avisos de módulos Node `fs`/`path` externalizados en shaders/decodificadores WASM de CharLS, libjpeg-turbo, openjpeg y openjph; y chunks superiores a 500 KiB minificados. **CI PASS no garantiza que todos esos códecs funcionen en navegador** ni que se limpien recursos. Se requiere prueba real de decodificación/worker y medición de memoria antes de integrar.
+- **No realizado:** test con navegador real, lectura automatizada de TC/RM, comprimidos, enhanced multiframe o estudio externo Slicer; no se ha probado calidad/fidelidad médica, ni compatibilidad de ejecución remota de Sites. La validación de empaquetado no constituye seguridad G1B.
+- El presente checkpoint es un commit documental posterior: corresponde revalidar su SHA final por CI.
+
 ## 3. Matriz de capacidad: evidencia exigida
 
 | Característica | Plan de prueba | Estado al abrir spike |

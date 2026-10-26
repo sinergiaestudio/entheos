@@ -14,6 +14,12 @@ PR #26 fusionado con método `merge` exclusivamente a la rama piloto. **HEAD ini
 - Issues #7, #8, #9, #20 continúan ABIERTOS; el cierre administrativo de Issue #25 depende de registro y revisión de Dirección. Los apartados históricos posteriores o anteriores que declaran `sin fusionar` describen un checkpoint previo, no contradicen este hito.
 - **Este propio commit documental** debe superar su CI separada antes de certificar el HEAD final de la rama piloto. Consultar [acta de integración](INTEGRACION_ISSUE_25_2026-10-26.md).
 
+## Checkpoint G2a-B Cornerstone OSS · 26/10/2026 (PR separado)
+
+- Rama `anatheos/issue-8-cornerstone-oss-spike` desde piloto `19c945cf69ff69daa95804639a4aabc9ce9ad7db`. Se preparó prototipo cliente Vite y workflow independiente para instalar solo en CI efímera los paquetes Cornerstone 5.13.1, auditar licencias declaradas y comprobar bundling WASM/worker. Referencia [CORNERSTONE_SPIKE_G2A_2026-10-26.md](CORNERSTONE_SPIKE_G2A_2026-10-26.md).
+- **CI pendiente** para evaluar resultado real de npm/build; aún no hay pruebas de decodificación CT/RM, compressed/multiframe, Slicer, memoria, Vitext Workers remoto ni diagnóstico. No sustituye P1A ni añade dependencias al proyecto estable.
+- G1B #7 y protección de ramas #20 continúan bloqueando publicación y cambios de settings; Site y main intactos.
+
 ## Panel ejecutivo
 
 | Dimensión | Estado verificable al elaborar este registro | Evidencia |

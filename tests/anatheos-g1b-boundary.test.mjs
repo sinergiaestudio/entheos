@@ -18,6 +18,33 @@ test("G1B Worker gate recognizes HTML, RSC subpaths, future APIs and percent-enc
   }
 });
 
+test("G1B canonicalization denies encoded, doubly encoded and router-normalized paths", () => {
+  const targets = [
+    "/app/%61natheos-3d", "/app/%2561natheos-3d",
+    "/app/anatheos-3d%2fsub", "/app/anatheos-3d%252fsub",
+    "/api%2fanatheos%2fupload", "/api%252fanatheos%252fupload",
+    "/app/a/../anatheos-3d", "/app/a%2f..%2fanatheos-3d",
+    "/app//anatheos-3d///rsc", "/app\\anatheos-3d\\x",
+    "/api/anatheos;param=1/studies", "/app/anatheos-3d%3bmatrix=1",
+  ];
+  for (const path of targets) {
+    assert.equal(isAnatheosHttpPath(path), true, path);
+    assert.equal(offStateResponse(path, "false")?.status, 404, path);
+  }
+  for (const unrelated of ["/app/other", "/api/unrelated", "/app/anatheos-3d-extra", "/api/anatheosx", "/_vinext/image"]) {
+    assert.equal(isAnatheosHttpPath(unrelated), false, unrelated);
+  }
+});
+
+test("G1B HTTP deny is method-agnostic for GET HEAD POST OPTIONS", () => {
+  for (const method of ["GET", "HEAD", "POST", "OPTIONS"]) {
+    const path = method === "OPTIONS" ? "/api%252fanatheos%252fupload" : "/app/anatheos-3d";
+    const result = offStateResponse(path, undefined);
+    assert.equal(result?.status, 404, method);
+    headersToCheck(result);
+  }
+});
+
 test("G1B Worker default-off returns real 404 Response with private headers", async () => {
   for (const path of paths) {
     for (const flag of [undefined, null, false, true, "", "false", "TRUE", "1"]) {

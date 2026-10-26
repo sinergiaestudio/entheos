@@ -15,7 +15,7 @@ cleanup() {
   rm -f "$log"
 }
 trap cleanup EXIT
-setsid ./node_modules/.bin/vite --config spikes/anatheos-cornerstone/vite.config.mjs \
+setsid ./node_modules/.bin/vite preview --config spikes/anatheos-cornerstone/vite.config.mjs \
   --host 127.0.0.1 --port 4174 --strictPort >"$log" 2>&1 &
 pid=$!
 ready=0

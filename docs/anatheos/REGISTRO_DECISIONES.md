@@ -28,6 +28,25 @@
 | P-005 | Persistir originales y derivados en almacén aislado Entheos | Diferida | Modelo de datos, autorización, cifrado, costos y restore |
 | P-006 | Autorizar Site independiente de propietario único | Pendiente de implementación/validación | Prueba con otra cuenta y anónimo; no tocar producción |
 | P-007 | Apertura a pacientes/profesionales | No autorizada | Consentimiento, RBAC, seguridad, licencia y regulación |
+| P-008 | Protección de ramas main e integración mediante reglas gratuitas | Propuesta pendiente (#20) | Compatibilidad de protección con GitHub y despliegues existentes, bloqueo de merges involuntarios y rollback; no modificar configuración sin decisión |
+
+### P-002 · Desarrollo de la migración del lector DICOM (propuesta técnica, sin aprobar)
+
+**Fecha:** 2026-10-26. **Issue:** #8. La implementación preparatoria se documenta en [DECODIFICADOR_G2A.md](DECODIFICADOR_G2A.md), sin incorporar librerías todavía.
+
+- **Candidato principal:** `@cornerstonejs/dicom-image-loader` con Cornerstone3D, arquitectura modular y solo entrada `File` local en piloto.
+- **Alternativas:** `dicom-parser` para tags sin decodificación visual de píxeles; `dcmjs` para metadatos; parser propio P1A solo fallback hasta cumplir equivalencias verificadas.
+- **No aprobado:** añadir paquetes, cargar códecs WASM, habilitar WADO remoto o afirmar compatibilidad multiframe/comprimidos.
+- **Condiciones:** comprobar licencia por versión y dependencias, lockfile reproducible, bundle/Worker/Vinext, cancelación/limpieza de cachés, regresión DICOM, pruebas Slicer, cero nuevas suscripciones/servicios y no fuga de PHI.
+- **Estado:** *propuesta para evaluación en PR*, no altera la decisión D-002 de costo cero.
+
+### P-009 · Integración temporal verificable de PR #21–#24 (propuesta técnica, sin autorización de merge)
+
+- **Issue:** #25. La rama temporal de revisión y las pruebas conjuntas no implican aprobación de los PR originales, despliegue ni autorización para fusionar en la rama piloto.
+- **Propuesta:** incorporar cambios con historial de dos padres, reconciliar auditorías y checkpoint documental, verificar la matriz cruzada owner-only/ingesta/corpus; preservar la auditoría posterior de Dirección.
+- **Requiere:** CI en SHA final, revisión independiente, autorización expresa de Dirección antes de integrar en piloto. Sin cambios de branch protection, hosting, PHI ni servicios pagos.
+- **Evidencia y rollback:** [Acta de integración Issue #25](INTEGRACION_ISSUE_25_2026-10-26.md); cerrar PR temporal sin alterar rama piloto.
+- **Estado:** propuesta, no aprobada; D-001–D-009 permanecen intactas.
 
 ## Formato para decisión nueva
 

@@ -38,12 +38,19 @@ Se creó un runner `scripts/anatheos-g1b-ci.sh` que fuerza `ANATHEOS_PILOT_ENABL
 
 La CI agrega **después de `npm test`** el paso `G1B local HTTP denied-access matrix (no deploy)`. Su resultado exacto debe registrarse en la revisión, no inferirse por existencia del código. La prueba comprueba el HTTP del laboratorio, **no el proxy remoto de ChatGPT Sites**.
 
+## 3 bis. Evidencia de CI y HTTP real sobre HEAD de código
+
+- [GitHub Actions #40369305137](https://github.com/sinergiaestudio/entheos/actions/runs/40369305137), SHA `83345d819edf9dc7107ccf804ddbfdf64fa7a522`, **COMPLETED/SUCCESS**; job `verify` #121735409153: **65 tests / 65 PASS / 0 FAIL / 0 SKIPPED / 0 CANCELLED**. Instalación, lint, typecheck y build PASS. Una advertencia de lint no bloqueante y preexistente en `components/timeline-documents.tsx`.
+- Paso `G1B local HTTP denied-access matrix (no deploy)`: **9/9 HTTP PASS, 0 FAIL, 0 SKIPPED**, cada respuesta 404/no-store/noindex/CSP/nosniff, con falso propietario/anónimo/tercero, solicitudes RSC, rutas API futuras y subruta. Solo loopback 127.0.0.1, flag OFF, usuarios ficticios.
+- **Cobertura real y límite:** demuestra comportamiento HTTP del Worker en el entorno local CI; **no demuestra autenticación del proveedor remoto**, confianza de las cabeceras con flag ON ni separación D1/R2. No habilitar Site.
+- Este propio checkpoint documental se registra por commit posterior: su CI debe comprobarse independientemente antes de informar HEAD final verificado.
+
 ## 4. Matriz G1B y resultados válidos
 
 | Caso | Evidencia aceptable ahora | Estado inicial |
 |---|---|---|
-| Flag OFF + anónimo/falsificación + RSC/API | Matriz HTTP en CI local y unit tests | PENDIENTE CI |
-| Respuestas privadas del Worker | Status y headers reales en CI local | PENDIENTE CI |
+| Flag OFF + anónimo/falsificación + RSC/API | CI #40369305137: nueve respuestas 404 | **PASS (local)** |
+| Respuestas privadas del Worker | CI #40369305137: no-store/noindex/CSP/nosniff | **PASS (local)** |
 | Flag ON + usuario legítimo | Sesión con identidad de procedencia certificada | BLOCKED (sin ambiente confiable) |
 | Flag ON + tercero real/anónimo | Dos sesiones externas controladas sin PHI | BLOCKED |
 | Cabecera proveniente del cliente externo | Prueba de **strip/overwrite en frontdoor** | BLOCKED CRÍTICO |

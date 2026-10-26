@@ -21,6 +21,12 @@ PR #26 fusionado con método `merge` exclusivamente a la rama piloto. **HEAD ini
 - Hallazgo P0: `app/chatgpt-auth.ts` toma el correo de `oai-authenticated-user-email` y deriva isGlobalAdmin; ningún predicado comprueba que la cabecera llegó de un proxy confiable. Flag remoto debe seguir OFF; casos ON/procedencia de identidad y aislamiento real de D1/R2 son BLOCKED.
 - No se modificaron `main`, piloto, producción, Site, D1/R2, secretos, costos ni protección GitHub. Issue #7 sigue abierto; Issue #20 requiere propuesta separada.
 
+## Evidencia provisional G1B de CI · 26/10/2026
+
+- [GitHub Actions #40369305137](https://github.com/sinergiaestudio/entheos/actions/runs/40369305137) sobre SHA `83345d819edf9dc7107ccf804ddbfdf64fa7a522`: **65/65 PASS**, 0 FAIL/SKIPPED; lint/typecheck/build PASS. Nueve peticiones HTTP reales a Worker local respondieron 404 y cabeceras no-store/noindex/CSP/nosniff. **No hubo Site remoto**, flag ON ni usuarios reales.
+- `app/chatgpt-auth.ts` deriva identidad y privilegio del header recibido; validación de procedencia en Sites sigue **BLOCKED P0**. Comparación de D1/R2 de staging también BLOCKED. Ninguna autorización de despliegue o uso clínico.
+- Este checkpoint documental exige CI del nuevo SHA; no confundir los 65 PASS de código con el HEAD documental aún en espera.
+
 ## Panel ejecutivo
 
 | Dimensión | Estado verificable al elaborar este registro | Evidencia |

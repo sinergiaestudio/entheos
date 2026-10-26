@@ -45,6 +45,11 @@
 
 - [Consolidación de PR #21–#24 (Issue #25)](INTEGRACION_ISSUE_25_2026-10-26.md) — rama temporal, trazabilidad de merges de dos padres, regresiones cruzadas, riesgos y decisión pendiente de Dirección. **No equivale a integración aprobada ni publicación.**
 
+## Seguridad pendiente G1B y protección de ramas
+
+- [Matriz de confianza de identidad, verificación HTTP y propuesta de rulesets gratuitos](SEGURIDAD_G1B_Y_RAMAS.md) — **documentación para aprobación, no entorno auditado ni reglas aplicadas**.
+- Smoke local restringido a loopback: `scripts/anatheos-loopback-smoke.mjs` (por defecto sin credenciales ni PHI; ejecutar solo contra servidor local con ANATHEOS deshabilitado). Test de seguridad de URL: `tests/anatheos-g1b-safety.test.mjs`.
+
 ## Tablero de ingeniería
 
 - **PR piloto, borrador, no fusionar:** [#5](https://github.com/sinergiaestudio/entheos/pull/5).

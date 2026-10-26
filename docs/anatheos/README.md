@@ -57,6 +57,10 @@
 - [Matriz de confianza de identidad, verificación HTTP y propuesta de rulesets gratuitos](SEGURIDAD_G1B_Y_RAMAS.md) — **documentación para aprobación, no entorno auditado ni reglas aplicadas**.
 - Smoke local restringido a loopback: `scripts/anatheos-loopback-smoke.mjs` (por defecto sin credenciales ni PHI; ejecutar solo contra servidor local con ANATHEOS deshabilitado). Test de seguridad de URL: `tests/anatheos-g1b-safety.test.mjs`.
 
+## G1B · HTTP local y procedencia de identidad
+
+- [Prueba HTTP real en loopback y bloqueo del frontdoor](G1B_HTTP_LOCAL_2026-10-26.md) — defensa por defecto **OFF** en Worker, prueba de RSC/HTTP/APIs con cabeceras ficticias y reporte de problemas de identidad que **siguen BLOCKED** en Site remoto. Trabajo pendiente de revisión en Issue #7; no significa acceso owner-only validado ni despliegue autorizado.
+
 ## Tablero de ingeniería
 
 - **PR piloto, borrador, no fusionar:** [#5](https://github.com/sinergiaestudio/entheos/pull/5).

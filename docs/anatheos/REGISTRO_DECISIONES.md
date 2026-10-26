@@ -59,6 +59,16 @@
 - **Evidencia y rollback:** [Acta de integración Issue #25](INTEGRACION_ISSUE_25_2026-10-26.md); cerrar PR temporal sin alterar rama piloto.
 - **Estado:** propuesta, no aprobada; D-001–D-009 permanecen intactas.
 
+### P-010 · Defensa HTTP de Worker para laboratorio G1B (propuesta en PR)
+
+- **Fecha/Issue:** 26/10/2026, #7. No es adopción aprobada para despliegue.
+- **Contexto:** `getChatGPTUser()` deriva identidad y rol del header `oai-authenticated-user-email` sin prueba del saneamiento/procedencia en el borde. Aun así el flag G1A se desactiva por defecto.
+- **Propuesta/implementación:** refuerzo OFF en `worker/index.ts` mediante `lib/anatheos/http-boundary.ts`, con 404 y no-store/noindex/CSP antes de entrar a Vinext; pruebas HTTP locales reales por GitHub Actions y pruebas unitarias de rutas.
+- **Impacto:** sin datos clínicos, cambios remotos, APIs, servicios pagos ni conexión D1/R2 adicionales. Con flag ON el worker no demuestra identidad; sigue prohibida la publicación.
+- **Evidencia de código:** [GitHub Actions #40369305137](https://github.com/sinergiaestudio/entheos/actions/runs/40369305137) sobre `83345d819edf9dc7107ccf804ddbfdf64fa7a522`, 65/65 PASS y 9/9 HTTP local OFF PASS. No incluye autenticación real del Site, seguridad de flag ON ni bindings separados.
+- **Estado:** codificado y verificado localmente en PR de G1B para revisión; **NO aprobado para despliegue**. Ver [protocolo](G1B_HTTP_LOCAL_2026-10-26.md). La prueba del frontdoor de Sites, el aislamiento de datos y los permisos efectivos requieren evidencia independiente y aprobación futura.
+- **Sustituye:** ninguna decisión previa. D-004 acceso exclusivo y D-010 integración piloto continúan vigentes.
+
 ## Formato para decisión nueva
 
 ### D-0XX — Título

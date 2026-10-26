@@ -14,6 +14,25 @@ PR #26 fusionado con método `merge` exclusivamente a la rama piloto. **HEAD ini
 - Issues #7, #8, #9, #20 continúan ABIERTOS; el cierre administrativo de Issue #25 depende de registro y revisión de Dirección. Los apartados históricos posteriores o anteriores que declaran `sin fusionar` describen un checkpoint previo, no contradicen este hito.
 - **Este propio commit documental** debe superar su CI separada antes de certificar el HEAD final de la rama piloto. Consultar [acta de integración](INTEGRACION_ISSUE_25_2026-10-26.md).
 
+## Checkpoint de ingeniería G1B · 2026-10-26 (PR pendiente)
+
+- Se propone desde el piloto `19c945cf69ff69daa95804639a4aabc9ce9ad7db` una defensa de Worker **fail-closed** para el flag OFF en HTML, RSC y futuras rutas `/api/anatheos/*`, con cabeceras privadas reales del Worker. Rama `anatheos/issue-7-g1b-loopback-http`, Issue #7.
+- [G1B_HTTP_LOCAL_2026-10-26.md](G1B_HTTP_LOCAL_2026-10-26.md) documenta las nueve solicitudes HTTP auténticas a loopback que ejecutará CI, además de pruebas unitarias; **la existencia del script no constituye evidencia de PASS hasta inspección de GitHub Actions**.
+- Hallazgo P0: `app/chatgpt-auth.ts` toma el correo de `oai-authenticated-user-email` y deriva isGlobalAdmin; ningún predicado comprueba que la cabecera llegó de un proxy confiable. Flag remoto debe seguir OFF; casos ON/procedencia de identidad y aislamiento real de D1/R2 son BLOCKED.
+- No se modificaron `main`, piloto, producción, Site, D1/R2, secretos, costos ni protección GitHub. Issue #7 sigue abierto; Issue #20 requiere propuesta separada.
+
+## Evidencia provisional G1B de CI · 26/10/2026
+
+- [GitHub Actions #40369305137](https://github.com/sinergiaestudio/entheos/actions/runs/40369305137) sobre SHA `83345d819edf9dc7107ccf804ddbfdf64fa7a522`: **65/65 PASS**, 0 FAIL/SKIPPED; lint/typecheck/build PASS. Nueve peticiones HTTP reales a Worker local respondieron 404 y cabeceras no-store/noindex/CSP/nosniff. **No hubo Site remoto**, flag ON ni usuarios reales.
+- `app/chatgpt-auth.ts` deriva identidad y privilegio del header recibido; validación de procedencia en Sites sigue **BLOCKED P0**. Comparación de D1/R2 de staging también BLOCKED. Ninguna autorización de despliegue o uso clínico.
+- Este checkpoint documental exige CI del nuevo SHA; no confundir los 65 PASS de código con el HEAD documental aún en espera.
+
+## Revisión G1B ampliada · Issue #7 · 26/10/2026
+
+- Dirección solicitó HEAD/POST/OPTIONS y canonicalización de URLs. En PR #27 se agregaron normalización de rutas y pruebas HTTP local sobre **23 casos**, no 9.
+- [GitHub Actions #40373451808](https://github.com/sinergiaestudio/entheos/actions/runs/40373451808) sobre SHA `397e2810f28b9cc45053c502da4805219907c801`: **67/67 PASS, 23/23 HTTP PASS, 0 FAIL/SKIPPED**, lint/typecheck/build PASS. Documento G1B detalla lo probado y bloqueado.
+- No hay prueba remota de identidad ON ni aislamiento D1/R2, **ningún deploy o merge autorizado**, Issue #7 abierto. Los checkpoints 65/9 son históricos y no deben sobrescribirse.
+
 ## Panel ejecutivo
 
 | Dimensión | Estado verificable al elaborar este registro | Evidencia |

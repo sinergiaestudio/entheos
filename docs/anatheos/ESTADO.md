@@ -14,6 +14,13 @@ PR #26 fusionado con método `merge` exclusivamente a la rama piloto. **HEAD ini
 - Issues #7, #8, #9, #20 continúan ABIERTOS; el cierre administrativo de Issue #25 depende de registro y revisión de Dirección. Los apartados históricos posteriores o anteriores que declaran `sin fusionar` describen un checkpoint previo, no contradicen este hito.
 - **Este propio commit documental** debe superar su CI separada antes de certificar el HEAD final de la rama piloto. Consultar [acta de integración](INTEGRACION_ISSUE_25_2026-10-26.md).
 
+## Checkpoint de ingeniería G1B · 2026-10-26 (PR pendiente)
+
+- Se propone desde el piloto `19c945cf69ff69daa95804639a4aabc9ce9ad7db` una defensa de Worker **fail-closed** para el flag OFF en HTML, RSC y futuras rutas `/api/anatheos/*`, con cabeceras privadas reales del Worker. Rama `anatheos/issue-7-g1b-loopback-http`, Issue #7.
+- [G1B_HTTP_LOCAL_2026-10-26.md](G1B_HTTP_LOCAL_2026-10-26.md) documenta las nueve solicitudes HTTP auténticas a loopback que ejecutará CI, además de pruebas unitarias; **la existencia del script no constituye evidencia de PASS hasta inspección de GitHub Actions**.
+- Hallazgo P0: `app/chatgpt-auth.ts` toma el correo de `oai-authenticated-user-email` y deriva isGlobalAdmin; ningún predicado comprueba que la cabecera llegó de un proxy confiable. Flag remoto debe seguir OFF; casos ON/procedencia de identidad y aislamiento real de D1/R2 son BLOCKED.
+- No se modificaron `main`, piloto, producción, Site, D1/R2, secretos, costos ni protección GitHub. Issue #7 sigue abierto; Issue #20 requiere propuesta separada.
+
 ## Panel ejecutivo
 
 | Dimensión | Estado verificable al elaborar este registro | Evidencia |

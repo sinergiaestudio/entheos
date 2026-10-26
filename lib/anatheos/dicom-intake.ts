@@ -5,7 +5,7 @@
  * No network calls, storage bindings or patient identifiers in diagnostics.
  * Keep limits centralized for future Cornerstone3D adapter.
  */
-import { buildVolume, parseDicom, type DicomSlice, type DicomVolume } from "./dicom";
+import { buildVolume, parseDicom, type DicomSlice, type DicomVolume } from "./dicom.ts";
 
 export const DICOM_INTAKE_LIMITS = Object.freeze({
   maxFiles: 600,

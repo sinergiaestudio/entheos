@@ -1,0 +1,94 @@
+# ANATHEOS 3D — Centro de dirección e ingeniería
+
+**Proyecto:** plataforma general de reconstrucción médica 3D.  
+**Código y documentación:** módulo experimental de Entheos en rama feature/anatheos-3d-owner-pilot.  
+**Política:** sin licencias, APIs o suscripciones externas pagas; ningún gasto adicional sin autorización.
+**Privacidad:** GitHub público; prohibido introducir datos clínicos reales y secretos.
+**Producción:** main y el Site Entheos permanecen fuera del piloto hasta autorización futura.
+
+## Documentos canónicos
+
+1. [Plan maestro](PLAN_MAESTRO.md) — visión, G0–G8, dependencias, criterios, prioridades, riesgos.
+2. [Arquitectura objetivo](ARQUITECTURA_OBJETIVO.md) — límites, módulos, datos, geometría y elección técnica.
+3. [Calidad, seguridad y validación](CALIDAD_SEGURIDAD_VALIDACION.md) — pruebas, gates, privacidad, validación DICOM/Slicer.
+4. [Decisiones adoptadas y propuestas](REGISTRO_DECISIONES.md) — D-001–D-009 y opciones técnicas pendientes.
+5. [Protocolo GitHub / dos chats](PROTOCOLO_GIT_Y_CHATS.md) — responsables, issues, PR, aprobaciones, comunicación.
+6. [Estado y riesgos actualizables](ESTADO.md) — hechos comprobados, tareas inmediatas, auditoría.
+7. [Inicio del chat de desarrollo](INICIO_CHAT_DESARROLLO.md) — instrucción ejecutiva que debe leer el programador.
+8. [Registro previo de hitos](../ANATHEOS_MILESTONES.md) — prototipo DICOM inicial y su QA.
+9. [Especificación del piloto inicial](../ANATHEOS_3D_PILOT.md) y [traspaso del Proyecto ChatGPT](../ANATHEOS_CHATGPT_PROJECT_HANDOFF.md) — historia y contexto.
+
+## Hito de integración experimental aprobado (Issue #25)
+
+- **PR #26 [fusionado](https://github.com/sinergiaestudio/entheos/pull/26)** en `feature/anatheos-3d-owner-pilot`, merge `8c0f29d30670c4e2d21d8673a1050d02b61f5bfd`, por autorización [de Dirección](https://github.com/sinergiaestudio/entheos/pull/26#issuecomment-6421827902).
+- CI del nuevo HEAD [GitHub Actions #40364071117](https://github.com/sinergiaestudio/entheos/actions/runs/40364071117): **60/60 PASS**, sin fallos ni omisiones. [Acta consolidada y control de riesgo](INTEGRACION_ISSUE_25_2026-10-26.md).
+- **No se autorizó** Site, uso clínico, carga de estudios reales, cambios en `main` o acceso a terceros. G1B, #20 y validación DICOM/Slicer siguen pendientes.
+- Los checkpoints de los PR originales que aún dicen *no integrado* corresponden a un **estado histórico anterior a esta fusión**; este apartado prevalece para el estado actual.
+
+## Auditorías independientes de dirección
+
+- [Auditoría de PR #21–#24, 26/10/2026](AUDITORIA_DIRECCION_2026-10-26.md) — estado real, evidencias CI, riesgos P0 y condiciones para integración; [Issue de control #25](https://github.com/sinergiaestudio/entheos/issues/25).
+
+## Auditoría reproducible G0
+
+- [Acta de baseline e inventario de riesgos (2026-10-26)](AUDITORIA_G0_2026-10-26.md) — verificación del SHA piloto, PR, Actions, límites, riesgos y dependencias.
+- Prueba documental automatizada: `tests/anatheos-governance.test.mjs` (validación estática; **no** sustituye pruebas de identidad, DICOM, protección de ramas ni validación médica).
+
+## Laboratorio G1 · Seguridad del piloto
+
+- [Protocolo G1A y matriz de pruebas de acceso](LAB_G1_LOCAL.md) — piloto deshabilitado por defecto, puerta owner-only y requisitos **pendientes** de prueba HTTP y de identidad confiable.
+
+## Corpus de referencia G2b
+
+- [Corpus DICOM íntegramente sintético](CORPUS_DICOM_SINTETICO.md) — escenarios anisotrópicos, oblicuos, lateralidad invertida y rechazos; goldens físicos LPS y guía de comparación con 3D Slicer, aún no ejecutada.
+- Generador sin descarga ni binarios versionados: `tests/fixtures/anatheos/synthetic-series.mjs`, `scripts/anatheos-corpus-manifest.mjs`; pruebas `tests/anatheos-corpus.test.mjs`.
+
+## Loader DICOM G2a
+
+- [Frontera de ingestión local y evaluación OSS](DECODIFICADOR_G2A.md): control de presupuesto, detección de sintaxis, cancelación cooperativa y estrategia de reemplazo por Cornerstone3D. **No equivale a decodificador nuevo integrado**.
+- Fuente del contrato: `lib/anatheos/dicom-intake.ts`. Tests: `tests/anatheos-intake.test.mjs`.
+
+## Integración conjunta en revisión
+
+- [Consolidación de PR #21–#24 (Issue #25)](INTEGRACION_ISSUE_25_2026-10-26.md) — rama temporal, trazabilidad de merges de dos padres, regresiones cruzadas, riesgos y decisión pendiente de Dirección. **No equivale a integración aprobada ni publicación.**
+
+## Seguridad pendiente G1B y protección de ramas
+
+- [Matriz de confianza de identidad, verificación HTTP y propuesta de rulesets gratuitos](SEGURIDAD_G1B_Y_RAMAS.md) — **documentación para aprobación, no entorno auditado ni reglas aplicadas**.
+- Smoke local restringido a loopback: `scripts/anatheos-loopback-smoke.mjs` (por defecto sin credenciales ni PHI; ejecutar solo contra servidor local con ANATHEOS deshabilitado). Test de seguridad de URL: `tests/anatheos-g1b-safety.test.mjs`.
+
+## Tablero de ingeniería
+
+- **PR piloto, borrador, no fusionar:** [#5](https://github.com/sinergiaestudio/entheos/pull/5).
+- **Gobierno G0:** [#6](https://github.com/sinergiaestudio/entheos/issues/6).
+- **Seguridad G1:** [#7](https://github.com/sinergiaestudio/entheos/issues/7).
+- **Importador G2a:** [#8](https://github.com/sinergiaestudio/entheos/issues/8).
+- **Corpus DICOM G2b:** [#9](https://github.com/sinergiaestudio/entheos/issues/9).
+- **MPR G3a:** [#10](https://github.com/sinergiaestudio/entheos/issues/10).
+- **UX/mediciones G3b:** [#11](https://github.com/sinergiaestudio/entheos/issues/11).
+- **Volumen 3D G4a:** [#12](https://github.com/sinergiaestudio/entheos/issues/12).
+- **Rendimiento G4b:** [#13](https://github.com/sinergiaestudio/entheos/issues/13).
+- **Segmentación manual G5a:** [#14](https://github.com/sinergiaestudio/entheos/issues/14).
+- **IA local optativa G5b:** [#15](https://github.com/sinergiaestudio/entheos/issues/15).
+- **Datos/Entheos G6:** [#16](https://github.com/sinergiaestudio/entheos/issues/16).
+- **Preview privado G7:** [#17](https://github.com/sinergiaestudio/entheos/issues/17).
+- **Apertura/regulación G8:** [#18](https://github.com/sinergiaestudio/entheos/issues/18).
+- **Privacidad, supply chain y seguridad transversal:** [#19](https://github.com/sinergiaestudio/entheos/issues/19).
+- **Protección de main e integración experimental:** [#20](https://github.com/sinergiaestudio/entheos/issues/20) — hallazgo P0, sin cambios de configuración autorizados.
+
+## Inicio recomendado
+
+**Dirección (este chat):** leer README, ESTADO, Issues, PR y checks; decidir alcance y aprobar o devolver hitos. Nunca confundir un commit con validación geométrica ni un branch con una URL privada.
+
+**Desarrollo (chat separado):** abrir INICIO_CHAT_DESARROLLO; implementar issue en rama desde integración; crear PR contra rama piloto; adjuntar CI y resultados; dejar comentario de entrega y actualizar documentación. Si cambia alcance o presupuesto, detener e iniciar propuesta de decisión.
+
+## Estado al centralizar
+
+La rama contiene una portada de propietario y un lector DICOM experimental local muy limitado, con un visor de planos simples. Existen pruebas sintéticas en CI, pero **no** existe renderizado volumétrico 3D ni Site piloto privado desplegado o validado. Los documentos maestros describen un diseño y metas, no funciones implementadas.
+
+## Política de conservación
+
+- Todo hito debe quedar como commits/Issues/PR y su estado en ESTADO; todo cambio estratégico debe figurar en REGISTRO_DECISIONES.
+- No guardar datos médicos, PDF de pacientes, dicoms reales, contraseñas o tokens en el repo ni en Issues.
+- Nunca borrar una decisión histórica para ocultar un cambio de criterio; agregar reemplazo y enlace.
+- Evitar usar el chat como único respaldo. GitHub aloja el registro técnico, no expedientes clínicos.

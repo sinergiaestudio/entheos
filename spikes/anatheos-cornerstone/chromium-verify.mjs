@@ -19,13 +19,18 @@ try {
   const page = await browser.newPage();
   const networkEvents = [];
   const consoleErrors = [];
+  const workerEvents = [];
+  const failedRequests = [];
   page.on("request", request => {
     const url = new URL(request.url());
     if (url.origin !== origin && !["data:", "blob:"].includes(url.protocol)) {
       networkEvents.push({ method: request.method(), protocol: url.protocol });
     }
   });
-  page.on("pageerror", error => consoleErrors.push(error.name));
+  page.on("pageerror", error => consoleErrors.push(error.name + ": " + error.message.slice(0,300)));
+  page.on("console", msg => { if (msg.type() === "error" || msg.type() === "warning") consoleErrors.push("console." + msg.type() + ": " + msg.text().slice(0,250)); });
+  page.on("worker", worker => workerEvents.push("created"));
+  page.on("requestfailed", req => failedRequests.push({ origin: new URL(req.url()).origin, reason: req.failure()?.errorText }));
   await page.goto(origin + "/", { waitUntil: "networkidle", timeout: 45000 });
   for (const [name, options, expected] of [
     ["explicit-le-ct-single-frame", { scenario: 78, layer: 2 },
@@ -38,8 +43,19 @@ try {
       mimeType: "application/dicom",
       buffer: Buffer.from(bytes),
     });
-    await page.waitForFunction(() => ["ok", "error"].includes(
-      window.__anatheosProbe?.state), null, { timeout: 60000 });
+    try {
+      await page.waitForFunction(() => ["ok", "error"].includes(
+        window.__anatheosProbe?.state), null, { timeout: 20000 });
+    } catch (e) {
+      const snapshot = await page.evaluate(() => ({
+        state: window.__anatheosProbe,
+        ui: document.getElementById("status")?.textContent?.slice(0,200),
+      }));
+      process.stdout.write("G2B Chromium diagnostic timeout (synthetic only): " +
+        JSON.stringify({ snapshot, consoleErrors, workerEvents, failedRequests,
+          blockedRemoteRequests: networkEvents.length }) + "\n");
+      throw e;
+    }
     const measured = await page.evaluate(() => window.__anatheosProbe);
     const report = {
       name, state: measured.state, rows: measured.rows, columns: measured.columns,

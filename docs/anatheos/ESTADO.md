@@ -25,6 +25,50 @@
 | Licencias/APIs pagas | Ninguna incorporada al prototipo de ANATHEOS en rama | código inicial y política D-002 |
 | Gobierno de proyecto | Plan, arquitectura, QA, decisiones, protocolo e issues creados | docs/anatheos |
 
+## Checkpoint de auditoría G0 · 2026-10-26 (propuesta en PR de #6)
+
+- Baseline de `main` antes del trabajo: `8e7602280d6c4fddc234c1973537839592683798`.
+- Baseline de integración antes del trabajo: `f66ffaa919b26ab3f4290499009b46812df957ab`, 26 commits por delante y ninguno detrás de `main`.
+- Workflow inicial [40333568854](https://github.com/sinergiaestudio/entheos/actions/runs/40333568854): `success` en ese SHA, incluyendo lint, typecheck y `npm test` (build y tests). Los checks del PR de G0 son **pendientes de comprobación independiente**.
+- PR #5: abierto y borrador, base `main`, sin merge; **no fusionar**.
+- Protección de `main` y piloto: `protected=false`. Issue #20 sigue P0; no modificar settings sin autorización.
+- [Acta de auditoría](AUDITORIA_G0_2026-10-26.md): inventario, limitaciones y matriz de dependencias. La rama `anatheos/issue-6-g0-audit` propone prueba estática de enlaces y decisiones; **no** constituye revisión médica ni test de acceso real.
+- **G0 permanece EN REVISIÓN hasta CI del HEAD del PR, revisión y aceptación.** No se creó entorno remoto ni se utilizaron estudios reales.
+
+## Checkpoint G1A · 2026-10-26 (rama de Issue #7, **sin fusionar**)
+
+- Rama propuesta: `anatheos/issue-7-owner-gate` desde HEAD piloto `f66ffaa919b26ab3f4290499009b46812df957ab`, sin modificar `main` ni la integración.
+- Puerta `ANATHEOS_PILOT_ENABLED` estrictamente igual a `true` y verificación adicional de propietario antes de renderizar ANATHEOS. Por defecto, ruta inaccesible; la habilitación **no se autoriza en producción**.
+- Cabeceras de caché/robots declaradas para rutas ANATHEOS; tests sintéticos de propietario/tercero/anónimo y configuración. La efectiva emisión de cabeceras en Vinext/Worker queda **sin prueba HTTP**.
+- [Protocolo G1A](LAB_G1_LOCAL.md) documenta aislamiento local, límites, matriz de aceptación, y riesgo de cabeceras de identidad si el borde no las sanea. `APP_OWNER_EMAIL` debe permanecer secreto de entorno, no almacenado en repo.
+- **G1 no está terminado:** no se ejecutó login real/otro usuario, no se verificó proxy confiable, D1/R2 staging ni URL remota. No desplegar.
+- Checks nuevos de CI/HEAD y PR deben registrarse al final; no deducir estado sólo por commits.
+
+## Checkpoint G2b-A · 2026-10-26 (Issue #9, rama en revisión)
+
+- Se propone un **corpus programático sintético** de nueve casos y generador local de DICOM Part 10, sin datos de pacientes ni binarios en GitHub, generado únicamente en memoria salvo exportación local explícita **fuera** del repositorio.
+- [Corpus, goldens y protocolo Slicer](CORPUS_DICOM_SINTETICO.md); hashes SHA-256 reproducibles por `node scripts/anatheos-corpus-manifest.mjs`.
+- Se agregan pruebas de casos axial anisotrópico, normal negativa/lateralidad, oblicuo, irregularidad, desplazamiento en plano, mezcla de series, implicit LE y rechazo de JPEG marcado/multiframe.
+- **No significa geometría validada:** goldens de test se comparan contra datos inventados; falta importación y contraste Slicer, dataset público desidentificado y pruebas clínicas. 3D volumétrico sigue sin implementar.
+- G1B pendiente de autenticar origen de cabeceras confiables; no existe entorno remoto owner-only verificado y no se activa ningún flag del piloto.
+- **Pruebas automatizadas verificadas:** commit `357ba8802f8bffb39563b2bb2d7df1d707016f20`, [GitHub Actions #40347354554](https://github.com/sinergiaestudio/entheos/actions/runs/40347354554), **32 PASS / 0 FAIL / 0 SKIPPED** (incluye pruebas de manifest/exportador); lint terminó con **1 advertencia preexistente** en `components/timeline-documents.tsx` y sin errores; typecheck/build PASS. El primer CI de este trabajo [#40346916743](https://github.com/sinergiaestudio/entheos/actions/runs/40346916743) falló por igualdad estricta de floats (29/30), corregido en commit `686e6ccd6809e7e0acb73bce9a8d6c8c85a5149b`. **CI del presente commit documental sujeto a comprobación posterior**. G2b permanece **parcial/en revisión**, sin Slicer.
+
+## Checkpoint G2a-A · 2026-10-26 (Issue #8; rama de trabajo, no integrada)
+
+- Rama `anatheos/issue-8-import-intake`, derivada de `feature/anatheos-3d-owner-pilot` en SHA `f66ffaa919b26ab3f4290499009b46812df957ab`.
+- `lib/anatheos/dicom-intake.ts`: preflight Part10 máx. 64 KiB, exclusión temprana de sintaxis no admitidas, presupuesto 600 archivos / 32 MB por archivo / 320 MB total, lectura serializada, cancelación cooperativa, exclusión de geometrías incompatibles y reporte sin etiquetas arbitrarias de DICOM. El lector P1A sigue siendo quien decodifica píxeles, **no fue sustituido**.
+- `components/anatheos/dicom-browser.tsx` usa el nuevo contrato y ofrece cancelación de lectura; `tests/anatheos-intake.test.mjs` añade casos adversariales sintéticos y privacidad.
+- [Matriz de formatos y spike de decoder OSS](DECODIFICADOR_G2A.md). Cornerstone3D/dicom-image-loader como candidato preferente para spike; ni instalado ni aprobado definitivamente. P-002 continúa propuesta sin adopción.
+- No se integraron PR #21/#22/#23, todavía draft, para evitar mezclas de ramas de revisión. Futuras integraciones deberán conciliar README/ESTADO y correr CI de la combinación.
+- **CI verificado de código:** [GitHub Actions #40350908859](https://github.com/sinergiaestudio/entheos/actions/runs/40350908859), commit `ff91c47f1c6f3ea1297f483e976d5a61e1632150`, **31/31 PASS, 0 FAIL, 0 SKIPPED**, lint (1 advertencia preexistente fuera de ANATHEOS), typecheck y build PASS. Se registraron dos ejecuciones fallidas iniciales por compatibilidad del ejecutor Node24 con TypeScript, corregidas sin alterar el parser. El presente commit documental debe tener su propio CI comprobado antes de declarar HEAD final exitoso. No hay validación Slicer, datos clínicos ni despliegue; G1B sigue bloqueado por procedencia confiable de identidad.
+
+## Checkpoint de integración propuesta · Issue #25 · 2026-10-26
+
+- Rama temporal `anatheos/issue-25-integration-review`, derivada de piloto auditado **actual** `aec8222c5fa4b529575fc49a85f401ecf7a41a49` que ya contiene la auditoría independiente de Dirección y su vínculo en README.
+- Referencias de origen: PR [#21](https://github.com/sinergiaestudio/entheos/pull/21) (G0), [#22](https://github.com/sinergiaestudio/entheos/pull/22) (G1A), [#23](https://github.com/sinergiaestudio/entheos/pull/23) (G2b-A), [#24](https://github.com/sinergiaestudio/entheos/pull/24) (G2a-A); merge commits **solo en esta rama temporal**, con los heads originales como segundos padres, sin fusionar ninguno de los PR originales en piloto.
+- Se preservaron los cuatro checkpoints previos y los añadidos G0, G1A, G2b-A y G2a-A. El documento [INTEGRACION_ISSUE_25_2026-10-26.md](INTEGRACION_ISSUE_25_2026-10-26.md) describe reconciliación, límites, regresión cruzada y rollback.
+- **Integración combinada: pendiente de CI en HEAD exacto** y revisión de Dirección. No hay despliegue, auditoría HTTP de identidad, Slicer, 3D volumétrico ni datos médicos. No cerrar #6/#7/#8/#9/#25 sin criterios cumplidos.
+
 ## Mapa de trabajo (gates)
 
 - **G0 — En curso:** documentación e Issues organizados; pendiente auditar consistencia final y acordar inicio de chat técnico.

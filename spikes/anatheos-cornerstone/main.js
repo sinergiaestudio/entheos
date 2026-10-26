@@ -3,7 +3,7 @@
  * Only a test-selected File reaches the loader. No DICOMweb / network transport.
  * It is neither a medical viewer nor an approval to use clinical DICOM.
  */
-import { init as initCore, imageLoader, cache } from "@cornerstonejs/core";
+import { init as initCore, imageLoader, cache, metaData } from "@cornerstonejs/core";
 import { init as initDicomLoader, wadouri } from "@cornerstonejs/dicom-image-loader";
 
 let initialized = false;
@@ -30,15 +30,24 @@ function removeImageId(imageId) {
   if (!imageId) return;
   const index = Number(imageId.slice("dicomfile:".length));
   try { cache.removeImageLoadObject(imageId); } catch { /* best effort, benchmark separately */ }
-  if (Number.isSafeInteger(index)) wadouri.fileManager.remove(index);
+  if (Number.isSafeInteger(index)) {
+    wadouri.fileManager.remove(index);
+    return wadouri.fileManager.get(index) === undefined;
+  }
+  return false;
 }
 
 function discard() {
   selectionGeneration += 1;
-  removeImageId(currentImageId);
+  const hadFile = currentImageId !== null;
+  const fileReferenceRemoved = removeImageId(currentImageId);
   currentImageId = null;
   input.value = "";
-  window.__anatheosProbe = { state: "cleared", cleanupRequested: true };
+  window.__anatheosProbe = {
+    state: "cleared", cleanupRequested: true,
+    fileReferenceRemoved: hadFile ? fileReferenceRemoved : null,
+    heapBytes: performance.memory?.usedJSHeapSize ?? null,
+  };
   status.textContent = "Archivo retirado del visor; la liberación de RAM y workers depende del navegador.";
 }
 
@@ -73,6 +82,7 @@ async function decodeSelected(file) {
     const intercept = Number(ds?.string?.("x00281052") ?? image.intercept ?? 0);
     const positions = [0, 1, 2, image.columns, image.columns + 1, pixels.length - 1];
     const samples = positions.map(index => Number(pixels[index]));
+    const plane = metaData.get("imagePlaneModule", imageId);
     const result = {
       state: "ok",
       rows: image.rows,
@@ -85,6 +95,13 @@ async function decodeSelected(file) {
       durationMs: Number((performance.now() - t0).toFixed(2)),
       heapBytes: performance.memory?.usedJSHeapSize ?? null,
       transferSyntax: ds?.string?.("x00020010") ?? "unavailable",
+      imagePlane: plane ? {
+        imagePositionPatient: plane.imagePositionPatient ?? null,
+        rowCosines: plane.rowCosines ?? null,
+        columnCosines: plane.columnCosines ?? null,
+        rowPixelSpacing: plane.rowPixelSpacing ?? null,
+        columnPixelSpacing: plane.columnPixelSpacing ?? null,
+      } : null,
     };
     window.__anatheosProbe = result;
     status.textContent = "Cornerstone decodificó " + result.columns + " × " + result.rows +

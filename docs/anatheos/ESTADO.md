@@ -27,6 +27,12 @@ PR #26 fusionado con método `merge` exclusivamente a la rama piloto. **HEAD ini
 - `app/chatgpt-auth.ts` deriva identidad y privilegio del header recibido; validación de procedencia en Sites sigue **BLOCKED P0**. Comparación de D1/R2 de staging también BLOCKED. Ninguna autorización de despliegue o uso clínico.
 - Este checkpoint documental exige CI del nuevo SHA; no confundir los 65 PASS de código con el HEAD documental aún en espera.
 
+## Revisión G1B ampliada · Issue #7 · 26/10/2026
+
+- Dirección solicitó HEAD/POST/OPTIONS y canonicalización de URLs. En PR #27 se agregaron normalización de rutas y pruebas HTTP local sobre **23 casos**, no 9.
+- [GitHub Actions #40373451808](https://github.com/sinergiaestudio/entheos/actions/runs/40373451808) sobre SHA `397e2810f28b9cc45053c502da4805219907c801`: **67/67 PASS, 23/23 HTTP PASS, 0 FAIL/SKIPPED**, lint/typecheck/build PASS. Documento G1B detalla lo probado y bloqueado.
+- No hay prueba remota de identidad ON ni aislamiento D1/R2, **ningún deploy o merge autorizado**, Issue #7 abierto. Los checkpoints 65/9 son históricos y no deben sobrescribirse.
+
 ## Panel ejecutivo
 
 | Dimensión | Estado verificable al elaborar este registro | Evidencia |

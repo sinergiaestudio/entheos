@@ -18,6 +18,10 @@
 8. [Registro previo de hitos](../ANATHEOS_MILESTONES.md) — prototipo DICOM inicial y su QA.
 9. [Especificación del piloto inicial](../ANATHEOS_3D_PILOT.md) y [traspaso del Proyecto ChatGPT](../ANATHEOS_CHATGPT_PROJECT_HANDOFF.md) — historia y contexto.
 
+## Laboratorio G1 · Seguridad del piloto
+
+- [Protocolo G1A y matriz de pruebas de acceso](LAB_G1_LOCAL.md) — piloto deshabilitado por defecto, puerta owner-only y requisitos **pendientes** de prueba HTTP y de identidad confiable.
+
 ## Tablero de ingeniería
 
 - **PR piloto, borrador, no fusionar:** [#5](https://github.com/sinergiaestudio/entheos/pull/5).

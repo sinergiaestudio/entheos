@@ -32,7 +32,7 @@
 - Se agregan pruebas de casos axial anisotrópico, normal negativa/lateralidad, oblicuo, irregularidad, desplazamiento en plano, mezcla de series, implicit LE y rechazo de JPEG marcado/multiframe.
 - **No significa geometría validada:** goldens de test se comparan contra datos inventados; falta importación y contraste Slicer, dataset público desidentificado y pruebas clínicas. 3D volumétrico sigue sin implementar.
 - G1B pendiente de autenticar origen de cabeceras confiables; no existe entorno remoto owner-only verificado y no se activa ningún flag del piloto.
-- Se requieren SHA y resultados CI del PR para convertir `codificado` en `probado automáticamente`; G2b permanece **parcial/en revisión**.
+- **Pruebas automatizadas verificadas:** commit `357ba8802f8bffb39563b2bb2d7df1d707016f20`, [GitHub Actions #40347354554](https://github.com/sinergiaestudio/entheos/actions/runs/40347354554), **32 PASS / 0 FAIL / 0 SKIPPED** (incluye pruebas de manifest/exportador); lint terminó con **1 advertencia preexistente** en `components/timeline-documents.tsx` y sin errores; typecheck/build PASS. El primer CI de este trabajo [#40346916743](https://github.com/sinergiaestudio/entheos/actions/runs/40346916743) falló por igualdad estricta de floats (29/30), corregido en commit `686e6ccd6809e7e0acb73bce9a8d6c8c85a5149b`. **CI del presente commit documental sujeto a comprobación posterior**. G2b permanece **parcial/en revisión**, sin Slicer.
 
 ## Mapa de trabajo (gates)
 

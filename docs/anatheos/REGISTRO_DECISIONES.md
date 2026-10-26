@@ -59,6 +59,12 @@
 - **Evidencia y rollback:** [Acta de integración Issue #25](INTEGRACION_ISSUE_25_2026-10-26.md); cerrar PR temporal sin alterar rama piloto.
 - **Estado:** propuesta, no aprobada; D-001–D-009 permanecen intactas.
 
+### P-008 · Ampliación técnica de la propuesta de protección de ramas (sin cambiar aprobación)
+
+- **Propuesta:** dos políticas separadas para `main` y `feature/anatheos-3d-owner-pilot`, requerir PR y status `verify`, bloquear force-push/borrado, preservar merges normales y evaluar disponibilidad de revisión humana efectiva.
+- **Fundamento:** [PROTECCION_RAMAS_ISSUE_20.md](PROTECCION_RAMAS_ISSUE_20.md) documenta opciones gratuitas, limitación de segundo revisor, GitHub Settings, despliegues de Entheos, rollback y prueba posterior.
+- **Estado:** diseño técnico entregado para revisión; **NO autoriza** crear/activar reglas de GitHub ni cierra el Issue #20. D-009 y D-010 quedan intactas.
+
 ## Formato para decisión nueva
 
 ### D-0XX — Título

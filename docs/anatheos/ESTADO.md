@@ -14,6 +14,13 @@ PR #26 fusionado con método `merge` exclusivamente a la rama piloto. **HEAD ini
 - Issues #7, #8, #9, #20 continúan ABIERTOS; el cierre administrativo de Issue #25 depende de registro y revisión de Dirección. Los apartados históricos posteriores o anteriores que declaran `sin fusionar` describen un checkpoint previo, no contradicen este hito.
 - **Este propio commit documental** debe superar su CI separada antes de certificar el HEAD final de la rama piloto. Consultar [acta de integración](INTEGRACION_ISSUE_25_2026-10-26.md).
 
+## Checkpoint de diseño #20 · 26/10/2026 (configuración NO aplicada)
+
+- Rama `anatheos/issue-20-branch-protection-design` derivada de `feature/anatheos-3d-owner-pilot` SHA `19c945cf69ff69daa95804639a4aabc9ce9ad7db`. [Propuesta completa](PROTECCION_RAMAS_ISSUE_20.md) con dos políticas distintas, QA, plan de rollback y compatibilidad con el único job `verify` de GitHub Actions.
+- GitHub confirma `protected=false` para `main` y piloto; GET `/rulesets` retorna lista vacía; detalles de branch protection inaccesibles por `403` en la integración GitHub, pese a que metadata general indica `admin=true`. NO se modificaron Settings.
+- Las reglas de GitHub Free para repos públicos no suponen un nuevo servicio pago. Es necesaria autorización adicional de Dirección para activar; ningún check demuestra aún bloqueo efectivo de push/merge. PR #5 continúa DRAFT y no fusionado.
+- El despliegue de Entheos puede depender de mecanismo externo al workflow `.github/workflows/ci.yml`; no activar protecciones sin inventario operativo. #20 ABIERTO.
+
 ## Panel ejecutivo
 
 | Dimensión | Estado verificable al elaborar este registro | Evidencia |

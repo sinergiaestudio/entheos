@@ -40,10 +40,13 @@ export const INTAKE_REASON_LABELS: Record<IntakeRejection, string> = {
 };
 
 export class DicomIntakeError extends Error {
-  constructor(public readonly code: "budget" | "cancelled") {
+  readonly code: "budget" | "cancelled";
+
+  constructor(code: "budget" | "cancelled") {
     super(code === "budget"
       ? "Límite local: máximo 600 archivos, 32 MB por archivo y 320 MB en total."
       : "Lectura cancelada. No se conservaron los archivos seleccionados.");
+    this.code = code;
     this.name = "DicomIntakeError";
   }
 }
@@ -74,8 +77,11 @@ function headerError(kind: "invalid-header" | "unsupported-syntax"): never {
 }
 
 export class IntakeHeaderError extends Error {
-  constructor(public readonly code: "invalid-header" | "unsupported-syntax") {
+  readonly code: "invalid-header" | "unsupported-syntax";
+
+  constructor(code: "invalid-header" | "unsupported-syntax") {
     super(INTAKE_REASON_LABELS[code]);
+    this.code = code;
     this.name = "IntakeHeaderError";
   }
 }

@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/anatheos-3d-owner-pilot]
   pull_request:
 
 permissions:

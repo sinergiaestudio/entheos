@@ -66,6 +66,14 @@ La CI agrega **después de `npm test`** el paso `G1B local HTTP denied-access ma
 - `worker/index.ts` referencia `DB` como tipo de binding global de Entheos; ANATHEOS no incorpora ninguna lectura/escritura D1/R2 nueva.
 - **Antes de desplegar:** obtener por medios administrativos una tabla sanitizada con *identificadores de proyecto y recursos* de staging vs producción, y confirmar diferencia real de cuentas/buckets/D1, sin incluir tokens ni datos clínicos en repositorio público. Sin autorización de infraestructura no se provisiona nada.
 
+## 5 bis. Ampliación adversarial tras auditoría de Dirección
+
+Se incorporaron al gate normalización iterativa de rutas percent-encoded y doble codificación, backslashes, segmentos `.`/`..`, separadores múltiples y parámetros de segmento. La matriz HTTP local ejecuta **23 escenarios**, incluidos HEAD, POST y OPTIONS, así como respuestas RSC/API y variaciones de URL. Se agregaron tests de regresión de rutas no ANATHEOS y exigencia de 404/headers para métodos no GET. **La cobertura no es exhaustiva**: comportamiento del router, proxies y URL remotas debe auditarse en entorno separado.
+
+- SHA de código `397e2810f28b9cc45053c502da4805219907c801`, [CI #40373451808](https://github.com/sinergiaestudio/entheos/actions/runs/40373451808): **67/67 pruebas PASS, 0 FAIL, 0 SKIPPED; HTTP real 23/23 PASS** en CI con flag OFF, sin desplegar. Un warning lint preexistente fuera de ANATHEOS.
+- Un test local de rutas no ANATHEOS demuestra que el helper no altera esas respuestas; **no equivale a regresión funcional exhaustiva** de Entheos productivo. El entrypoint Worker de CI usa el mismo archivo fuente `worker/index.ts` que el build del proyecto, pero no demuestra que el Site remoto emplee idéntica ruta de ejecución/identidad.
+- G1B ON y confianza de header permanecen **BLOCKED**. Se requiere evidencia del borde Sites y recursos D1/R2 independientes antes de cualquier habilitación.
+
 ## 6. Salida y decisión solicitada
 
 - Integrar en piloto **solo tras revisión del PR** y CI final exitoso; no cerrar #7 por pruebas con flag OFF.

@@ -57,7 +57,7 @@ test("G2b oblique phantom has predictable voxel-centre geometry but no fake axia
   const phantom = corpusCases.oblique;
   const volume = buildVolume(slices(phantom));
   assert.equal(volume.axisAlignedAxial, false);
-  assert.equal(volume.sliceSpacingMm, 4);
+  assert.ok(Math.abs(volume.sliceSpacingMm - 4) <= 1e-8, "DS direction-cosine rounding affects computed spacing");
   const [column, row, k] = phantom.point.voxel;
   nearly(expectedVoxelCentreLps(volume.slices[k], column, row),
     phantom.point.lpsMm, phantom.point.toleranceMm);

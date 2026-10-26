@@ -11,7 +11,12 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   async headers() {
-    return [{ source: "/", headers: securityHeaders }];
+    return [
+      { source: "/", headers: securityHeaders },
+      // ANATHEOS is opt-in and must never be indexed or cached if enabled.
+      { source: "/app/anatheos-3d", headers: securityHeaders },
+      { source: "/app/anatheos-3d/:path*", headers: securityHeaders },
+    ];
   },
 };
 

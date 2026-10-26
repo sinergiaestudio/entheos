@@ -22,6 +22,34 @@
 
 - [Auditoría de PR #21–#24, 26/10/2026](AUDITORIA_DIRECCION_2026-10-26.md) — estado real, evidencias CI, riesgos P0 y condiciones para integración; [Issue de control #25](https://github.com/sinergiaestudio/entheos/issues/25).
 
+## Auditoría reproducible G0
+
+- [Acta de baseline e inventario de riesgos (2026-10-26)](AUDITORIA_G0_2026-10-26.md) — verificación del SHA piloto, PR, Actions, límites, riesgos y dependencias.
+- Prueba documental automatizada: `tests/anatheos-governance.test.mjs` (validación estática; **no** sustituye pruebas de identidad, DICOM, protección de ramas ni validación médica).
+
+## Laboratorio G1 · Seguridad del piloto
+
+- [Protocolo G1A y matriz de pruebas de acceso](LAB_G1_LOCAL.md) — piloto deshabilitado por defecto, puerta owner-only y requisitos **pendientes** de prueba HTTP y de identidad confiable.
+
+## Corpus de referencia G2b
+
+- [Corpus DICOM íntegramente sintético](CORPUS_DICOM_SINTETICO.md) — escenarios anisotrópicos, oblicuos, lateralidad invertida y rechazos; goldens físicos LPS y guía de comparación con 3D Slicer, aún no ejecutada.
+- Generador sin descarga ni binarios versionados: `tests/fixtures/anatheos/synthetic-series.mjs`, `scripts/anatheos-corpus-manifest.mjs`; pruebas `tests/anatheos-corpus.test.mjs`.
+
+## Loader DICOM G2a
+
+- [Frontera de ingestión local y evaluación OSS](DECODIFICADOR_G2A.md): control de presupuesto, detección de sintaxis, cancelación cooperativa y estrategia de reemplazo por Cornerstone3D. **No equivale a decodificador nuevo integrado**.
+- Fuente del contrato: `lib/anatheos/dicom-intake.ts`. Tests: `tests/anatheos-intake.test.mjs`.
+
+## Integración conjunta en revisión
+
+- [Consolidación de PR #21–#24 (Issue #25)](INTEGRACION_ISSUE_25_2026-10-26.md) — rama temporal, trazabilidad de merges de dos padres, regresiones cruzadas, riesgos y decisión pendiente de Dirección. **No equivale a integración aprobada ni publicación.**
+
+## Seguridad pendiente G1B y protección de ramas
+
+- [Matriz de confianza de identidad, verificación HTTP y propuesta de rulesets gratuitos](SEGURIDAD_G1B_Y_RAMAS.md) — **documentación para aprobación, no entorno auditado ni reglas aplicadas**.
+- Smoke local restringido a loopback: `scripts/anatheos-loopback-smoke.mjs` (por defecto sin credenciales ni PHI; ejecutar solo contra servidor local con ANATHEOS deshabilitado). Test de seguridad de URL: `tests/anatheos-g1b-safety.test.mjs`.
+
 ## Tablero de ingeniería
 
 - **PR piloto, borrador, no fusionar:** [#5](https://github.com/sinergiaestudio/entheos/pull/5).

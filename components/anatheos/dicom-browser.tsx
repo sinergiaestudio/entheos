@@ -1,16 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { pixelValue, windowedGray, type DicomVolume } from "@/lib/anatheos/dicom";
 import {
-  buildVolume, parseDicom, pixelValue, windowedGray,
-  type DicomSlice, type DicomVolume,
-} from "@/lib/anatheos/dicom";
+  importLocalDicom, INTAKE_REASON_LABELS, DicomIntakeError,
+  type IntakeRejection, type IntakeSeries,
+} from "@/lib/anatheos/dicom-intake";
 
-type SeriesRecord = { key: string; volume: DicomVolume; modality: string };
+type SeriesRecord = IntakeSeries;
 type Plane = "axial" | "coronal" | "sagital";
-const MAX_FILES = 600;
-const MAX_FILE_BYTES = 32 * 1024 * 1024;
-const MAX_TOTAL_BYTES = 320 * 1024 * 1024;
 
 function renderPlane(
   canvas: HTMLCanvasElement, volume: DicomVolume, plane: Plane,
@@ -73,6 +71,8 @@ export function AnatheosDicomBrowser() {
   const [message, setMessage] = useState("Seleccioná archivos DICOM de una misma adquisición.");
   const [loading, setLoading] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const importAbortRef = useRef<AbortController | null>(null);
+  const [progress, setProgress] = useState("");
   const volume = series[active]?.volume ?? null;
   const first = volume?.slices[0];
   const planeMax = volume
@@ -82,61 +82,68 @@ export function AnatheosDicomBrowser() {
 
   async function onFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
+    importAbortRef.current?.abort();
+    const controller = new AbortController();
+    importAbortRef.current = controller;
     setLoading(true);
+    setProgress("");
     setSeries([]);
     setMessage("Leyendo imágenes únicamente en este navegador…");
     try {
-      const selected = [...files];
-      const total = selected.reduce((sum, file) => sum + file.size, 0);
-      if (selected.length > MAX_FILES || selected.some((file) => file.size > MAX_FILE_BYTES) ||
-        total > MAX_TOTAL_BYTES) {
-        throw new Error("Límite del piloto: 600 archivos, 32 MB por archivo y 320 MB en total.");
-      }
-      const groups = new Map<string, DicomSlice[]>();
-      const rejected = new Map<string, number>();
-      for (const file of selected) {
-        try {
-          const parsed = parseDicom(await file.arrayBuffer());
-          const key = parsed.studyUid + "|" + parsed.seriesUid;
-          groups.set(key, [...(groups.get(key) ?? []), parsed]);
-        } catch (error) {
-          const reason = error instanceof Error ? error.message : "No compatible";
-          rejected.set(reason, (rejected.get(reason) ?? 0) + 1);
-        }
-      }
-      const built: SeriesRecord[] = [];
-      for (const [key, slices] of groups) {
-        try {
-          const candidate = buildVolume(slices);
-          built.push({ key, volume: candidate, modality: slices[0].modality });
-        } catch (error) {
-          const reason = error instanceof Error ? error.message : "Geometría no compatible";
-          rejected.set(reason, (rejected.get(reason) ?? 0) + slices.length);
-        }
-      }
-      built.sort((a, b) => b.volume.slices.length - a.volume.slices.length);
+      const result = await importLocalDicom([...files], {
+        signal: controller.signal,
+        onProgress: (done, total) => {
+          if (importAbortRef.current === controller) setProgress(done + " / " + total);
+        },
+      });
+      if (importAbortRef.current !== controller) return;
+      const built = result.series;
+      const reasons = Object.entries(result.rejectedByReason)
+        .filter(([, count]) => count > 0)
+        .slice(0, 2)
+        .map(([reason, count]) =>
+          count + " archivo(s): " + INTAKE_REASON_LABELS[reason as IntakeRejection])
+        .join(" · ");
       if (built.length === 0) {
-        throw new Error("Ninguna serie cumple los requisitos del prototipo. " +
-          [...rejected].slice(0, 2).map(([reason, count]) => count + " archivo(s): " + reason).join(" · "));
+        throw new Error("Ninguna serie cumple los requisitos del prototipo. " + reasons);
       }
       setSeries(built);
       setActive(0);
       setPlane("axial");
       setPosition(Math.floor(built[0].volume.slices.length / 2));
       const firstSlice = built[0].volume.slices[0];
-      setCenter(Math.min(4000, Math.max(-1500, firstSlice.windowCenter ?? (firstSlice.modality === "CT" ? 40 : 1024))));
-      setWidth(Math.min(6000, Math.max(1, firstSlice.windowWidth ?? (firstSlice.modality === "CT" ? 400 : 2048))));
+      setCenter(Math.min(4000, Math.max(-1500, firstSlice.windowCenter ??
+        (firstSlice.modality === "CT" ? 40 : 1024))));
+      setWidth(Math.min(6000, Math.max(1, firstSlice.windowWidth ??
+        (firstSlice.modality === "CT" ? 400 : 2048))));
       setMessage(
         built.length + " serie(s) compatible(s). " +
-        [...rejected].reduce((sum, [, count]) => sum + count, 0) +
-        " archivo(s) excluido(s) por seguridad o incompatibilidad. Los archivos no se enviaron a un servidor."
+        result.rejectedFiles + " archivo(s) excluido(s). " + reasons +
+        " Los archivos no se enviaron a un servidor."
       );
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "No se pudieron leer los archivos.");
+      if (importAbortRef.current !== controller) return;
+      setMessage(error instanceof DicomIntakeError || error instanceof Error
+        ? error.message : "No se pudieron leer los archivos.");
     } finally {
-      setLoading(false);
+      if (importAbortRef.current === controller) {
+        importAbortRef.current = null;
+        setProgress("");
+        setLoading(false);
+      }
     }
   }
+
+  function cancelImport() {
+    importAbortRef.current?.abort();
+    importAbortRef.current = null;
+    setSeries([]);
+    setProgress("");
+    setLoading(false);
+    setMessage("Selección cancelada. Una lectura ya iniciada puede continuar internamente; los resultados no se muestran ni se envían.");
+  }
+
+  useEffect(() => () => { importAbortRef.current?.abort(); }, []);
 
   useEffect(() => {
     if (!volume || !canvasRef.current) return;
@@ -191,12 +198,18 @@ export function AnatheosDicomBrowser() {
       </label>
       {series.length > 0 && (
         <button type="button" className="text-sm font-semibold underline"
-          onClick={() => { setSeries([]); setMessage("Se descartaron los archivos de la sesión del visor."); }}>
-          Descartar estudio de la memoria del visor
+          onClick={() => { setSeries([]); setMessage("Estudio retirado del visor. La liberación de memoria depende del navegador."); }}>
+          Quitar estudio del visor
+        </button>
+      )}
+      {loading && (
+        <button type="button" onClick={cancelImport}
+          className="mt-3 rounded-lg border px-3 py-2 text-sm font-semibold">
+          Cancelar lectura
         </button>
       )}
       <p role="status" aria-live="polite" className="my-4 text-sm text-[#52685c]">
-        {loading ? "Procesando archivos localmente…" : message}
+        {loading ? "Procesando archivos localmente… " + progress : message}
       </p>
 
       {volume && first && (

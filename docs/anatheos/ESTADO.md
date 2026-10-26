@@ -69,6 +69,12 @@
 - Se preservaron los cuatro checkpoints previos y los añadidos G0, G1A, G2b-A y G2a-A. El documento [INTEGRACION_ISSUE_25_2026-10-26.md](INTEGRACION_ISSUE_25_2026-10-26.md) describe reconciliación, límites, regresión cruzada y rollback.
 - **Integración combinada: pendiente de CI en HEAD exacto** y revisión de Dirección. No hay despliegue, auditoría HTTP de identidad, Slicer, 3D volumétrico ni datos médicos. No cerrar #6/#7/#8/#9/#25 sin criterios cumplidos.
 
+## Checkpoint de propuesta G1B/#20 · 2026-10-26
+
+- [SEGURIDAD_G1B_Y_RAMAS.md](SEGURIDAD_G1B_Y_RAMAS.md) detalla prueba de procedencia de `oai-authenticated-user-email`, matriz de peticiones HTTP, aislamiento de bindings y reglas gratuitas de protección de ramas. No se ejecutaron pruebas de sesión ni se habilitó staging; solo test de prohibición de destino no loopback en el script auxiliar, **sin prueba HTTP aún**.
+- API GitHub consultada: `rulesets` devuelve lista vacía, ambos branches reportan `protected=false`. Endpoint detallado de branch protection devolvió **403 por permisos de integración**: no asumir una auditoría integral de configuración.
+- Propuesta sujeta a Dirección; no se cambió GitHub Settings ni se desplegó ningún Site. No autorizar `ANATHEOS_PILOT_ENABLED=true` en un remoto.
+
 ## Mapa de trabajo (gates)
 
 - **G0 — En curso:** documentación e Issues organizados; pendiente auditar consistencia final y acordar inicio de chat técnico.

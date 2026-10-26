@@ -140,7 +140,7 @@ export function AnatheosDicomBrowser() {
     setSeries([]);
     setProgress("");
     setLoading(false);
-    setMessage("Lectura cancelada. No se conservaron los archivos seleccionados.");
+    setMessage("Selección cancelada. Una lectura ya iniciada puede continuar internamente; los resultados no se muestran ni se envían.");
   }
 
   useEffect(() => () => { importAbortRef.current?.abort(); }, []);
@@ -198,8 +198,8 @@ export function AnatheosDicomBrowser() {
       </label>
       {series.length > 0 && (
         <button type="button" className="text-sm font-semibold underline"
-          onClick={() => { setSeries([]); setMessage("Se descartaron los archivos de la sesión del visor."); }}>
-          Descartar estudio de la memoria del visor
+          onClick={() => { setSeries([]); setMessage("Estudio retirado del visor. La liberación de memoria depende del navegador."); }}>
+          Quitar estudio del visor
         </button>
       )}
       {loading && (

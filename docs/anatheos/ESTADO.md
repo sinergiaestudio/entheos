@@ -32,7 +32,7 @@
 - `components/anatheos/dicom-browser.tsx` usa el nuevo contrato y ofrece cancelación de lectura; `tests/anatheos-intake.test.mjs` añade casos adversariales sintéticos y privacidad.
 - [Matriz de formatos y spike de decoder OSS](DECODIFICADOR_G2A.md). Cornerstone3D/dicom-image-loader como candidato preferente para spike; ni instalado ni aprobado definitivamente. P-002 continúa propuesta sin adopción.
 - No se integraron PR #21/#22/#23, todavía draft, para evitar mezclas de ramas de revisión. Futuras integraciones deberán conciliar README/ESTADO y correr CI de la combinación.
-- **CI del SHA final: registrar después de abrir PR y verificar logs.** No hay validación Slicer, datos clínicos ni despliegue; G1B sigue bloqueado por procedencia confiable de identidad.
+- **CI verificado de código:** [GitHub Actions #40350908859](https://github.com/sinergiaestudio/entheos/actions/runs/40350908859), commit `ff91c47f1c6f3ea1297f483e976d5a61e1632150`, **31/31 PASS, 0 FAIL, 0 SKIPPED**, lint (1 advertencia preexistente fuera de ANATHEOS), typecheck y build PASS. Se registraron dos ejecuciones fallidas iniciales por compatibilidad del ejecutor Node24 con TypeScript, corregidas sin alterar el parser. El presente commit documental debe tener su propio CI comprobado antes de declarar HEAD final exitoso. No hay validación Slicer, datos clínicos ni despliegue; G1B sigue bloqueado por procedencia confiable de identidad.
 
 ## Mapa de trabajo (gates)
 

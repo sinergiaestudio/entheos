@@ -35,6 +35,9 @@ try {
   for (const [name, options, expected] of [
     ["explicit-le-ct-single-frame", { scenario: 78, layer: 2 },
       { rows: 3, columns: 4, pixels: [200, 201, 202, 210, 211, 223] }],
+    ["implicit-le-ct-single-frame", { scenario: 79, layer: 1,
+      syntax: "1.2.840.10008.1.2" },
+      { rows: 3, columns: 4, pixels: [100, 101, 102, 110, 111, 123] }],
   ]) {
     const bytes = makeSyntheticDicom(options);
     const t0 = Date.now();
@@ -66,6 +69,7 @@ try {
       elapsedWallMs: Date.now() - t0,
       heapBytes: measured.heapBytes,
       transferSyntax: measured.transferSyntax,
+      imagePlane: measured.imagePlane,
     };
     results.push(report);
     assert.equal(measured.state, "ok", name + " Cornerstone browser decode failed");
@@ -81,6 +85,7 @@ try {
     const afterClear = await page.evaluate(() => window.__anatheosProbe);
     assert.equal(afterClear.state, "cleared");
     assert.equal(afterClear.cleanupRequested, true);
+    assert.equal(afterClear.fileReferenceRemoved, true, "FileManager still holds Blob reference");
   }
   assert.deepEqual(networkEvents, [], "unexpected external browser network request");
   // A failing console is reported, not automatically proof of decode failure.

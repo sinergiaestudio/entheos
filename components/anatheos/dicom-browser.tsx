@@ -32,7 +32,8 @@ function renderPlane(
   const image = context.createImageData(w, h);
   const views = slices.map((s) => new DataView(s.buffer));
   const inverted = first.photometric === "MONOCHROME1";
-  const up = first.rowDirection[0] > 0;
+  const towardLeft = first.rowDirection[0] > 0;
+  const towardPosterior = first.columnDirection[1] > 0;
   const normalZ = first.rowDirection[0] * first.columnDirection[1];
 
   for (let y = 0; y < h; y++) {
@@ -43,9 +44,9 @@ function renderPlane(
         z = normalZ > 0 ? slices.length - y - 1 : y;
         if (coronal) {
           py = position;
-          px = up ? x : first.columns - x - 1;
+          px = towardLeft ? x : first.columns - x - 1;
         } else {
-          py = up ? x : first.rows - x - 1;
+          py = towardPosterior ? x : first.rows - x - 1;
           px = position;
         }
       }

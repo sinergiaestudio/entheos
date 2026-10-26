@@ -18,9 +18,12 @@ window.__anatheosProbe = { state: "idle" };
 
 async function initialize() {
   if (initialized) return;
+  window.__anatheosProbe = { state: "loading", step: "core.init" };
   await initCore();
+  window.__anatheosProbe = { state: "loading", step: "loader.init" };
   initDicomLoader({ maxWebWorkers: 1 });
   initialized = true;
+  window.__anatheosProbe = { state: "loading", step: "initialized" };
 }
 
 function removeImageId(imageId) {
@@ -49,11 +52,13 @@ async function decodeSelected(file) {
   const t0 = performance.now();
   await initialize();
   if (generation !== selectionGeneration) return;
+  window.__anatheosProbe = { state: "loading", step: "fileManager.add" };
   const imageId = wadouri.fileManager.add(file);
   currentImageId = imageId;
   try {
     // Disable pre-scaling so image.getPixelData() may be compared to
     // invented 16-bit source samples independently of HU rescale.
+    window.__anatheosProbe = { state: "loading", step: "loadAndCacheImage" };
     const image = await imageLoader.loadAndCacheImage(imageId, { preScale: { enabled: false } });
     if (generation !== selectionGeneration) {
       removeImageId(imageId);

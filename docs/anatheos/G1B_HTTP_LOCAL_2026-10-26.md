@@ -1,0 +1,88 @@
+# ANATHEOS 3D · G1B — Evidencia HTTP local y bloqueo de origen de identidad
+
+**Fecha:** 26/10/2026 · **Issue:** #7 · **Rama:** `anatheos/issue-7-g1b-loopback-http` desde piloto `19c945cf69ff69daa95804639a4aabc9ce9ad7db`. **Clasificación:** laboratorio técnico aislado, no staging real ni certificación de Site.
+
+## 1. Hallazgo de seguridad P0
+
+`app/chatgpt-auth.ts` obtiene la identidad del header `oai-authenticated-user-email` mediante `next/headers`. El booleano `isGlobalAdmin` se determina comparando ese correo con el `APP_OWNER_EMAIL` de entorno. `app/app/anatheos-3d/page.tsx` combina `ANATHEOS_PILOT_ENABLED`, `requireChatGPTUser` y `isAnatheosOwner`.
+
+**Si el borde HTTP de Sites/Workers no elimina y sobrescribe una cabecera arbitraria enviada por el cliente**, un atacante que conozca el correo del titular podría presentar un header falso. Por tanto, la combinación del predicado y del flag es necesaria pero **no demuestra procedencia autenticada**. Se prohíbe usar el flag `true` remotamente hasta verificar el contrato de autenticación y su comportamiento en un entorno aislado real, incluso si las pruebas locales pasan.
+
+No introducir cabeceras de identidad falsas en un Site productivo.
+
+## 2. Defensa técnica añadida en esta rama
+
+- `lib/anatheos/http-boundary.ts`: política pura de rutas y cabeceras. Cuando el flag no sea **exactamente** `"true"`, emite un 404 sin pasar a Vinext para `/app/anatheos-3d`, rutas anidadas y `/api/anatheos` (reservada para API futura). Rechaza variantes de flag, trata segmentos sin capturar rutas no relacionadas y comprende segmentos percent-encoded sencillos.
+- `worker/index.ts`: aplica el bloqueo al **inicio** de `worker.fetch` y refuerza `Cache-Control: private, no-store`, `X-Robots-Tag: noindex`, CSP, Referrer y nosniff en toda respuesta de ANATHEOS (incluidos errores y RSC). No altera las rutas normales de Entheos ni añade persistencia o bindings.
+- `tests/anatheos-g1b-boundary.test.mjs`: pruebas adversariales directas de Response, segmentos/rutas, flag off y cabeceras (unitarias, **no HTTP real**).
+
+**Esta defensa no certifica el estado ON.** La comprobación de propietario con cabecera suministrada por el request sigue sujeta al riesgo anterior. Tampoco autoriza por sí misma futuros endpoints: el flag OFF los protege, pero el flag ON exige un guard server-side específico y prueba de confianza del origen.
+
+## 3. Prueba HTTP real, loopback y CI
+
+Se creó un runner `scripts/anatheos-g1b-ci.sh` que fuerza `ANATHEOS_PILOT_ENABLED=false`, identidad sintética `owner@example.invalid` y directorio runtime aislado, y arranca el servidor **Vinext + Worker** escuchando exclusivamente `127.0.0.1:4173` en un checkout efímero de GitHub Actions. El proceso se detiene al finalizar. No utiliza cookies reales, DICOM, secretos, cuentas ni servidores externos.
+
+`scripts/anatheos-g1b-http-matrix.mjs` realiza HTTP `fetch` real a nueve variantes controladas, comprobando status 404, no-store, noindex, CSP y nosniff, sin guardar o imprimir cuerpos de respuesta. Las variantes incluyen:
+
+| Escenario | Expectativa del flag OFF |
+|---|---|
+| HTML anónimo | 404 + cabeceras privadas |
+| HTML con header de propietario ficticio | 404 + cabeceras privadas |
+| HTML con tercero ficticio | 404 + cabeceras privadas |
+| Variación de cabeceras falsificadas | 404 + cabeceras privadas |
+| RSC anónimo | 404 + cabeceras privadas |
+| RSC con header de propietario ficticio | 404 + cabeceras privadas |
+| API futura GET `/api/anatheos/studies` | 404 + cabeceras privadas |
+| API futura con header ficticio `/api/anatheos/upload` | 404 + cabeceras privadas |
+| Subruta `/app/anatheos-3d/subroute` | 404 + cabeceras privadas |
+
+La CI agrega **después de `npm test`** el paso `G1B local HTTP denied-access matrix (no deploy)`. Su resultado exacto debe registrarse en la revisión, no inferirse por existencia del código. La prueba comprueba el HTTP del laboratorio, **no el proxy remoto de ChatGPT Sites**.
+
+## 3 bis. Evidencia de CI y HTTP real sobre HEAD de código
+
+- [GitHub Actions #40369305137](https://github.com/sinergiaestudio/entheos/actions/runs/40369305137), SHA `83345d819edf9dc7107ccf804ddbfdf64fa7a522`, **COMPLETED/SUCCESS**; job `verify` #121735409153: **65 tests / 65 PASS / 0 FAIL / 0 SKIPPED / 0 CANCELLED**. Instalación, lint, typecheck y build PASS. Una advertencia de lint no bloqueante y preexistente en `components/timeline-documents.tsx`.
+- Paso `G1B local HTTP denied-access matrix (no deploy)`: **9/9 HTTP PASS, 0 FAIL, 0 SKIPPED**, cada respuesta 404/no-store/noindex/CSP/nosniff, con falso propietario/anónimo/tercero, solicitudes RSC, rutas API futuras y subruta. Solo loopback 127.0.0.1, flag OFF, usuarios ficticios.
+- **Cobertura real y límite:** demuestra comportamiento HTTP del Worker en el entorno local CI; **no demuestra autenticación del proveedor remoto**, confianza de las cabeceras con flag ON ni separación D1/R2. No habilitar Site.
+- Este propio checkpoint documental se registra por commit posterior: su CI debe comprobarse independientemente antes de informar HEAD final verificado.
+
+## 4. Matriz G1B y resultados válidos
+
+| Caso | Evidencia aceptable ahora | Estado inicial |
+|---|---|---|
+| Flag OFF + anónimo/falsificación + RSC/API | CI #40369305137: nueve respuestas 404 | **PASS (local)** |
+| Respuestas privadas del Worker | CI #40369305137: no-store/noindex/CSP/nosniff | **PASS (local)** |
+| Flag ON + usuario legítimo | Sesión con identidad de procedencia certificada | BLOCKED (sin ambiente confiable) |
+| Flag ON + tercero real/anónimo | Dos sesiones externas controladas sin PHI | BLOCKED |
+| Cabecera proveniente del cliente externo | Prueba de **strip/overwrite en frontdoor** | BLOCKED CRÍTICO |
+| Headers efectivos de Site remoto | Pruebas HTTP reales en staging aprobado | BLOCKED |
+| Aislamiento de D1/R2 y cuentas | Comparación de IDs de proyecto/bucket/bindings en recursos aislados, sin valores sensibles | BLOCKED |
+| No bypass de rutas API cuando ON | Guard server-side por API y tests negativos reales | BLOCKED: aún no hay API |
+| Volumen 3D / validación médica | Slicer/datasets de referencia | FUERA DEL ALCANCE G1B |
+
+## 5. Inventario de vínculos de infraestructura (sin secretos)
+
+- `.openai/hosting.json` define **nombres** `DB` (D1) y `BUCKET` (R2).
+- `vite.config.ts` configura localmente nombres sintéticos `site-creator-d1` y `site-creator-r2`, con ID de base placeholder. **No demuestra aislamiento en un futuro staging**.
+- `worker/index.ts` referencia `DB` como tipo de binding global de Entheos; ANATHEOS no incorpora ninguna lectura/escritura D1/R2 nueva.
+- **Antes de desplegar:** obtener por medios administrativos una tabla sanitizada con *identificadores de proyecto y recursos* de staging vs producción, y confirmar diferencia real de cuentas/buckets/D1, sin incluir tokens ni datos clínicos en repositorio público. Sin autorización de infraestructura no se provisiona nada.
+
+## 5 bis. Ampliación adversarial tras auditoría de Dirección
+
+Se incorporaron al gate normalización iterativa de rutas percent-encoded y doble codificación, backslashes, segmentos `.`/`..`, separadores múltiples y parámetros de segmento. La matriz HTTP local ejecuta **23 escenarios**, incluidos HEAD, POST y OPTIONS, así como respuestas RSC/API y variaciones de URL. Se agregaron tests de regresión de rutas no ANATHEOS y exigencia de 404/headers para métodos no GET. **La cobertura no es exhaustiva**: comportamiento del router, proxies y URL remotas debe auditarse en entorno separado.
+
+- SHA de código `397e2810f28b9cc45053c502da4805219907c801`, [CI #40373451808](https://github.com/sinergiaestudio/entheos/actions/runs/40373451808): **67/67 pruebas PASS, 0 FAIL, 0 SKIPPED; HTTP real 23/23 PASS** en CI con flag OFF, sin desplegar. Un warning lint preexistente fuera de ANATHEOS.
+- Un test local de rutas no ANATHEOS demuestra que el helper no altera esas respuestas; **no equivale a regresión funcional exhaustiva** de Entheos productivo. El entrypoint Worker de CI usa el mismo archivo fuente `worker/index.ts` que el build del proyecto, pero no demuestra que el Site remoto emplee idéntica ruta de ejecución/identidad.
+- G1B ON y confianza de header permanecen **BLOCKED**. Se requiere evidencia del borde Sites y recursos D1/R2 independientes antes de cualquier habilitación.
+
+## 5 ter. Documentación oficial de identidad Sites vs prueba de procedencia
+
+La guía oficial [ChatGPT Sites · Data and connections](https://learn.chatgpt.com/docs/sites/data-and-connections) (consultada 26/10/2026) señala que el flujo de Sign in with ChatGPT es administrado por Sites y que la plataforma comunica al servidor el correo autenticado mediante `oai-authenticated-user-email`, con nombre opcional. Esto **fundamenta el contrato nominal de cabeceras**, pero el texto consultado **no especifica ni demuestra** qué ocurre si un cliente externo suministra deliberadamente la misma cabecera: eliminación, sustitución, preferencia, o duplicados. **Por ello G1B sigue BLOCKED** hasta una prueba real, aislada y autorizada de cabeceras adversariales con flag ON, anónimo/tercero/propietario y bindings segregados.
+
+Posibles mitigaciones a diseñar si no se verifica el borde: validación de sesión con origen verificable o proxy confiable que filtre/sobrescriba cabeceras de cliente. **No se adoptó ninguno todavía**; no introducir una solución sin revisar el protocolo de Sites.
+
+## 6. Salida y decisión solicitada
+
+- Integrar en piloto **solo tras revisión del PR** y CI final exitoso; no cerrar #7 por pruebas con flag OFF.
+- Si se constata que el borde admite headers no confiables, **mantener G1B BLOCKED** hasta autenticar con mecanismo verificable del proveedor, session/token validado criptográficamente o equivalente diseñado y aprobado; no confiar en un encabezado aislado.
+- **No habilitar ANATHEOS remotamente, publicar URL, reutilizar DB/R2 de producción ni pagar proveedores.**
+- Próximo experimento condicionado: entorno aislado auténtico con cuentas de prueba, capturas HTTP sanitizadas de flag ON, owner, tercero, RSC y rutas API, previa aprobación de seguridad/publicación cuando corresponda.

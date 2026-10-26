@@ -1,6 +1,7 @@
 /** Cloudflare Worker entry point for the vinext-starter template. */
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
+import { offStateResponse, withAnatheosPrivateHeaders } from "../lib/anatheos/http-boundary";
 
 interface Env {
   ASSETS: Fetcher;
@@ -29,6 +30,11 @@ const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
 
+    // Default OFF at the Worker entry point, before application auth or API routing.
+    // Never rely on arbitrary client-supplied oai-authenticated-* headers for identity.
+    const denied = offStateResponse(url.pathname, (env as Env & { ANATHEOS_PILOT_ENABLED?: string }).ANATHEOS_PILOT_ENABLED);
+    if (denied) return denied;
+
     if (url.pathname === "/_vinext/image") {
       const allowedWidths = [...DEFAULT_DEVICE_SIZES, ...DEFAULT_IMAGE_SIZES];
       return handleImageOptimization(request, {
@@ -40,7 +46,8 @@ const worker = {
       }, allowedWidths);
     }
 
-    return handler.fetch(request, env, ctx);
+    const response = await handler.fetch(request, env, ctx);
+    return withAnatheosPrivateHeaders(url.pathname, response);
   },
 };
 

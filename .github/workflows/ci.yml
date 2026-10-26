@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/anatheos-3d-owner-pilot]
   pull_request:
 
 permissions:
@@ -33,3 +33,6 @@ jobs:
 
       - name: Test production artifact
         run: npm test
+
+      - name: G1B local HTTP denied-access matrix (no deploy)
+        run: bash scripts/anatheos-g1b-ci.sh

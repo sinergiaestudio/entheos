@@ -4,6 +4,16 @@
 **Versión:** 1.0 (creación de gobierno; no modifica funciones del producto)
 **Autoridad:** comprobar HEAD real, PR, GitHub Actions, Issue y evidencia antes de atualizar esta hoja. Ningún dato clínico real.
 
+## Checkpoint POST-MERGE autorizado · 2026-10-26 · Issue #25
+
+PR #26 fusionado con método `merge` exclusivamente a la rama piloto. **HEAD inicial integrado `8c0f29d30670c4e2d21d8673a1050d02b61f5bfd`**, desde la base `aec8222c5fa4b529575fc49a85f401ecf7a41a49` y el PR HEAD `b40218c95c3b328be240f9e9c43f5cd3b1a1307e`. Resultado GitHub `merged=true`. Autorización [#6421827902](https://github.com/sinergiaestudio/entheos/pull/26#issuecomment-6421827902).
+
+- **CI post-merge:** [GitHub Actions #40364071117](https://github.com/sinergiaestudio/entheos/actions/runs/40364071117), job 121716889176 `completed/success`: **60 tests / 60 PASS / 0 FAIL / 0 SKIPPED / 0 CANCELLED**; instalación, lint, TS y build PASS; un warning de lint histórico `no-img-element` fuera de ANATHEOS.
+- `main` HEAD `8e7602280d6c4fddc234c1973537839592683798` permanece intacto. No se publicaron cambios ni se activaron Site, servicios pagos, D1/R2 o acceso de terceros.
+- El código combinado de G0/G1A/G2b-A/G2a-A está **integrado técnicamente y probado por CI en piloto**, no validado clínicamente. La identidad de header `oai-authenticated-user-email`, aislamiento de datos, geometría Slicer y decodificador OSS definitivo permanecen **P0/P1 abiertos**.
+- Issues #7, #8, #9, #20 continúan ABIERTOS; el cierre administrativo de Issue #25 depende de registro y revisión de Dirección. Los apartados históricos posteriores o anteriores que declaran `sin fusionar` describen un checkpoint previo, no contradicen este hito.
+- **Este propio commit documental** debe superar su CI separada antes de certificar el HEAD final de la rama piloto. Consultar [acta de integración](INTEGRACION_ISSUE_25_2026-10-26.md).
+
 ## Panel ejecutivo
 
 | Dimensión | Estado verificable al elaborar este registro | Evidencia |

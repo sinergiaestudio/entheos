@@ -17,6 +17,17 @@
 | D-008 | Avances quedan guardados y versionados en Git y tratados con comunicación pública sanitizada | Aprobada como política de trabajo | 2026-10-26 | Cada issue/PR precisa estado, SHA, CI, límites |
 | D-009 | Mantener una rama de integración experimental y no fusionar a producción por defecto | Aprobada | 2026-10-26 | PR a rama piloto y go/no-go separado para producción |
 
+### D-010 · Consolidación técnica de PR #26 exclusivamente en rama piloto
+
+- **Fecha y aprobador:** 26/10/2026; autorización expresa de Dirección en [resolución #6421827902](https://github.com/sinergiaestudio/entheos/pull/26#issuecomment-6421827902), con ratificación del usuario titular en la conversación de Ingeniería.
+- **Contexto:** la combinación temporal de PR #21–#24 superó 60/60 pruebas y la revisión independiente; se autoriza exclusivamente el merge normal a `feature/anatheos-3d-owner-pilot`.
+- **Alternativas:** no fusionar; fusionar directamente PR originales; squash/rebase; o fusionar la rama ya reconciliada. Se elige la última con historial completo, sin alterar `main`.
+- **Decisión y motivación:** aprobar **solo consolidación técnica experimental**, no publicación ni apertura a terceros. GitHub confirmó `merged=true` para [PR #26](https://github.com/sinergiaestudio/entheos/pull/26), merge commit `8c0f29d30670c4e2d21d8673a1050d02b61f5bfd` con dos padres.
+- **Impacto en privacidad, licencias y presupuesto:** ningún dato clínico real, gastos, nuevas APIs, cambios D1/R2 ni cambio de producción. Mantener flag OFF hasta G1B.
+- **Pruebas y evidencia:** CI post-merge [GitHub Actions #40364071117](https://github.com/sinergiaestudio/entheos/actions/runs/40364071117), **60/60 PASS**, lint, TS y build PASS, 0 FAIL/SKIPPED.
+- **Riesgos residuales:** #7 identidad HTTP/bindings, #8 decoder/RAM, #9/#10 geometría Slicer, #20 protección de ramas; sin aptitud diagnóstica ni volumen 3D.
+- **Sustituye a:** no borra P-009; registra resolución positiva **solo para el merge técnico descrito**. P-009 permanece como evidencia de la fase anterior en evaluación.
+
 ## Opciones técnicas propuestas, todavía NO aprobadas para adopción definitiva
 
 | ID | Propuesta | Estado | Evidencia requerida |

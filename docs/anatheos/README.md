@@ -18,6 +18,13 @@
 8. [Registro previo de hitos](../ANATHEOS_MILESTONES.md) — prototipo DICOM inicial y su QA.
 9. [Especificación del piloto inicial](../ANATHEOS_3D_PILOT.md) y [traspaso del Proyecto ChatGPT](../ANATHEOS_CHATGPT_PROJECT_HANDOFF.md) — historia y contexto.
 
+## Hito de integración experimental aprobado (Issue #25)
+
+- **PR #26 [fusionado](https://github.com/sinergiaestudio/entheos/pull/26)** en `feature/anatheos-3d-owner-pilot`, merge `8c0f29d30670c4e2d21d8673a1050d02b61f5bfd`, por autorización [de Dirección](https://github.com/sinergiaestudio/entheos/pull/26#issuecomment-6421827902).
+- CI del nuevo HEAD [GitHub Actions #40364071117](https://github.com/sinergiaestudio/entheos/actions/runs/40364071117): **60/60 PASS**, sin fallos ni omisiones. [Acta consolidada y control de riesgo](INTEGRACION_ISSUE_25_2026-10-26.md).
+- **No se autorizó** Site, uso clínico, carga de estudios reales, cambios en `main` o acceso a terceros. G1B, #20 y validación DICOM/Slicer siguen pendientes.
+- Los checkpoints de los PR originales que aún dicen *no integrado* corresponden a un **estado histórico anterior a esta fusión**; este apartado prevalece para el estado actual.
+
 ## Auditorías independientes de dirección
 
 - [Auditoría de PR #21–#24, 26/10/2026](AUDITORIA_DIRECCION_2026-10-26.md) — estado real, evidencias CI, riesgos P0 y condiciones para integración; [Issue de control #25](https://github.com/sinergiaestudio/entheos/issues/25).

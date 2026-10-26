@@ -2,6 +2,17 @@
 
 **Fecha:** 26/10/2026. **Estado:** rama temporal de revisión, **no integrada a la rama piloto**, no desplegada, no aceptada clínicamente. Esta es evidencia técnica de ingeniería para aprobación separada por Dirección.
 
+## Post-integración autorizada · 26/10/2026
+
+**Estado actual:** PR [#26](https://github.com/sinergiaestudio/entheos/pull/26) fusionado por método **merge normal** EXCLUSIVAMENTE a `feature/anatheos-3d-owner-pilot`. La autorización expresa de Dirección figura en [comentario #6421827902](https://github.com/sinergiaestudio/entheos/pull/26#issuecomment-6421827902), ratificada en esta conversación por el titular.
+
+- **Merge SHA:** `8c0f29d30670c4e2d21d8673a1050d02b61f5bfd`, padres `aec8222c5fa4b529575fc49a85f401ecf7a41a49` (piloto anterior) y `b40218c95c3b328be240f9e9c43f5cd3b1a1307e` (PR #26); historial conservado, no squash/rebase.
+- **CI del merge exacto:** [GitHub Actions #40364071117](https://github.com/sinergiaestudio/entheos/actions/runs/40364071117), workflow `completed/success` y job `verify` #121716889176: **60 pruebas PASS, 0 FAIL, 0 SKIPPED, 0 CANCELLED**; instalación, lint, TypeScript y build PASS, con una advertencia preexistente por `<img>` fuera de ANATHEOS.
+- **Producción:** `main` permanece en `8e7602280d6c4fddc234c1973537839592683798`; ningún merge en `main`, publicación ni intervención D1/R2. No se activó flag remoto, Site, terceros o costos nuevos.
+- **Gobierno:** las propuestas/hitos G0/G1A/G2a/G2b quedaron *integrados técnicamente en piloto*; NO equivalen a Issues #7/#8/#9 cerrados, geometría Slicer validada ni autorización de uso médico. Issue #25: consolidación de código conforme y prueba CI superada; seguimiento administrativo a criterio de Dirección.
+- **G1B/Issue #20:** origen confiable de la identidad y bindings aislados sin validar; ramas aún `protected=false`. Se mantiene **NO-GO de despliegue**.
+- **Cierre documental:** este anexo se incorpora por commit posterior al merge, por lo que su propio HEAD y CI se deben registrar en el Issue #25 una vez verificados.
+
 ## 1. Referencias verificadas y límites
 
 - Repositorio público `sinergiaestudio/entheos`, `main` baseline `8e7602280d6c4fddc234c1973537839592683798`, sin cambios autorizados de ANATHEOS.

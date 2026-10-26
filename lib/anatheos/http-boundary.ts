@@ -14,19 +14,49 @@ const PRIVATE_HEADERS = Object.freeze({
   "Permissions-Policy": "camera=(self), microphone=(), geolocation=()",
 });
 
-/** Segment boundaries prevent capturing unrelated /app/anatheos-3d-foo paths. */
+/**
+ * Defend the OFF gate even if an upstream router decodes %-escapes, merges
+ * slashes, removes dot segments or treats backslashes as separators.
+ * A path that looks like an ANATHEOS path after a bounded number of normalizations
+ * is denied BEFORE the application sees it. This is not user authentication.
+ */
 export function isAnatheosHttpPath(pathname: string): boolean {
-  let path: string;
-  try {
-    path = decodeURIComponent(pathname);
-  } catch {
-    // Raw URL may be malformed; block any path that resembles ANATHEOS.
-    return /anatheos/i.test(pathname);
+  if (typeof pathname !== "string" || !pathname.startsWith("/")) return false;
+  let path = pathname;
+  const targeted = (value: string) => {
+    const segments = value
+      .replace(/\\/g, "/")
+      .replace(/\/+/g, "/")
+      .toLowerCase()
+      .split("/")
+      .filter(Boolean)
+      .map((part) => part.split(";")[0]);
+    const canonical: string[] = [];
+    for (const part of segments) {
+      if (part === ".") continue;
+      if (part === "..") canonical.pop();
+      else canonical.push(part);
+    }
+    const joined = "/" + canonical.join("/");
+    return ["/app/anatheos-3d", "/api/anatheos"].some(
+      (prefix) => joined === prefix || joined.startsWith(prefix + "/"),
+    );
+  };
+  for (let i = 0; i < 32; i += 1) {
+    if (targeted(path)) return true;
+    let decoded: string;
+    try {
+      decoded = decodeURIComponent(path);
+    } catch {
+      // Malformed escapes: if the target appears literally, deny conservatively.
+      return /anatheos/i.test(path);
+    }
+    if (decoded === path) return false;
+    path = decoded;
   }
-  path = path.replace(/\\/g, "/").replace(/\/{2,}/g, "/").toLowerCase();
-  return ["/app/anatheos-3d", "/api/anatheos"].some(
-    (prefix) => path === prefix || path.startsWith(prefix + "/"),
-  );
+  // Too many encodings is inherently ambiguous. Preserve the OFF boundary
+  // for suspicious ANATHEOS patterns without intercepting unrelated routes.
+  return targeted(path) || /anatheos/i.test(path);
 }
 
 export function offStateResponse(pathname: string, flag: unknown): Response | null {

@@ -260,9 +260,9 @@ export function buildVolume(input: DicomSlice[]): DicomVolume {
   return { slices, sliceSpacingMm: median, axisAlignedAxial };
 }
 
-export function pixelValue(slice: DicomSlice, x: number, y: number): number {
+export function pixelValue(slice: DicomSlice, x: number, y: number, reusableView?: DataView): number {
   const offset = slice.pixelOffset + (y * slice.columns + x) * (slice.bitsAllocated / 8);
-  const view = new DataView(slice.buffer);
+  const view = reusableView ?? new DataView(slice.buffer);
   let raw = slice.bitsAllocated === 8 ? view.getUint8(offset) : view.getUint16(offset, true);
   const mask = (1 << slice.bitsStored) - 1;
   raw &= mask;

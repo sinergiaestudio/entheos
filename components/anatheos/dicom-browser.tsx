@@ -124,8 +124,8 @@ export function AnatheosDicomBrowser() {
       setPlane("axial");
       setPosition(Math.floor(built[0].volume.slices.length / 2));
       const firstSlice = built[0].volume.slices[0];
-      setCenter(firstSlice.windowCenter ?? (firstSlice.modality === "CT" ? 40 : 1024));
-      setWidth(firstSlice.windowWidth ?? (firstSlice.modality === "CT" ? 400 : 2048));
+      setCenter(Math.min(4000, Math.max(-1500, firstSlice.windowCenter ?? (firstSlice.modality === "CT" ? 40 : 1024))));
+      setWidth(Math.min(6000, Math.max(1, firstSlice.windowWidth ?? (firstSlice.modality === "CT" ? 400 : 2048))));
       setMessage(
         built.length + " serie(s) compatible(s). " +
         [...rejected].reduce((sum, [, count]) => sum + count, 0) +
@@ -158,8 +158,8 @@ export function AnatheosDicomBrowser() {
     setPosition(Math.floor(selected.volume.slices.length / 2));
     setCenter(Math.min(4000, Math.max(-1500, selected.volume.slices[0].windowCenter ??
       (selected.modality === "CT" ? 40 : 1024))));
-    setWidth(selected.volume.slices[0].windowWidth ??
-      (selected.modality === "CT" ? 400 : 2048));
+    setWidth(Math.min(6000, Math.max(1, selected.volume.slices[0].windowWidth ??
+      (selected.modality === "CT" ? 400 : 2048))));
   };
 
   return (

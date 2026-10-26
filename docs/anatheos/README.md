@@ -18,6 +18,11 @@
 8. [Registro previo de hitos](../ANATHEOS_MILESTONES.md) — prototipo DICOM inicial y su QA.
 9. [Especificación del piloto inicial](../ANATHEOS_3D_PILOT.md) y [traspaso del Proyecto ChatGPT](../ANATHEOS_CHATGPT_PROJECT_HANDOFF.md) — historia y contexto.
 
+## Auditoría reproducible G0
+
+- [Acta de baseline e inventario de riesgos (2026-10-26)](AUDITORIA_G0_2026-10-26.md) — verificación del SHA piloto, PR, Actions, límites, riesgos y dependencias.
+- Prueba documental automatizada: `tests/anatheos-governance.test.mjs` (validación estática; **no** sustituye pruebas de identidad, DICOM, protección de ramas ni validación médica).
+
 ## Tablero de ingeniería
 
 - **PR piloto, borrador, no fusionar:** [#5](https://github.com/sinergiaestudio/entheos/pull/5).

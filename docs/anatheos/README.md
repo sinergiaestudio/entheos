@@ -18,6 +18,11 @@
 8. [Registro previo de hitos](../ANATHEOS_MILESTONES.md) — prototipo DICOM inicial y su QA.
 9. [Especificación del piloto inicial](../ANATHEOS_3D_PILOT.md) y [traspaso del Proyecto ChatGPT](../ANATHEOS_CHATGPT_PROJECT_HANDOFF.md) — historia y contexto.
 
+## Loader DICOM G2a
+
+- [Frontera de ingestión local y evaluación OSS](DECODIFICADOR_G2A.md): control de presupuesto, detección de sintaxis, cancelación cooperativa y estrategia de reemplazo por Cornerstone3D. **No equivale a decodificador nuevo integrado**.
+- Fuente del contrato: `lib/anatheos/dicom-intake.ts`. Tests: `tests/anatheos-intake.test.mjs`.
+
 ## Tablero de ingeniería
 
 - **PR piloto, borrador, no fusionar:** [#5](https://github.com/sinergiaestudio/entheos/pull/5).

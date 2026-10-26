@@ -33,6 +33,12 @@ PR #26 fusionado con método `merge` exclusivamente a la rama piloto. **HEAD ini
 - Auditoría transitiva instalada: **88 paquetes, 9 binarios WASM (5.597.616 bytes)** y una licencia npm no declarada (`rechoir`), pendientes de revisión. [Acta completa y metodología Slicer](CHROMIUM_CORNERSTONE_G2A_2026-10-26.md).
 - PR #31 mantiene código aislado de PR #30, ningún paquete permanente, visor P1A y main/piloto intactos. Prueba final del HEAD documental aún pendiente. **G2a/B, Slicer, compresión/multiframe y G1B remoto continúan ABIERTOS**.
 
+## Revisión funcional G2a-C · 26/10/2026 (navegador real, no clínica)
+
+- [CI aislada #40420653518](https://github.com/sinergiaestudio/entheos/actions/runs/40420653518) sobre `2cbb2bcf39639ddedbb22664cd0ca3dc85b01ba1`: **tres DICOM sintéticos decodificados realmente en Chromium** (CT explícito, implícito y oblicuo), valores de píxel e intensidades exactas. **LPS/RAS oblicuo verificado** contra oráculo matemático interno `[13.82842712476,18.65685424952,25]` / `[-13.82842712476,-18.65685424952,25]` mm; [acta y límites](CHROMIUM_CORNERSTONE_G2A_2026-10-26.md).
+- El caso implícito genera diagnóstico de parser en consola: mantenido explícito en CI y pendiente de verificar fixture conforme con Slicer. No existe validación médica, benchmark de RAM total, codec comprimido/multiframe ni Slicer independiente.
+- [CI general #40420653604](https://github.com/sinergiaestudio/entheos/actions/runs/40420653604) PASS. Prototipo aislado en PR #31, sin cambios en el visor P1A ni en los paquetes permanentes. Este anexo tiene un nuevo SHA documental pendiente de CI.
+
 ## Panel ejecutivo
 
 | Dimensión | Estado verificable al elaborar este registro | Evidencia |

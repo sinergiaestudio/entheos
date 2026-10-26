@@ -31,6 +31,14 @@ La CI sobre el **HEAD combinado** deberá ejecutar `npm run lint`, `npm run type
 
 No se cambió `main`, piloto, producción, Site, D1/R2 ni credenciales; el repo sigue público y solo incluye fixtures sintéticos. El rollback de este bloque consiste en no fusionar PR temporal y cerrar/descartar rama; nada fue desplegado. La Dirección debe revisar este PR antes de cualquier fusión a piloto. No se cierran #7 ni #20.
 
-## 5. Evidencia posterior
+## 5. Primera evidencia CI del HEAD conjunto
+
+- [GitHub Actions #40374336543](https://github.com/sinergiaestudio/entheos/actions/runs/40374336543) del SHA `f37b6c8dfc34fd021a5f2936c4cb404a3f6d9199`, job `verify` #121753162536: **COMPLETED/SUCCESS; 70/70 tests PASS, 0 FAIL, 0 SKIPPED/CANCELLED**. Lint, TypeScript y build completados (1 advertencia preexistente ajena a ANATHEOS).
+- Matriz HTTP real en servidor de loopback, flag OFF: **23/23 PASS**, sin fallos ni casos omitidos. Incluye métodos HEAD, POST y OPTIONS, codificación simple/doble, RSC y prefijos API.
+- No se ha probado el disparador `push` sobre un nuevo HEAD del piloto, dado que este PR **no está autorizado para merge**. La configuración GitHub sigue sin reglas activadas.
+- La confianza de identidad con flag ON, las sesiones reales y segregación D1/R2 continúan **BLOCKED**. No se ha alterado `main`, piloto ni se habilitó un Site.
+- Este checkpoint documental, al añadir otro commit, requiere nueva CI sobre el último HEAD antes de que pueda darse por verificado.
+
+## 6. Seguimiento documental## 5. Evidencia posterior
 
 Se añadirá a los comentarios del PR temporal y de los Issues #7/#20 la ejecución CI **del HEAD definitivo**, con contadores PASS/FAIL/SKIPPED de pruebas de código y HTTP separados. No constituye revisión de seguridad remota.

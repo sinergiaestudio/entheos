@@ -29,6 +29,16 @@
 | P-006 | Autorizar Site independiente de propietario único | Pendiente de implementación/validación | Prueba con otra cuenta y anónimo; no tocar producción |
 | P-007 | Apertura a pacientes/profesionales | No autorizada | Consentimiento, RBAC, seguridad, licencia y regulación |
 
+### P-002 · Desarrollo de la migración del lector DICOM (propuesta técnica, sin aprobar)
+
+**Fecha:** 2026-10-26. **Issue:** #8. La implementación preparatoria se documenta en [DECODIFICADOR_G2A.md](DECODIFICADOR_G2A.md), sin incorporar librerías todavía.
+
+- **Candidato principal:** `@cornerstonejs/dicom-image-loader` con Cornerstone3D, arquitectura modular y solo entrada `File` local en piloto.
+- **Alternativas:** `dicom-parser` para tags sin decodificación visual de píxeles; `dcmjs` para metadatos; parser propio P1A solo fallback hasta cumplir equivalencias verificadas.
+- **No aprobado:** añadir paquetes, cargar códecs WASM, habilitar WADO remoto o afirmar compatibilidad multiframe/comprimidos.
+- **Condiciones:** comprobar licencia por versión y dependencias, lockfile reproducible, bundle/Worker/Vinext, cancelación/limpieza de cachés, regresión DICOM, pruebas Slicer, cero nuevas suscripciones/servicios y no fuga de PHI.
+- **Estado:** *propuesta para evaluación en PR*, no altera la decisión D-002 de costo cero.
+
 ## Formato para decisión nueva
 
 ### D-0XX — Título

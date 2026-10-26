@@ -44,3 +44,18 @@ test("G7+20 safety: decoded API and HTML paths fail closed, unrelated Entheos pa
     assert.equal(offStateResponse(path, false), null, path);
   }
 });
+
+test("G7+20 revised audit act has sequential headings and both final PR document merges", () => {
+  const act = read("docs/anatheos/INTEGRACION_G1B_20_2026-10-26.md");
+  const headings = [...act.matchAll(/^## (\d+)\. (.+)$/gm)].map((m) => Number(m[1]));
+  assert.deepEqual(headings, [1, 2, 3, 4, 5, 6]);
+  assert.doesNotMatch(act, /documental##/);
+  for (const marker of [
+    "4589de55811dfefcebd9bd1505e018bc4f2d7919",
+    "310a8b5f321483f2e8b3591cd14b2db8cd704409",
+    "a1f565c2d78c3e8ecc4106c17b3f84f23704400a",
+    "947de6d1b5b7b4fd6e9dccae9a350fb1673b0784",
+  ]) assert.ok(act.includes(marker), "missing final ancestry " + marker);
+  assert.match(read("docs/anatheos/G1B_HTTP_LOCAL_2026-10-26.md"), /Documentación oficial de identidad Sites/);
+  assert.match(read("docs/anatheos/PROTECCION_RAMAS_ISSUE_20.md"), /Fuente oficial de publicación Sites/);
+});

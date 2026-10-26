@@ -59,6 +59,14 @@
 - **Evidencia y rollback:** [Acta de integración Issue #25](INTEGRACION_ISSUE_25_2026-10-26.md); cerrar PR temporal sin alterar rama piloto.
 - **Estado:** propuesta, no aprobada; D-001–D-009 permanecen intactas.
 
+### P-011 · Spike local de Cornerstone v5.13.1 (evaluación, no adopción)
+
+- **Fecha/Issue:** 26/10/2026, #8. Versión exacta verificada en upstream tag `v5.13.1`, dicom-image-loader y core con licencia MIT declarada.
+- **Propuesta:** instalar paquetes gratis y fijados solo en job CI efímero, generar un bundle cliente independiente bajo `spikes/anatheos-cornerstone`, comprobar manifest/codec/WASM y conservar el visor P1A original sin ningún cambio.
+- **Riesgos pendientes:** licencias transitivas y binarios WASM, lockfile de adopción futura, ejecución real de decoder en browsers, Vinext/Workers, CT/RM, sintaxis comprimidas, enhanced multiframe, memory/cancel/cleanup y Slicer externo. **Ninguna garantía clínica**.
+- **Evidencia:** [CORNERSTONE_SPIKE_G2A_2026-10-26.md](CORNERSTONE_SPIKE_G2A_2026-10-26.md), SHA/CI se verifican tras workflow. Sin permisos de despliegue, gastos ni integración definitiva.
+- **Estado:** P-011 propuesta de ingeniería no aprobada para incorporación al producto. P-002 permanece propuesta; no sustituye D-001–D-010.
+
 ## Formato para decisión nueva
 
 ### D-0XX — Título

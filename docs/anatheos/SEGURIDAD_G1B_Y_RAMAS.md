@@ -47,7 +47,25 @@ GitHub Docs confirma disponibilidad de branch protection y branch rulesets en re
 
 **Rollback propuesto:** exportar/capturar configuración no secreta antes de cambios, anotar IDs de ruleset, guardar plan para desactivar temporalmente o restaurar reglas anteriores, corroborar funcionamiento de CI y deploy. Solamente administrador/titular con aprobación explícita puede ejecutarlo.
 
-## 4. Go/no-go
+## 4. Instrumentación local creada (sin test de Site)
+
+El script `scripts/anatheos-loopback-smoke.mjs` hace solicitudes `GET` únicamente a `http://127.0.0.1` o `http://[::1]`, con un usuario ficticio o sin header, **solo para verificar la configuración OFF**: exige HTTP 404, cabeceras `no-store` y `noindex`. Rechaza URLs con DNS, HTTPS, rutas o credenciales y **jamás** permite consultar el Site productivo. No se ejecutó aún contra un servidor local; el test de aislamiento `tests/anatheos-g1b-safety.test.mjs` valida que la herramienta no acepte otros destinos.
+
+Modo sin red para verificar argumentos:
+
+```bash
+node scripts/anatheos-loopback-smoke.mjs --self-test
+```
+
+Modo HTTP contra un servidor **local ya iniciado**, con `ANATHEOS_PILOT_ENABLED=false`:
+
+```bash
+node scripts/anatheos-loopback-smoke.mjs http://127.0.0.1:3000
+```
+
+**No ejecutarlo con credenciales ni headers reales.** Un 404 con flag OFF **no prueba** procedencia de cabeceras cuando el flag está ON, ni validación de owner, ni separación real de D1/R2. Estas fases exigen configuración de entorno aislado y aprobación previa.
+
+## 5. Go/no-go
 
 **NO-GO actual para Site remoto:** flag apagado, identidad upstream y separación D1/R2 sin probar. **NO-GO para fusionar PR #26:** falta revisión/decisión de Dirección aun si CI verde. **NO-GO para Settings:** falta aprobación y auditoría de procesos de despliegue. **GO para trabajo local no productivo con DICOM sintéticos y regresiones cruzadas.**
 

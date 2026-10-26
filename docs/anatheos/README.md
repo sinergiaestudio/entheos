@@ -18,6 +18,11 @@
 8. [Registro previo de hitos](../ANATHEOS_MILESTONES.md) — prototipo DICOM inicial y su QA.
 9. [Especificación del piloto inicial](../ANATHEOS_3D_PILOT.md) y [traspaso del Proyecto ChatGPT](../ANATHEOS_CHATGPT_PROJECT_HANDOFF.md) — historia y contexto.
 
+## Corpus de referencia G2b
+
+- [Corpus DICOM íntegramente sintético](CORPUS_DICOM_SINTETICO.md) — escenarios anisotrópicos, oblicuos, lateralidad invertida y rechazos; goldens físicos LPS y guía de comparación con 3D Slicer, aún no ejecutada.
+- Generador sin descarga ni binarios versionados: `tests/fixtures/anatheos/synthetic-series.mjs`, `scripts/anatheos-corpus-manifest.mjs`; pruebas `tests/anatheos-corpus.test.mjs`.
+
 ## Tablero de ingeniería
 
 - **PR piloto, borrador, no fusionar:** [#5](https://github.com/sinergiaestudio/entheos/pull/5).

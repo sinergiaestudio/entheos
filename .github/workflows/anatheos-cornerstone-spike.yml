@@ -32,6 +32,8 @@ jobs:
         run: node spikes/anatheos-cornerstone/audit.mjs
       - name: Build standalone Vite client-only probe
         run: ./node_modules/.bin/vite build --config spikes/anatheos-cornerstone/vite.config.mjs
+      - name: Build ephemeral Cornerstone client route through Vinext and Cloudflare Worker
+        run: bash spikes/anatheos-cornerstone/vinext-probe.sh
       - name: Prove no tracked lockfile or Entheos dependency change
         run: |
           git diff --exit-code -- package.json package-lock.json

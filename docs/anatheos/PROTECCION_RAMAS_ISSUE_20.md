@@ -75,6 +75,12 @@ No afirmar `protected=true` ni que exista un ruleset. Ninguna configuración se 
 
 **Plan para revisar permisos del Site sin modificación:** consultar con administrador qué cuenta/servicio publica Entheos y si efectúa `git push` directo o solo consume artefactos de una publicación explícita. Reunir únicamente nombres de actores técnicos y tipos de eventos, sin tokens ni datos clínicos. Simular reglas en modo no ejecutorio solo si efectivamente disponible en el plan; ninguna prueba destructiva sobre main.
 
+## 5 bis. Fuente oficial de publicación Sites y verificación pendiente de Entheos
+
+La documentación [ChatGPT Sites · Publish and share](https://learn.chatgpt.com/docs/sites/publishing-and-sharing) describe el procedimiento de **guardar una versión y desplegarla**, con pasos de publicación distintos de una simple ejecución de GitHub Actions. En `sinergiaestudio/entheos` el único workflow GitHub observado es `CI` sin deploy. Por tanto, **no existe evidencia de que proteger una rama implique automáticamente publicar el Site o de que el Site haga push directo**. Tampoco hay prueba de que la instancia concreta de Entheos se publique estrictamente mediante esa secuencia; la cuenta/flujo de publicación debe verificarse con el administrador antes de activar reglas.
+
+Con esta información la propuesta conserva check `verify` y política de merges normales, pero **no se declara compatibilidad productiva del deploy como validada**. Los controles de Sites y branch protection siguen siendo decisiones diferentes.
+
 ## 5. Decisión requerida de Dirección
 
 **P-008 todavía propuesta, no aprobada:** validar rama exacta, checks, condición de revisión (segundo revisor), implicación en hosting productivo y plan de rollback. Autorizar por separado el acto administrativo de crear/activar las reglas. Sin esa autorización, #20 continúa abierto y `main`/piloto continúan sin protección efectiva.

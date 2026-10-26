@@ -1,6 +1,7 @@
 declare namespace Cloudflare {
   interface Env {
     APP_OWNER_EMAIL?: string;
+    ANATHEOS_PILOT_ENABLED?: string;
     INTERVALS_CLIENT_ID?: string;
     INTERVALS_CLIENT_SECRET?: string;
     ENTHEOS_INTEGRATION_KEY?: string;

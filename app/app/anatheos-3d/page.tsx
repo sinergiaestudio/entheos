@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { AnatheosDicomBrowser } from "@/components/anatheos/dicom-browser";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { env } from "cloudflare:workers";
+import { isAnatheosOwner, isAnatheosPilotEnabled } from "@/lib/anatheos/owner-access";
 import { requireChatGPTUser } from "../../chatgpt-auth";
 
 export const dynamic = "force-dynamic";
@@ -34,10 +36,13 @@ const capabilities = [
 ];
 
 export default async function Anatheos3DOwnerPilotPage() {
+  // Disabled even for administrators until an isolated runtime is explicitly approved.
+  if (!isAnatheosPilotEnabled(env.ANATHEOS_PILOT_ENABLED)) notFound();
+
   const user = await requireChatGPTUser("/app/anatheos-3d");
 
-  // Fail closed: only the configured owner, never a generic authenticated user.
-  if (!user.isGlobalAdmin) notFound();
+  // Defense in depth. Trusted identity provenance must also be verified upstream.
+  if (!isAnatheosOwner(user, env.APP_OWNER_EMAIL)) notFound();
 
   return (
     <main className="min-h-screen bg-[#f4f7f5] text-[#20342b]">
@@ -47,7 +52,7 @@ export default async function Anatheos3DOwnerPilotPage() {
             ← Volver a Entheos
           </Link>
           <span className="rounded-full border border-[#c6d7cd] bg-white px-3 py-1 text-xs font-medium">
-            Entorno privado · Experimental
+            Área restringida · Experimental
           </span>
         </nav>
 

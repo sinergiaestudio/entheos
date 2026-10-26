@@ -144,7 +144,7 @@ La dirección decide scope, prioridades, aceptación final y publicación. El de
 
 ## 8. Estimación orientativa (no compromiso)
 
-Con un desarrollador con experiencia y datasets accesibles, el camino desde G0 a un MVP privado con volumen 3D y sin IA puede requerir aproximadamente **3 a 6 meses**; escenarios complejos de DICOM, limitaciones de hosting, hardware o validación pueden ampliarlo significativamente. La segmentación, colaboración y eventual regulación se planifican por separado tras una prueba de rendimiento y una revisión del alcance. Se privilegiarán hitos pequeños verificados por encima de fechas especulativas.
+No se comprometen fechas de finalización ni gastos. La duración depende de la compatibilidad DICOM real, disponibilidad de hardware, validación geométrica, seguridad del entorno y capacidad de desarrollo. Las estimaciones se revisarán después del corpus de referencia G2 y el estudio de integración/renderizado G4; prevalecen los hitos con evidencia frente a calendarios especulativos.
 
 ## 9. Protocolo de avance y cierre
 

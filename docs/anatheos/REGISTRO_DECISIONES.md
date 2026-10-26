@@ -28,6 +28,7 @@
 | P-005 | Persistir originales y derivados en almacén aislado Entheos | Diferida | Modelo de datos, autorización, cifrado, costos y restore |
 | P-006 | Autorizar Site independiente de propietario único | Pendiente de implementación/validación | Prueba con otra cuenta y anónimo; no tocar producción |
 | P-007 | Apertura a pacientes/profesionales | No autorizada | Consentimiento, RBAC, seguridad, licencia y regulación |
+| P-008 | Protección de ramas main e integración mediante reglas gratuitas | Propuesta pendiente (#20) | Compatibilidad de protección con GitHub y despliegues existentes, bloqueo de merges involuntarios y rollback; no modificar configuración sin decisión |
 
 ## Formato para decisión nueva
 

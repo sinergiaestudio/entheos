@@ -19,7 +19,7 @@ function element(group, id, vr, data) {
 }
 function makeDicom({
   z = 0, uid = "1.2.3.4", series = "1.2.3", syntax = "1.2.840.10008.1.2.1",
-  spacing = "1\\1", orientation = "1\\0\\0\\0\\1\\0",
+  spacing = "1\\1", orientation = "1\\0\\0\\0\\1\\0", position = null,
   values = [0, 100, 200, 300], signed = false, photometric = "MONOCHROME2",
 } = {}) {
   const pixels = values.flatMap((value) => u16(value & 65535));
@@ -29,7 +29,7 @@ function makeDicom({
     element(0x0008, 0x0060, "CS", "CT"),
     element(0x0020, 0x000d, "UI", "1.2.3.4.5"),
     element(0x0020, 0x000e, "UI", series),
-    element(0x0020, 0x0032, "DS", "0\\0\\" + z),
+    element(0x0020, 0x0032, "DS", position ?? ("0\\0\\" + z)),
     element(0x0020, 0x0037, "DS", orientation),
     element(0x0028, 0x0002, "US", u16(1)),
     element(0x0028, 0x0004, "CS", photometric),
@@ -102,4 +102,13 @@ test("windowing is bounded and can invert MONOCHROME1", () => {
   assert.equal(windowedGray(-1000, 40, 400), 0);
   assert.equal(windowedGray(1000, 40, 400), 255);
   assert.equal(windowedGray(1000, 40, 400, true), 0);
+});
+
+test("rejects absent geometry components and in-plane shifts", () => {
+  assert.throws(() => parseDicom(makeDicom({
+    orientation: "1\\0\\0\\0\\1\\",
+  })), /Metadatos geométricos/);
+  const one = parseDicom(makeDicom({ z: 0, uid: "shift-a" }));
+  const two = parseDicom(makeDicom({ z: 1, uid: "shift-b", position: "1\\0\\1" }));
+  assert.throws(() => buildVolume([one, two]), /Desplazamiento/);
 });

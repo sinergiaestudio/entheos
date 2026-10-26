@@ -35,6 +35,7 @@
 - **Preview privado G7:** [#17](https://github.com/sinergiaestudio/entheos/issues/17).
 - **Apertura/regulación G8:** [#18](https://github.com/sinergiaestudio/entheos/issues/18).
 - **Privacidad, supply chain y seguridad transversal:** [#19](https://github.com/sinergiaestudio/entheos/issues/19).
+- **Protección de main e integración experimental:** [#20](https://github.com/sinergiaestudio/entheos/issues/20) — hallazgo P0, sin cambios de configuración autorizados.
 
 ## Inicio recomendado
 

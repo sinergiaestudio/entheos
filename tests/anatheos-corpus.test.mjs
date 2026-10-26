@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { parseDicom, buildVolume, pixelValue } from "../lib/anatheos/dicom.ts";
 import {
   corpusCases, expectedVoxelCentreLps, makeSyntheticDicom,
@@ -92,4 +94,30 @@ test("G2b generated Part 10 samples are byte-for-byte deterministic, including S
   assert.equal(hash(first), hash(second));
   assert.match(hash(first), /^[a-f0-9]{64}$/);
   assert.notEqual(hash(first), hash(makeSyntheticDicom({ scenario: 77, layer: 2, position: [1, 2, 3] })));
+});
+
+test("G2b public SHA-256 manifest reproduces each generated file and reference", () => {
+  const command = fileURLToPath(new URL("../scripts/anatheos-corpus-manifest.mjs", import.meta.url));
+  const stdout = execFileSync(process.execPath, [command], { encoding: "utf8" });
+  const manifest = JSON.parse(stdout);
+  assert.equal(manifest.schema, "anatheos.synthetic-corpus.v1");
+  assert.equal(manifest.cases.length, Object.keys(corpusCases).length);
+  for (const dataset of Object.values(corpusCases)) {
+    const item = manifest.cases.find((entry) => entry.id === dataset.caseId);
+    assert.ok(item, "Missing manifest case: " + dataset.caseId);
+    assert.deepEqual(item.reference, dataset.point ?? null);
+    assert.equal(item.files.length, dataset.slices.length);
+    item.files.forEach((entry, index) => {
+      assert.equal(entry.bytes, dataset.slices[index].byteLength);
+      assert.equal(entry.sha256, createHash("sha256").update(dataset.slices[index]).digest("hex"));
+    });
+  }
+});
+
+test("G2b exporter refuses writing generated DICOM into the Git repository", () => {
+  const command = fileURLToPath(new URL("../scripts/anatheos-corpus-manifest.mjs", import.meta.url));
+  const repo = fileURLToPath(new URL("../", import.meta.url));
+  assert.throws(() => execFileSync(process.execPath, [command, "--out", repo],
+    { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }), (error) =>
+    error.status !== 0 && /Refusing export inside the Git working tree/.test(String(error.stderr)));
 });

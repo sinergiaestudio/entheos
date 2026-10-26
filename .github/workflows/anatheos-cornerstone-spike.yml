@@ -1,0 +1,38 @@
+name: ANATHEOS Cornerstone OSS compatibility spike
+
+on:
+  pull_request:
+    paths:
+      - "spikes/anatheos-cornerstone/**"
+      - ".github/workflows/anatheos-cornerstone-spike.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  cornerstone-isolated-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install baseline Entheos dependencies
+        run: npm run install:ci
+      - name: Install exact OSS candidate packages in ephemeral CI only
+        run: |
+          npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund \
+            @cornerstonejs/core@5.13.1 \
+            @cornerstonejs/metadata@5.13.1 \
+            @cornerstonejs/utils@5.13.1 \
+            @cornerstonejs/dicom-image-loader@5.13.1
+      - name: Audit package declarations and bundled codecs
+        run: node spikes/anatheos-cornerstone/audit.mjs
+      - name: Build standalone Vite client-only probe
+        run: ./node_modules/.bin/vite build --config spikes/anatheos-cornerstone/vite.config.mjs
+      - name: Prove no tracked lockfile or Entheos dependency change
+        run: |
+          git diff --exit-code -- package.json package-lock.json
+          test -f .sites-runtime/anatheos-cornerstone-bundle/index.html

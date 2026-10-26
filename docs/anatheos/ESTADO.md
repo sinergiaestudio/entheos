@@ -25,6 +25,15 @@
 | Licencias/APIs pagas | Ninguna incorporada al prototipo de ANATHEOS en rama | código inicial y política D-002 |
 | Gobierno de proyecto | Plan, arquitectura, QA, decisiones, protocolo e issues creados | docs/anatheos |
 
+## Checkpoint G2b-A · 2026-10-26 (Issue #9, rama en revisión)
+
+- Se propone un **corpus programático sintético** de nueve casos y generador local de DICOM Part 10, sin datos de pacientes ni binarios en GitHub, generado únicamente en memoria salvo exportación local explícita **fuera** del repositorio.
+- [Corpus, goldens y protocolo Slicer](CORPUS_DICOM_SINTETICO.md); hashes SHA-256 reproducibles por `node scripts/anatheos-corpus-manifest.mjs`.
+- Se agregan pruebas de casos axial anisotrópico, normal negativa/lateralidad, oblicuo, irregularidad, desplazamiento en plano, mezcla de series, implicit LE y rechazo de JPEG marcado/multiframe.
+- **No significa geometría validada:** goldens de test se comparan contra datos inventados; falta importación y contraste Slicer, dataset público desidentificado y pruebas clínicas. 3D volumétrico sigue sin implementar.
+- G1B pendiente de autenticar origen de cabeceras confiables; no existe entorno remoto owner-only verificado y no se activa ningún flag del piloto.
+- Se requieren SHA y resultados CI del PR para convertir `codificado` en `probado automáticamente`; G2b permanece **parcial/en revisión**.
+
 ## Mapa de trabajo (gates)
 
 - **G0 — En curso:** documentación e Issues organizados; pendiente auditar consistencia final y acordar inicio de chat técnico.

@@ -39,7 +39,7 @@
 
 ## Issues y dependencias inmediatas
 
-1. #6 — G0: consolidación final; fuente de verdad y operación.
+1. #6 y #20 — G0: consolidación final y plan para protección de ramas; fuente de verdad y operación.
 2. #7 — G1: aislamiento y owner-only; trabajo temprano en paralelo.
 3. #9 — G2b: corpus público/sintético y referencia geométrica.
 4. #8 — G2a: loader DICOM robusto; elección documentada tras investigar.
@@ -55,6 +55,7 @@ G4 depende de los resultados técnicos; no precipitar renderizados 3D sólo para
 - **R-004 Alto:** volumen 3D puede exceder recursos del navegador o de Workers; prever fallback y procesamiento local.
 - **R-005 Alto:** decisiones en dos chats divergen si no se documentan; obligatoria escritura en ADR y Issues.
 - **R-006 Alto:** licencias de paquetes y modelos AI varían; no confundir software OSS y licencia de pesos.
+- **R-007 Alto:** verificado que main y rama piloto registran protected=false en GitHub; Issue #20 exige propuesta de protección sin modificar configuración antes de aprobación.
 
 ## Plantilla de siguiente actualización
 

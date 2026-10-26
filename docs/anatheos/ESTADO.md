@@ -25,6 +25,15 @@
 | Licencias/APIs pagas | Ninguna incorporada al prototipo de ANATHEOS en rama | código inicial y política D-002 |
 | Gobierno de proyecto | Plan, arquitectura, QA, decisiones, protocolo e issues creados | docs/anatheos |
 
+## Checkpoint G1A · 2026-10-26 (rama de Issue #7, **sin fusionar**)
+
+- Rama propuesta: `anatheos/issue-7-owner-gate` desde HEAD piloto `f66ffaa919b26ab3f4290499009b46812df957ab`, sin modificar `main` ni la integración.
+- Puerta `ANATHEOS_PILOT_ENABLED` estrictamente igual a `true` y verificación adicional de propietario antes de renderizar ANATHEOS. Por defecto, ruta inaccesible; la habilitación **no se autoriza en producción**.
+- Cabeceras de caché/robots declaradas para rutas ANATHEOS; tests sintéticos de propietario/tercero/anónimo y configuración. La efectiva emisión de cabeceras en Vinext/Worker queda **sin prueba HTTP**.
+- [Protocolo G1A](LAB_G1_LOCAL.md) documenta aislamiento local, límites, matriz de aceptación, y riesgo de cabeceras de identidad si el borde no las sanea. `APP_OWNER_EMAIL` debe permanecer secreto de entorno, no almacenado en repo.
+- **G1 no está terminado:** no se ejecutó login real/otro usuario, no se verificó proxy confiable, D1/R2 staging ni URL remota. No desplegar.
+- Checks nuevos de CI/HEAD y PR deben registrarse al final; no deducir estado sólo por commits.
+
 ## Mapa de trabajo (gates)
 
 - **G0 — En curso:** documentación e Issues organizados; pendiente auditar consistencia final y acordar inicio de chat técnico.

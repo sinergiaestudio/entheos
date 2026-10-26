@@ -75,6 +75,15 @@
 - API GitHub consultada: `rulesets` devuelve lista vacía, ambos branches reportan `protected=false`. Endpoint detallado de branch protection devolvió **403 por permisos de integración**: no asumir una auditoría integral de configuración.
 - Propuesta sujeta a Dirección; no se cambió GitHub Settings ni se desplegó ningún Site. No autorizar `ANATHEOS_PILOT_ENABLED=true` en un remoto.
 
+## Evidencia CI conjunta y revisión de seguridad · 2026-10-26
+
+- PR de revisión temporal [#26](https://github.com/sinergiaestudio/entheos/pull/26), rama `anatheos/issue-25-integration-review`; CI conjunto [GitHub Actions #40355584304](https://github.com/sinergiaestudio/entheos/actions/runs/40355584304) verificado **COMPLETED/SUCCESS** sobre SHA `79166c8c0234f76f804ba6a083c2ccec1be11a0b`, **60 tests / 60 PASS / 0 FAIL / 0 SKIPPED / 0 CANCELLED**. Instalación, lint (1 warning preexistente por `img` en Entheos), typecheck y build PASS.
+- Tests cruzados: G25 owner/flag + corpus axial/oblicuo + rechazos/cancelación; G1B: bloqueo de URLs remotas para herramienta HTTP de loopback y self-test sin red. No equivale a test HTTP real ni autorización de proveedor de identidad.
+- Comparación `feature/anatheos-3d-owner-pilot...anatheos/issue-25-integration-review`: **26 archivos, 51 commits por delante / 0 detrás** por preservación de historia de cuatro ramas con commits de dos padres. No se agregó dependencia a `package.json`, no se cambiaron datos productivos.
+- Al preparar este informe: `main` `8e7602280d6c4fddc234c1973537839592683798`; piloto `aec8222c5fa4b529575fc49a85f401ecf7a41a49`; ambos intactos y no protegidos, Issue #20. PR #21–#24 y #26 **DRAFT y no fusionados**.
+- [Informe de seguridad G1B y protección de ramas](SEGURIDAD_G1B_Y_RAMAS.md) documentado. API GitHub de rulesets vacía, lectura de branch protection con 403; NO se aplicaron reglas.
+- **Control de revisión:** la ejecución anterior verifica el código; este nuevo commit de documentación requiere su propia CI sobre HEAD para cerrar formalmente QA. Issues #6, #7, #8, #9, #20, #25 mantienen bloqueos. Sin Slicer, Site, PHI, 3D volumétrico, ni validación clínica.
+
 ## Mapa de trabajo (gates)
 
 - **G0 — En curso:** documentación e Issues organizados; pendiente auditar consistencia final y acordar inicio de chat técnico.

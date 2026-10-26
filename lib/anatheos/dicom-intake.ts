@@ -45,7 +45,7 @@ export class DicomIntakeError extends Error {
   constructor(code: "budget" | "cancelled") {
     super(code === "budget"
       ? "Límite local: máximo 600 archivos, 32 MB por archivo y 320 MB en total."
-      : "Lectura cancelada. No se conservaron los archivos seleccionados.");
+      : "Lectura cancelada en el visor. Una lectura ya iniciada puede finalizar internamente antes de liberar memoria.");
     this.code = code;
     this.name = "DicomIntakeError";
   }

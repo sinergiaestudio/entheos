@@ -63,6 +63,18 @@ No afirmar `protected=true` ni que exista un ruleset. Ninguna configuración se 
 - Si una regla impide el funcionamiento legítimo, un administrador con autorización puede **desactivar temporalmente únicamente la regla implicada**, volver a configuración original con auditoría y verificar el despliegue; no desactivar la protección global automáticamente.
 - Durante pruebas no usar datos clínicos, credenciales ni publicar ANATHEOS. No activar ningún gasto o cuenta externa.
 
+## 5. Propuesta ejecutable CI post-merge y revisión de despliegues
+
+**Cambio propuesto en esta rama:** `.github/workflows/ci.yml` añade `feature/anatheos-3d-owner-pilot` a `on.push.branches`, conservando `main` y `pull_request`. No cambia pasos ni introduce servicios. Al aprobar una integración futura, Actions debe crear el run `push` para el **HEAD exacto del piloto** aunque el PR #5 no exista. La ejecución `pull_request` no reemplaza esta evidencia. Probarlo únicamente después de autorización de merge, comprobando que `head_sha` coincida y que el job `verify` concluya `success`.
+
+**Compatibilidad de workflows:** PR #27 agrega paso `G1B local HTTP denied-access matrix (no deploy)` al job `verify`. En integración combinada conservar **ambas** modificaciones: trigger `push` piloto y paso G1B. No sustituir el YAML completo por uno de los PR y perder el otro. El CI del PR de documentación prueba su propia configuración bajo evento PR, pero **todavía no prueba un push real a piloto**, porque su fusión sigue sin autorización.
+
+**Inventario concreto de despliegues accesibles:** el único workflow GitHub en `.github/workflows` es `ci.yml`. No incluye `deploy`, `wrangler deploy`, secrets de publicación ni entrega de Site; usa `npm run install:ci`, `npm run lint`, `npm run typecheck`, `npm test`. `scripts/build-verified.sh` empaqueta y valida `dist/server/index.js` y `.openai/hosting.json`; el manifiesto de Site contiene nombres de bindings `DB`/`BUCKET`. Por ello, el despliegue **no aparece implementado en GitHub Actions del repositorio**. Podría ser iniciado por la plataforma Sites mediante otro mecanismo no disponible a este conector; **su identidad, permisos, trigger real y eventual push directo a main continúan BLOCKED** hasta inventario de Dirección/administración. No afirmar que los deploys están garantizados bajo la regla propuesta.
+
+**Revisión independiente para un solo mantenedor:** opciones a decidir por Dirección, en orden de preferencia: (1) un segundo revisor con permiso suficiente y sin costo agregado que apruebe cambios en `main`; (2) proteger sin requerir aprobación independiente si no existe revisor, conservando PR obligatorio, check obligatorio y conversación resuelta, con compensación de aprobación documental manual; (3) excepción nominativa temporal, auditada y acotada, nunca bypass general automático. GitHub no permite al autor aprobar su propio PR. Ninguna de estas opciones está aprobada todavía.
+
+**Plan para revisar permisos del Site sin modificación:** consultar con administrador qué cuenta/servicio publica Entheos y si efectúa `git push` directo o solo consume artefactos de una publicación explícita. Reunir únicamente nombres de actores técnicos y tipos de eventos, sin tokens ni datos clínicos. Simular reglas en modo no ejecutorio solo si efectivamente disponible en el plan; ninguna prueba destructiva sobre main.
+
 ## 5. Decisión requerida de Dirección
 
 **P-008 todavía propuesta, no aprobada:** validar rama exacta, checks, condición de revisión (segundo revisor), implicación en hosting productivo y plan de rollback. Autorizar por separado el acto administrativo de crear/activar las reglas. Sin esa autorización, #20 continúa abierto y `main`/piloto continúan sin protección efectiva.

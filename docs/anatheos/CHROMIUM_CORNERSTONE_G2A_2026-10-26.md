@@ -34,6 +34,15 @@ Protocolo para 3D Slicer cuando se disponga de la herramienta local y de fixture
 5. Para oblicuos, invertir normal, inclinación de gantry y gaps irregular: registrar si Slicer rechaza/advierte o crea volumen con correcciones. No omitir esos casos ni inferir equivalencia de fixtures mínimos no conformes.
 6. Cualquier 3D volumétrico/segmentación sigue bloqueado hasta estabilizar geometría y memoria.
 
+## 3 bis. Primera comprobación de geometría axial/oblicua dentro de Chromium
+
+- [GitHub Actions #40420653518](https://github.com/sinergiaestudio/entheos/actions/runs/40420653518) sobre SHA `2cbb2bcf39639ddedbb22664cd0ca3dc85b01ba1`: **COMPLETED/SUCCESS**, decodificación real de **tres** instancias CT sintéticas en navegador Chromium: Explicit LE axial, Implicit LE axial y Explicit LE oblicua. Las muestras de intensidad siguen coincidiendo; el diagnóstico conocido `Invalid vr type ox - using OW` queda registrado **únicamente** con el fixture implícito y no se clasifica como conformidad DICOM.
+- Se añadieron aserciones de metadata recuperada del **loader**: `imagePositionPatient`, cosenos de fila y columna y spacing por eje, así como conversión de un centro de voxel de DICOM **LPS a RAS**. Para caso oblicuo: `IPP=[11,13,25]`, `rowCosines=[0.70710678119,0.70710678119,0]`, `columnCosines=[-0.70710678119,0.70710678119,0]`, spacing `[2,3] mm`. El centro de voxel (columna=2, fila=1) coincidió con el oráculo sintético: **LPS `[13.82842712476,18.65685424952,25]` mm** y **RAS `[-13.82842712476,-18.65685424952,25]` mm**, tolerancia `1e-6 mm`.
+- La geometría se comparó contra valores sintéticos **derivados de los mismos parámetros de generación**, no contra 3D Slicer. Este resultado **NO** constituye validación geométrica independiente ni confirma lateralidad en imágenes clínicas.
+- Tiempos indicativos de este runner, no benchmark: primer caso ~127 ms, segundo ~9 ms y oblicuo ~8 ms, medidos con carga/cache de un navegador concreto. Heap JS observada ~15–16 MB; sin medición de pico/GC/WASM completa. Se verificó retirada de referencias de `fileManager` tras cada caso, **no liberación instantánea ni cancelación real de worker**.
+- [CI estándar #40420653604](https://github.com/sinergiaestudio/entheos/actions/runs/40420653604) del mismo SHA `2cbb2bc...`: `completed/success`, suite estable sin incorporación de dependencias.
+- Este anexo se incorpora por commit documental posterior y requiere CI propia para acreditar el HEAD definitivo.
+
 ## 4. Licencias y binarios: inventario técnico
 
 - `spikes/anatheos-cornerstone/transitive-sbom.mjs` recorre **dependencias runtime y peer efectivamente instaladas** desde cuatro paquetes Cornerstone 5.13.1, inventariando versión, licencia declarada, avisos LICENSE/NOTICE y SHA256/tamaño de archivos WASM. Salida JSON en runner CI y artefacto GitHub Actions, sin código clínico.

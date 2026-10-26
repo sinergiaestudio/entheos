@@ -156,8 +156,8 @@ export function AnatheosDicomBrowser() {
     setActive(index);
     setPlane("axial");
     setPosition(Math.floor(selected.volume.slices.length / 2));
-    setCenter(selected.volume.slices[0].windowCenter ??
-      (selected.modality === "CT" ? 40 : 1024));
+    setCenter(Math.min(4000, Math.max(-1500, selected.volume.slices[0].windowCenter ??
+      (selected.modality === "CT" ? 40 : 1024))));
     setWidth(selected.volume.slices[0].windowWidth ??
       (selected.modality === "CT" ? 400 : 2048));
   };
@@ -176,12 +176,11 @@ export function AnatheosDicomBrowser() {
       <label className="block cursor-pointer rounded-xl border-2 border-dashed border-[#a3b8ad] bg-[#f8faf8] p-5">
         <span className="block font-semibold">Seleccionar archivos DICOM del equipo</span>
         <span className="mt-1 block text-xs leading-5 text-[#64776c]">
-          Múltiples cortes de una serie. Límite total: 320 MB. No se suben archivos a Entheos ni a terceros.
+          Múltiples cortes de una serie, con o sin extensión .dcm. Límite total: 320 MB. No se suben archivos a Entheos ni a terceros.
         </span>
         <input
           className="mt-3 block w-full text-sm"
           type="file"
-          accept=".dcm,.dicom,application/dicom"
           multiple
           disabled={loading}
           onChange={(event) => {
@@ -190,6 +189,12 @@ export function AnatheosDicomBrowser() {
           }}
         />
       </label>
+      {series.length > 0 && (
+        <button type="button" className="text-sm font-semibold underline"
+          onClick={() => { setSeries([]); setMessage("Se descartaron los archivos de la sesión del visor."); }}>
+          Descartar estudio de la memoria del visor
+        </button>
+      )}
       <p role="status" aria-live="polite" className="my-4 text-sm text-[#52685c]">
         {loading ? "Procesando archivos localmente…" : message}
       </p>
@@ -224,7 +229,7 @@ export function AnatheosDicomBrowser() {
                     }}
                     className={"rounded-md border px-2 py-2 text-xs capitalize " +
                       (plane === choice ? "border-[#35654c] bg-[#dcece2]" : "bg-white")}>
-                    {choice}
+                    {choice === "axial" && !volume.axisAlignedAxial ? "original" : choice}
                   </button>
                 ))}
               </div>

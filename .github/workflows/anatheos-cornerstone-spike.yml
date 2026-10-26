@@ -27,13 +27,27 @@ jobs:
             @cornerstonejs/core@5.13.1 \
             @cornerstonejs/metadata@5.13.1 \
             @cornerstonejs/utils@5.13.1 \
-            @cornerstonejs/dicom-image-loader@5.13.1
+            @cornerstonejs/dicom-image-loader@5.13.1 \
+            playwright@1.56.1
       - name: Audit package declarations and bundled codecs
         run: node spikes/anatheos-cornerstone/audit.mjs
+      - name: Inventory runtime and peer licenses plus codec WASM hashes
+        run: node spikes/anatheos-cornerstone/transitive-sbom.mjs
+      - name: Upload non-clinical SPDX-like SBOM for audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: anatheos-cornerstone-experimental-sbom
+          path: .sites-runtime/anatheos-cornerstone-sbom.json
+          retention-days: 7
+          if-no-files-found: error
       - name: Build standalone Vite client-only probe
         run: ./node_modules/.bin/vite build --config spikes/anatheos-cornerstone/vite.config.mjs
       - name: Build ephemeral Cornerstone client route through Vinext and Cloudflare Worker
         run: bash spikes/anatheos-cornerstone/vinext-probe.sh
+      - name: Install Chromium free browser binary in ephemeral CI
+        run: ./node_modules/.bin/playwright install --only-shell chromium
+      - name: Decode synthetic Part10 pixels in actual Chromium with Cornerstone
+        run: bash spikes/anatheos-cornerstone/chromium-local-ci.sh
       - name: Prove no tracked lockfile or Entheos dependency change
         run: |
           git diff --exit-code -- package.json package-lock.json

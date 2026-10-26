@@ -67,6 +67,14 @@
 - **Evidencia:** [CORNERSTONE_SPIKE_G2A_2026-10-26.md](CORNERSTONE_SPIKE_G2A_2026-10-26.md), SHA/CI se verifican tras workflow. Sin permisos de despliegue, gastos ni integración definitiva.
 - **Estado:** P-011 propuesta de ingeniería no aprobada para incorporación al producto. P-002 permanece propuesta; no sustituye D-001–D-010.
 
+### P-012 · Investigación del decoder real en Chromium (no adopción del producto)
+
+- **Fecha/Issue:** 26/10/2026, #8; decisión de ingeniería acotada al laboratorio con PR #31 DRAFT, basado en el SPIKE independiente de PR #30.
+- **Evidencia verificada:** `Cornerstone 5.13.1` decodificó realmente CT sintético Explicit VR LE en navegador [CI #40418651758](https://github.com/sinergiaestudio/entheos/actions/runs/40418651758), muestras y transformación slope/intercept exactas. El caso Implicit VR LE devolvió píxeles correctos pero advirtió VR de parser, por lo que el [CI #40419609025](https://github.com/sinergiaestudio/entheos/actions/runs/40419609025) **falló** hasta una clasificación documentada del diagnóstico.
+- **Alcance:** análisis del runtime, diagnóstico, memoria JS puntual, cancelación stale, metadatos IPP/IOP/pixel spacing, y auditoría transitiva de 88 paquetes + hash 9 binarios WASM. Ningún test Slicer externo, IOD clínico, codec comprimido ni multiframe validado.
+- **Condiciones:** conservar P1A, cero datos médicos reales, ningún nuevo costo, sin deploy ni dependencia persistente. No pasar a G3 sin referencia independiente. La licencia declarada de `rechoir` requiere revisión.
+- **Estado:** propuesta/investigación no autorizada como reemplazo; [detalle](CHROMIUM_CORNERSTONE_G2A_2026-10-26.md). No sustituye P-002/P-011 ni D-001–D-010.
+
 ## Formato para decisión nueva
 
 ### D-0XX — Título

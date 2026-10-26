@@ -61,6 +61,10 @@
 
 - [Spike aislado Cornerstone3D v5.13.1](CORNERSTONE_SPIKE_G2A_2026-10-26.md) — prototipo cliente en `spikes/anatheos-cornerstone/` y workflow de bundling/licencias. **No modifica** el visor estable, no acredita CT/RM comprimido ni multiframe, ni validación Slicer.
 
+## Primera decodificación efectiva en navegador (G2a-C)
+
+- [Cornerstone 5.13.1 en Chromium: píxeles y HU comprobados, avisos de parser, memoria y SBOM](CHROMIUM_CORNERSTONE_G2A_2026-10-26.md). Rama de investigación separada PR #31, con destino exclusivamente al SPIKE de PR #30; **no sustituye P1A ni habilita uso médico**.
+
 ## Tablero de ingeniería
 
 - **PR piloto, borrador, no fusionar:** [#5](https://github.com/sinergiaestudio/entheos/pull/5).

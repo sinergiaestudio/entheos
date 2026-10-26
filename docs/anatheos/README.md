@@ -18,6 +18,10 @@
 8. [Registro previo de hitos](../ANATHEOS_MILESTONES.md) — prototipo DICOM inicial y su QA.
 9. [Especificación del piloto inicial](../ANATHEOS_3D_PILOT.md) y [traspaso del Proyecto ChatGPT](../ANATHEOS_CHATGPT_PROJECT_HANDOFF.md) — historia y contexto.
 
+## Auditorías independientes de dirección
+
+- [Auditoría de PR #21–#24, 26/10/2026](AUDITORIA_DIRECCION_2026-10-26.md) — estado real, evidencias CI, riesgos P0 y condiciones para integración; [Issue de control #25](https://github.com/sinergiaestudio/entheos/issues/25).
+
 ## Tablero de ingeniería
 
 - **PR piloto, borrador, no fusionar:** [#5](https://github.com/sinergiaestudio/entheos/pull/5).

@@ -39,5 +39,24 @@ jobs:
           path: .sites-runtime/anatheos-sites-demo-synthetic.png
           retention-days: 7
           if-no-files-found: error
+      - name: Record exact Git HEAD in no-DICOM snapshot
+        run: |
+          git rev-parse HEAD > .sites-runtime/anatheos-sites-preview-head.txt
+      - name: Archive code-only recovery package for Drive
+        uses: actions/upload-artifact@v4
+        with:
+          name: anatheos-sites-preview-v01-code-only
+          path: |
+            app/app/anatheos-3d/demo/page.tsx
+            components/anatheos/site-demo-client.tsx
+            components/anatheos/site-demo.css
+            lib/anatheos/site-demo-zip.ts
+            tests/anatheos-sites-demo.test.mjs
+            scripts/anatheos-sites-preview-ci.sh
+            scripts/anatheos-sites-preview-chromium.mjs
+            docs/anatheos/SITES_PREVIEW_DEMO_V01_2026-10-27.md
+            .sites-runtime/anatheos-sites-preview-head.txt
+          retention-days: 7
+          if-no-files-found: error
       - name: Confirm no product dependency or lockfile modifications
         run: git diff --exit-code -- package.json package-lock.json

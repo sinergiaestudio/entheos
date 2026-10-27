@@ -1,0 +1,5 @@
+RTKN0668 MR DESS
+Wijayathunga, Nagitha; Day, Gavin A.; Jones, Alison; Wilcox, Ruth; Mengoni, Marlène (2026). High resolution CT and MR images of cadaveric knees – dataset 01 (RTKN0668). University of Leeds. DOI https://doi.org/10.5518/1834
+Source https://archive.researchdata.leeds.ac.uk/1609/
+License: Creative Commons Attribution 4.0 International (CC BY 4.0) https://creativecommons.org/licenses/by/4.0/
+Original DESS ZIP is distributed unmodified; ANATHEOS viewer is independent experimental code.

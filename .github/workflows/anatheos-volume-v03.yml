@@ -1,0 +1,63 @@
+name: ANATHEOS v0.3 Windows viewer source and browser smoke (no DICOM)
+
+on:
+  pull_request:
+    paths:
+      - "demos/anatheos-local-v0.3/**"
+      - "tests/anatheos-volume-v03-browser.mjs"
+      - ".github/workflows/anatheos-volume-v03.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-source-and-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install baseline Entheos dependencies
+        run: npm run install:ci
+      - name: Verify exact no-DICOM recovery package
+        run: |
+          set -eu
+          archive=demos/anatheos-local-v0.3/ANATHEOS_3D_Demo_Local_v0.3_Codigo_Sin_DICOM.zip
+          printf '375433915c315ccf96662c56e9cc4d69f3b9440b2e11f32db177248b07261182  %s\n' "$archive" | sha256sum --check
+          unzip -t "$archive" | tail -2
+          if unzip -Z1 "$archive" | grep -E '(^datasets/|[.]dcm$|RTKN0668_MR_DESS[.]zip$)'; then
+            echo "Medical image file found in public GitHub artifact - REFUSE"
+            exit 1
+          fi
+          mkdir -p .sites-runtime/anatheos-v03-source
+          unzip -q "$archive" -d .sites-runtime/anatheos-v03-source
+          (cd .sites-runtime/anatheos-v03-source && node --check app.js && node --check volumetric.js && node test_volume_core.mjs)
+      - name: Ephemeral free Chromium tooling
+        run: |
+          npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.56.1
+          ./node_modules/.bin/playwright install --only-shell chromium
+      - name: Exercise synthetic DICOM v0.3 viewer at localhost only
+        run: |
+          set -euo pipefail
+          (cd .sites-runtime/anatheos-v03-source && python3 -m http.server 8770 --bind 127.0.0.1) > .sites-runtime/anatheos-v03-http.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 40); do
+            if curl --silent --output /dev/null --max-time 1 http://127.0.0.1:8770/; then ready=1;break;fi
+            sleep 1
+          done
+          test "$ready" = "1"
+          node tests/anatheos-volume-v03-browser.mjs
+      - name: Upload only synthetic-browser screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: anatheos-v03-synthetic-chromium-capture
+          path: .sites-runtime/anatheos-v03-synthetic-preview.png
+          retention-days: 7
+          if-no-files-found: error
+      - name: No product dependency changes
+        run: git diff --exit-code -- package.json package-lock.json

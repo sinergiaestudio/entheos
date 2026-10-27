@@ -39,7 +39,7 @@ try {
   await page.getByRole("button",{name:"Restablecer"}).click();
   await page.getByLabel("Corte DICOM").focus();
   await page.keyboard.press("Home");
-  await page.getByText("Corte 1 / 2", {exact:false}).waitFor({timeout:5000});
+  await page.locator('label[for="anatheosSlice"]').getByText("Corte 1 / 2",{exact:false}).waitFor({timeout:5000});
   for(const label of ["Ventana","Nivel","Brillo","Contraste"]) {
     assert.equal(await page.getByRole("slider",{name:label}).count(),1);
   }

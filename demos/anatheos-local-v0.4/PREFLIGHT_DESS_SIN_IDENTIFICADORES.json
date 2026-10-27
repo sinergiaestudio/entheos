@@ -1,0 +1,198 @@
+{
+  "zip_name": "RTKN0668_MR_DESS.zip",
+  "sha256": "1c378e89d3a2e7aa57a1049f1fa91b9278529e544369d1071d4c453073ce951d",
+  "instances": 144,
+  "total_uncompressed_bytes": 57603528,
+  "transfer_syntax": [
+    [
+      "1.2.840.10008.1.2.1",
+      144
+    ]
+  ],
+  "modality": [
+    [
+      "MR",
+      144
+    ]
+  ],
+  "series_description": [
+    [
+      "DESS_PC_Knee2",
+      144
+    ]
+  ],
+  "iop": [
+    [
+      "0.0070189979721\\0.99997536653033\\4.2684742e-008\\0.05401624929465\\-0.0003791066605\\-0.9985399847228",
+      144
+    ]
+  ],
+  "rows": [
+    [
+      "384",
+      144
+    ]
+  ],
+  "cols": [
+    [
+      "384",
+      144
+    ]
+  ],
+  "pixel_spacing": [
+    [
+      "0.36458334326744\\0.36458334326744",
+      144
+    ]
+  ],
+  "slice_thickness": [
+    [
+      "0.70000004768372",
+      144
+    ]
+  ],
+  "spacing_between_slices": [
+    [
+      "None",
+      144
+    ]
+  ],
+  "bits_allocated": [
+    [
+      "16",
+      144
+    ]
+  ],
+  "bits_stored": [
+    [
+      "12",
+      144
+    ]
+  ],
+  "pixel_representation": [
+    [
+      "0",
+      144
+    ]
+  ],
+  "samples_per_pixel": [
+    [
+      "1",
+      144
+    ]
+  ],
+  "photometric": [
+    [
+      "MONOCHROME2",
+      144
+    ]
+  ],
+  "intercept": [
+    [
+      "None",
+      144
+    ]
+  ],
+  "slope": [
+    [
+      "None",
+      144
+    ]
+  ],
+  "series_count": 1,
+  "instance_number_range": [
+    1,
+    144
+  ],
+  "instance_number_unique": 144,
+  "iop_first": [
+    0.0070189979721,
+    0.99997536653033,
+    4.2684742e-08,
+    0.05401624929465,
+    -0.0003791066605,
+    -0.9985399847228
+  ],
+  "normal_lps": [
+    -0.99851538720219,
+    0.007008752433499763,
+    -0.05401757963589258
+  ],
+  "ipp_first_filename": "34.721725608623\\-131.19093549735\\82.785459961677",
+  "ipp_low": "42.410294322854\\-131.24490289272\\83.201395337465",
+  "ipp_high": "-57.541098962154\\-130.54332675289\\77.794235452209",
+  "projected_spacing": {
+    "min": 0.7000000211918191,
+    "median": 0.7000000211928707,
+    "max": 0.7000000211929489
+  },
+  "position_unique": 144,
+  "projection_unique": 144,
+  "pixel_data_first": {
+    "offset": 105114,
+    "length": 294912
+  },
+  "pixel_data_length_counts": [
+    [
+      294912,
+      144
+    ]
+  ],
+  "first_5_ordered": [
+    {
+      "instance": "144",
+      "name": "13137362",
+      "projection_mm": -47.76153
+    },
+    {
+      "instance": "143",
+      "name": "13137346",
+      "projection_mm": -47.06153
+    },
+    {
+      "instance": "142",
+      "name": "13137330",
+      "projection_mm": -46.36153
+    },
+    {
+      "instance": "141",
+      "name": "13137314",
+      "projection_mm": -45.66153
+    },
+    {
+      "instance": "140",
+      "name": "13137298",
+      "projection_mm": -44.96153
+    }
+  ],
+  "last_5_ordered": [
+    {
+      "instance": "5",
+      "name": "13174052",
+      "projection_mm": 49.53847
+    },
+    {
+      "instance": "4",
+      "name": "13174036",
+      "projection_mm": 50.23847
+    },
+    {
+      "instance": "3",
+      "name": "13174020",
+      "projection_mm": 50.93847
+    },
+    {
+      "instance": "2",
+      "name": "13174004",
+      "projection_mm": 51.63847
+    },
+    {
+      "instance": "1",
+      "name": "13173988",
+      "projection_mm": 52.33847
+    }
+  ],
+  "attribution": "Wijayathunga et al. (2026), University of Leeds, DOI:10.5518/1834, CC BY 4.0",
+  "note": "Public cadaveric knee DICOM. Patient-related tag group 0010 and vendor-private tags are present; their values are never displayed/logged in demo. Original unchanged. Independent Slicer comparison not run.",
+  "supported_by_demo": "Native uncompressed monochrome Part10 16-bit only (internal standalone decoder). Cornerstone3D browser proof is tracked separately in GitHub PR #31/#32."
+}

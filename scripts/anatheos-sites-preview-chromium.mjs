@@ -42,6 +42,19 @@ try {
   await page.getByLabel("Corte DICOM").focus();
   await page.keyboard.press("Home");
   await page.locator('label[for="anatheosSlice"]').getByText("Corte 1 / 2",{exact:false}).waitFor({timeout:5000});
+  await page.getByRole("button",{name:"Auto W/L"}).click();
+  await page.waitForFunction(()=>{
+    const c=document.querySelector("canvas");
+    if(!c)return false;
+    const bytes=c.getContext("2d").getImageData(0,0,c.width,c.height).data;
+    const intensities=new Set();
+    for(let i=0;i<bytes.length;i+=80){
+      if(bytes[i]===bytes[i+1]&&bytes[i+1]===bytes[i+2])intensities.add(bytes[i]);
+      if(intensities.size>=5)return true;
+    }
+    return false;
+  },null,{timeout:5000});
+
   for(const label of ["Ventana","Nivel","Brillo","Contraste"]) {
     assert.equal(await page.getByRole("slider",{name:label}).count(),1);
   }

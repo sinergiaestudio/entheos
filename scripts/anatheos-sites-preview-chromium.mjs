@@ -31,9 +31,11 @@ try {
     const data=c.getContext("2d").getImageData(0,0,c.width,c.height).data;
     let nonBackground=0;
     for(let i=0;i<data.length;i+=4) if(data[i]!==21 && data[i]!==0)nonBackground++;
-    return{width:c.width,height:c.height,nonBackground};
+    const rect=c.getBoundingClientRect();
+    return{width:c.width,height:c.height,cssWidth:rect.width,cssHeight:rect.height,nonBackground};
   });
-  assert.ok(metrics.width>=200&&metrics.height>=200);
+  assert.ok(metrics.width>=600&&metrics.height>=350,"canvas is not full-size; CSS missing");
+  assert.ok(metrics.cssWidth>=600&&metrics.cssHeight>=350,"responsive medical layout missing");
   assert.ok(metrics.nonBackground>10,"no synthetic pixels visible");
   await page.getByRole("button",{name:"+"}).click();
   await page.getByRole("button",{name:"Restablecer"}).click();
@@ -43,6 +45,7 @@ try {
   for(const label of ["Ventana","Nivel","Brillo","Contraste"]) {
     assert.equal(await page.getByRole("slider",{name:label}).count(),1);
   }
+  await page.screenshot({path:".sites-runtime/anatheos-sites-demo-synthetic.png",fullPage:true});
   await page.getByRole("button",{name:"Liberar"}).click();
   await page.getByText("Datos desvinculados", {exact:false}).waitFor({timeout:5000});
   assert.deepEqual(outbound,[],"external request detected");

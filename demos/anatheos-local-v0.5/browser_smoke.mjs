@@ -13,16 +13,16 @@ try{
  await page.locator('#surfaceFile').setInputFiles([
   {name:'femur-95.stl',mimeType:'application/octet-stream',buffer:stl(0)},
   {name:'tibia-96.stl',mimeType:'application/octet-stream',buffer:stl(60)}]);
- await page.waitForFunction(()=>document.querySelectorAll('.surface-row').length===2,{timeout:12000});
+ await page.waitForFunction(()=>document.querySelectorAll('.surface-row').length===2,null,{timeout:12000});
  assert.equal(await page.locator('#surfaceButton').getAttribute('aria-pressed'),'true');
  assert.equal(await page.locator('#surfaceCanvas').isVisible(),true);
  const canvas=await page.locator('#surfaceCanvas').evaluate(el=>({width:el.width,height:el.height}));
  assert(canvas.width>200&&canvas.height>100,'No rasterized WebGL canvas');
- await page.locator('.surface-row').first.locator('button').last().click();
+ await page.locator('.surface-row').first().locator('button').last().click();
  assert.deepEqual(await page.locator('.surface-row input[type=checkbox]').evaluateAll(xs=>xs.map(x=>x.checked)),[true,false]);
  await page.locator('#surfaceAll').click();
  assert.deepEqual(await page.locator('.surface-row input[type=checkbox]').evaluateAll(xs=>xs.map(x=>x.checked)),[true,true]);
- await page.locator('.surface-row').first.locator('input[type=range]').fill('35');
+ await page.locator('.surface-row').first().locator('input[type=range]').evaluate(el=>{el.value='35';el.dispatchEvent(new Event('input',{bubbles:true}));});
  await page.locator('#twoDButton').click();
  assert.equal(await page.locator('#surfaceCanvas').isVisible(),false);
  await page.locator('#surfaceButton').click();

@@ -1,0 +1,47 @@
+name: ANATHEOS v0.2 · Real voxel volume (local browser only)
+on:
+  pull_request:
+    paths:
+      - "demos/anatheos-local-v0.2/**"
+      - "scripts/anatheos-volume-v02-browser.mjs"
+      - ".github/workflows/anatheos-volume-v02.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify-volume:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install Entheos baseline dependencies
+        run: npm run install:ci
+      - name: Verify source-only recovery SHA and forbid DICOM in Git
+        run: |
+          sha256sum demos/anatheos-local-v0.2/ANATHEOS_3D_Demo_Local_v0.2_SOLO_CODIGO_sin_DICOM.zip
+          echo "534c7a7e11c6b7e1c53197c4aa9736fdea31bdd584995bbbdba6619ecbe844fe  demos/anatheos-local-v0.2/ANATHEOS_3D_Demo_Local_v0.2_SOLO_CODIGO_sin_DICOM.zip" | sha256sum -c -
+          if unzip -Z1 demos/anatheos-local-v0.2/ANATHEOS_3D_Demo_Local_v0.2_SOLO_CODIGO_sin_DICOM.zip | grep -E '(^datasets/|[.]dcm$|[.]nii([.]gz)?$)'; then
+            echo "FAIL: medical image detected in public source archive"
+            exit 1
+          fi
+      - name: Extract source-only experimental volume package
+        run: |
+          mkdir -p .sites-runtime/anatheos-v02
+          unzip -q demos/anatheos-local-v0.2/ANATHEOS_3D_Demo_Local_v0.2_SOLO_CODIGO_sin_DICOM.zip -d .sites-runtime/anatheos-v02
+          node --check .sites-runtime/anatheos-v02/app.js
+          node --check .sites-runtime/anatheos-v02/volumetric.js
+      - name: Verify DICOM geometry and 3D voxel mapping / cancellation
+        run: node .sites-runtime/anatheos-v02/test_volume_core.mjs
+      - name: Install browser automation in ephemeral runner only
+        run: npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.56.1
+      - name: Install free Chromium Headless Shell
+        run: ./node_modules/.bin/playwright install --only-shell chromium
+      - name: Execute actual Chromium 3D rotation on synthetic invented DICOM volume
+        run: node scripts/anatheos-volume-v02-browser.mjs
+      - name: Product dependency lockfile unchanged
+        run: git diff --exit-code -- package.json package-lock.json

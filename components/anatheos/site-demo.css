@@ -1,0 +1,122 @@
+/* ANATHEOS Sites demo: CSS strictly scoped. No Tailwind dependency and no
+   production Entheos global selector changes. */
+#anatheos-web-demo {
+  --a3-red:#b51f37;--a3-ink:#252a2f;--a3-muted:#707982;
+  --a3-line:#e0e3e7;--a3-paper:#f4f5f7;
+  box-sizing:border-box;
+  width:100%;min-height:100vh;margin:0;
+  background:var(--a3-paper);color:var(--a3-ink);
+  font-family:Inter,"Segoe UI",Arial,sans-serif;
+  font-size:14px;line-height:1.5;
+}
+#anatheos-web-demo *,#anatheos-web-demo *::before,#anatheos-web-demo *::after {box-sizing:border-box}
+#anatheos-web-demo > header {
+ display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
+ gap:14px;padding:17px 25px;background:#fff;border-bottom:1px solid var(--a3-line);
+}
+#anatheos-web-demo > header >div >span {font-size:19px;font-weight:900;letter-spacing:.12em;color:var(--a3-red)}
+#anatheos-web-demo > header >div >span >span {color:var(--a3-ink)}
+#anatheos-web-demo > header p {font-size:10px;letter-spacing:.15em;color:var(--a3-muted);font-weight:700;margin:4px 0 0}
+#anatheos-web-demo > header >span {font-size:10px;font-weight:700;letter-spacing:.08em;border:1px solid #eac7ce;color:#9c293d;padding:7px 10px;border-radius:5px}
+#anatheos-web-demo > div {
+ display:grid;grid-template-columns:295px minmax(0,1fr);min-height:760px;
+}
+#anatheos-web-demo aside {
+ min-width:0;padding:22px;background:#fff;border-right:1px solid var(--a3-line);
+ display:flex;flex-direction:column;gap:28px;
+}
+#anatheos-web-demo aside h2 {font-size:18px;font-weight:700;margin:6px 0 9px}
+#anatheos-web-demo aside p {margin:5px 0;color:#667078;font-size:12px;line-height:1.7}
+#anatheos-web-demo aside >div>div:first-child {font-size:10px;font-weight:800;letter-spacing:.13em;color:var(--a3-red)}
+#anatheos-web-demo aside >div:nth-child(3) {margin-top:auto;border-top:1px solid var(--a3-line);padding-top:18px;font-size:11px;color:#6d747e}
+#anatheos-web-demo aside >div:nth-child(3) p {font-size:11px}
+#anatheos-web-demo a {color:var(--a3-red);text-decoration:underline}
+#anatheos-web-demo button {
+ font:inherit;cursor:pointer;border-radius:7px;
+ border:1px solid #d7dce0;background:#fff;color:#444a50;
+ padding:8px 12px;font-size:12px;font-weight:700;
+ transition:background .12s ease;
+}
+#anatheos-web-demo button:hover {background:#f1f2f3}
+#anatheos-web-demo button:disabled {opacity:.44;cursor:not-allowed}
+#anatheos-web-demo button:focus-visible,
+#anatheos-web-demo input:focus-visible,
+#anatheos-web-demo select:focus-visible {outline:2px solid var(--a3-red);outline-offset:2px}
+#anatheos-web-demo aside >div:first-child >button:first-of-type {
+ display:block;width:100%;margin:15px 0 9px;background:var(--a3-red);
+ border-color:var(--a3-red);color:#fff;padding:12px;
+}
+#anatheos-web-demo aside >div:first-child >button:first-of-type:hover {background:#922037}
+#anatheos-web-demo aside >div:first-child >button:nth-of-type(2) {display:block;width:100%}
+#anatheos-web-demo aside p[role="status"] {
+ margin:10px 0 0;padding:12px;background:#fafafa;border:1px solid #e5e6e8;
+ border-radius:8px;white-space:pre-wrap;overflow-wrap:anywhere;
+}
+#anatheos-web-demo aside select {display:block;width:100%;margin:8px 0 0;padding:9px;border:1px solid var(--a3-line);border-radius:8px;background:#fff}
+#anatheos-web-demo main {min-width:0;padding:23px 26px;display:flex;flex-direction:column;gap:14px}
+#anatheos-web-demo main >div:first-child {
+ display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;
+}
+#anatheos-web-demo main >div:first-child >div:first-child p:first-child {
+ font-size:10px;font-weight:800;letter-spacing:.14em;color:var(--a3-red);margin:0;
+}
+#anatheos-web-demo main h1 {font-size:22px;font-weight:750;letter-spacing:-.025em;margin:4px 0}
+#anatheos-web-demo main >div:first-child p:last-child {font-size:11px;color:#757d85;margin:0}
+#anatheos-web-demo main >div:first-child >div:nth-child(2) {
+ display:flex;flex-wrap:wrap;align-items:center;gap:7px;
+}
+#anatheos-web-demo main >div:nth-child(2) {
+ position:relative;height:540px;min-height:320px;border-radius:8px;
+ overflow:hidden;background:#15191d;
+}
+#anatheos-web-demo main >div:nth-child(2) >div:first-child {
+ position:absolute;inset:0;display:grid;place-items:center;
+ color:#bfc3c7;font-size:13px;text-align:center;
+}
+#anatheos-web-demo canvas {
+ display:block;width:100%;height:100%;touch-action:none;cursor:grab;
+}
+#anatheos-web-demo canvas:active {cursor:grabbing}
+#anatheos-web-demo main >div:nth-child(2) >div:last-child {
+ position:absolute;bottom:0;left:0;right:0;padding:35px 15px 12px;
+ display:flex;align-items:center;justify-content:space-between;gap:8px;
+ color:#e3e5e7;pointer-events:none;font-size:10px;letter-spacing:.02em;
+ background:linear-gradient(transparent,rgba(0,0,0,.73));
+}
+#anatheos-web-demo main >div:nth-child(3) {
+ display:flex;align-items:center;gap:12px;padding:11px 14px;
+ border:1px solid var(--a3-line);border-radius:8px;background:white;
+}
+#anatheos-web-demo main >div:nth-child(3) label {font-size:12px;font-weight:750;white-space:nowrap}
+#anatheos-web-demo main >div:nth-child(3) input {flex:1;min-width:60px}
+#anatheos-web-demo input[type="range"] {accent-color:var(--a3-red);cursor:pointer}
+#anatheos-web-demo main >div:nth-child(4) {
+ display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:17px;
+ padding:17px;background:#fff;border:1px solid var(--a3-line);border-radius:8px;
+}
+#anatheos-web-demo main >div:nth-child(4) label {font-size:11px;font-weight:750;min-width:0}
+#anatheos-web-demo main >div:nth-child(4) label output {float:right;color:#9299a1;font-variant-numeric:tabular-nums}
+#anatheos-web-demo main >div:nth-child(4) input {display:block;width:100%;margin-top:14px}
+#anatheos-web-demo main >div:nth-child(5) {
+ display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;
+ padding:17px;background:#fff;border:1px solid var(--a3-line);border-radius:8px;
+}
+#anatheos-web-demo main >div:nth-child(5) >div {font-size:11px;min-width:0;overflow-wrap:anywhere}
+#anatheos-web-demo main >div:nth-child(5) p:first-child {font-size:10px;font-weight:800;color:#5e666e;margin:0 0 5px}
+#anatheos-web-demo main >div:nth-child(5) p:last-child {color:#67717a;margin:0;font-variant-numeric:tabular-nums}
+#anatheos-web-demo main >div:nth-child(5) >div:last-child {grid-column:span 2}
+#anatheos-web-demo main >p:last-child {font-size:11px;color:#855661}
+@media(max-width:1000px) {
+ #anatheos-web-demo >div {grid-template-columns:225px minmax(0,1fr)}
+ #anatheos-web-demo aside {padding:16px}
+ #anatheos-web-demo main {padding:16px}
+ #anatheos-web-demo main >div:nth-child(4) {grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:680px) {
+ #anatheos-web-demo >div {display:block}
+ #anatheos-web-demo aside {border-right:0;border-bottom:1px solid var(--a3-line)}
+ #anatheos-web-demo aside >div:nth-child(3) {display:none}
+ #anatheos-web-demo main >div:nth-child(2) {height:420px}
+ #anatheos-web-demo main >div:nth-child(2) >div:last-child span:last-child {display:none}
+ #anatheos-web-demo main >div:nth-child(5) {grid-template-columns:repeat(2,minmax(0,1fr))}
+}

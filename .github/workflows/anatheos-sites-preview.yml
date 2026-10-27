@@ -1,0 +1,64 @@
+name: ANATHEOS Site Demo v0.1 · Browser Smoke (no deploy)
+
+on:
+  pull_request:
+    paths:
+      - "components/anatheos/site-demo-client.tsx"
+      - "lib/anatheos/site-demo-zip.ts"
+      - "app/app/anatheos-3d/demo/**"
+      - "tests/anatheos-sites-demo.test.mjs"
+      - "scripts/anatheos-sites-preview-chromium.mjs"
+      - "scripts/anatheos-sites-preview-ci.sh"
+      - ".github/workflows/anatheos-sites-preview.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  browser-local:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install repository dependencies
+        run: npm run install:ci
+      - name: Install free ephemeral browser automation (no lockfile change)
+        run: npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.56.1
+      - name: Install Chromium Headless Shell for local smoke
+        run: ./node_modules/.bin/playwright install --only-shell chromium
+      - name: Render preview and exercise synthetic ZIP / interactive controls
+        run: bash scripts/anatheos-sites-preview-ci.sh
+      - name: Archive synthetic-only UI screenshot for Direction review
+        uses: actions/upload-artifact@v4
+        with:
+          name: anatheos-sites-demo-synthetic-screenshot
+          path: .sites-runtime/anatheos-sites-demo-synthetic.png
+          retention-days: 7
+          if-no-files-found: error
+      - name: Record PR source HEAD in no-DICOM snapshot
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          printf '%s\n' "$PR_HEAD_SHA" > .sites-runtime/anatheos-sites-preview-head.txt
+      - name: Archive code-only recovery package for Drive
+        uses: actions/upload-artifact@v4
+        with:
+          name: anatheos-sites-preview-v01-code-only
+          path: |
+            app/app/anatheos-3d/demo/page.tsx
+            components/anatheos/site-demo-client.tsx
+            components/anatheos/site-demo.css
+            lib/anatheos/site-demo-zip.ts
+            tests/anatheos-sites-demo.test.mjs
+            scripts/anatheos-sites-preview-ci.sh
+            scripts/anatheos-sites-preview-chromium.mjs
+            docs/anatheos/SITES_PREVIEW_DEMO_V01_2026-10-27.md
+            .sites-runtime/anatheos-sites-preview-head.txt
+          retention-days: 7
+          if-no-files-found: error
+      - name: Confirm no product dependency or lockfile modifications
+        run: git diff --exit-code -- package.json package-lock.json

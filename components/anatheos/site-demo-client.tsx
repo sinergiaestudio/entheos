@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import "./site-demo.css";
 import { pixelValue, type DicomSlice } from "@/lib/anatheos/dicom";
 import { importLocalDicom, type IntakeSeries, type IntakeInput } from "@/lib/anatheos/dicom-intake";
 import { unpackDicomZip, ZIP_ERROR_MESSAGES } from "@/lib/anatheos/site-demo-zip";
@@ -154,7 +155,7 @@ export function AnatheosSiteDemoClient() {
   const fieldStyle="w-full accent-[#c12940]";
   const buttonStyle="rounded-lg border border-[#d8dce0] bg-white px-3 py-2 text-sm font-semibold text-[#434a50] hover:bg-[#f3f4f5]";
   return (
-    <section className="min-h-screen bg-[#f5f6f7] text-[#252a2f]">
+    <section id="anatheos-web-demo" className="min-h-screen bg-[#f5f6f7] text-[#252a2f]">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b bg-white px-6 py-4">
         <div>
           <span className="text-lg font-black tracking-[0.12em] text-[#b61e33]">ANATHEOS <span className="text-[#252a2f]">3D</span></span>

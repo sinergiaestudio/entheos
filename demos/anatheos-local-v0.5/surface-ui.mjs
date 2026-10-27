@@ -1,5 +1,6 @@
 import {loadSurface,MAX_SCENE_TRIANGLES} from './surface-core.mjs';
 import {SurfaceRenderer} from './surface-renderer.mjs';
+import {verifyOriginalSPLMesh} from './spl-provenance.mjs';
 const $=id=>document.getElementById(id);
 const colorFor=['#d6e9f5','#f3c77d','#e59ca1','#78c6c9','#b0a9e2'];
 let renderer=null,active=false,drag=null,modelCounter=0;
@@ -19,17 +20,20 @@ function uiRows(){const root=$('surfaceLayers');root.replaceChildren();if(!rende
  }
 }
 async function loadMeshes(files){if(!files.length)return;if(!renderer){try{renderer=new SurfaceRenderer($('surfaceCanvas'));}catch(e){status(e.message);return;}}
- const expected=$('surfaceSource').value;let loaded=0;
+ const expected=$('surfaceSource').value;let loaded=0,authenticated=0;
  for(const file of files){try{
    if(!/\.(stl|obj)$/i.test(file.name))throw Error('Formato no admitido: '+file.name);
    const arr=await file.arrayBuffer();const m=loadSurface(file.name,arr);const current=renderer.meshes.reduce((a,v)=>a+v.triangles,0);
    if(current+m.triangles>MAX_SCENE_TRIANGLES)throw Error('Límite de triángulos por escena');
+   const spl=expected==='spl-knee' ? await verifyOriginalSPLMesh(file.name,arr,m.triangles) : null;
+   if(expected==='spl-knee'&&!spl)throw Error('La malla no coincide con las fuentes originales SPL por nombre, geometría y SHA-256. Elegí Otro estudio para material no verificado.');
    if(renderer.meshes.length&&renderer.meshes[0].sourceId!==expected)throw Error('No se permite mezclar mallas de estudios distintos; vaciá antes la escena');
-   m.name=file.name.replace(/\.(stl|obj)$/i,'').replace(/[-_]/g,' ');m.originalName=file.name;m.sourceId=expected;m.coordinateSystem='unknown';m.id=++modelCounter;
+   m.name=spl?`${spl.display} · SPL verificado`:file.name.replace(/\.(stl|obj)$/i,'').replace(/[-_]/g,' ');m.originalName=file.name;m.sourceId=expected;m.coordinateSystem=spl?'RAS (bbox compatible con máscara LPS)':'unknown';m.provenance=spl;m.id=++modelCounter;
+   if(spl)authenticated++;
    const item=renderer.add(m);item.color=colorFor[(renderer.meshes.length-1)%colorFor.length];loaded++;
   }catch(e){status(`Rechazado ${file.name}: ${e.message}`);}
  }
- if(loaded){status(`${loaded} estructura(s) importadas localmente. NO se verificó correspondencia espacial ni unidades con MRI. STL/OBJ son geometría, no máscaras.`);renderer.selected=renderer.meshes.at(-1);uiRows();showMode();}
+ if(loaded){renderer.selected=renderer.meshes.at(-1);uiRows();showMode();status(authenticated===loaded?`${authenticated} estructura(s) SPL comprobadas por SHA-256. Coordenadas RAS y cotas físicas coherentes con el mapa LPS (error máximo inferior a 0,71 mm); falta registro formal 3D Slicer. No superponer a Leeds.`:`${loaded} estructura(s) importadas sin procedencia anatómica comprobada. Sin registro espacial con DICOM.`);}
 }
 $('surfaceFile').addEventListener('change',async e=>{await loadMeshes([...e.target.files]);e.target.value='';});
 $('surfaceOpen').addEventListener('click',()=>$('surfaceFile').click());

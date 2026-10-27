@@ -1,0 +1,99 @@
+ANATHEOS 3D · NOVEDADES v0.3 · VISOR AMPLIADO
+================================================
+
+CAMBIOS REALES SOBRE v0.2
+- El recuadro de visualización ocupa ahora aproximadamente 72 % de la altura de pantalla.
+- «Visor amplio» oculta la columna lateral y paneles secundarios; «Vista normal» regresa.
+- «Pantalla completa» ocupa toda la pantalla y tiene botón de salida; Esc también sale.
+- El modelo comienza con encuadre 3D más cercano, siempre ajustable con la rueda.
+- «Profundidad de cortes» recorta progresivamente el eje de cortes del volumen DICOM.
+  Permite mirar capas internas; NO equivale a segmentar huesos, cartílagos ni meniscos.
+- «Paleta de intensidades»: «Grises» o «Pseudocolor». No identifica tejidos.
+- Controles rápidos de profundidad y paleta dentro del visor, incluso en modo amplio/fullscreen.
+- Durante el arrastre se renderiza a resolución reducida para mejorar respuesta;
+  al soltar se vuelve a la resolución disponible, dependiendo de la GPU/navegador.
+- Se preservan la precisión y el lector original de cortes 2D.
+
+ANATHEOS 3D · DEMO LOCAL v0.3 · VOLUMEN REAL DE LEEDS
+========================================================
+
+INICIO EN WINDOWS (sin instalaciones ni cuentas)
+1. Descomprimí el ZIP completo en una carpeta local de Windows 10/11.
+2. Hacé doble clic en INICIAR_ANATHEOS.cmd.
+3. Se abrirá Microsoft Edge/Chrome en http://127.0.0.1:8765 (o hasta :8775).
+4. Elegí «Cargar RM DESS incluida». Se cargarán 144 cortes de Leeds.
+5. Hacé clic en «Volumen 3D»: visualizarás una representación volumétrica de las intensidades reales.
+
+CONTROLES 3D
+- Arrastrar con el botón principal: rotar el volumen.
+- Rueda del mouse o +/−: zoom.
+- Opacidad y Umbral: explorar qué intensidades contribuyen a la visualización.
+- Calidad: aumentar o disminuir los pasos de muestreo.
+- Restablecer rotación: volver al ángulo inicial.
+- Cortes 2D: regresar a la visualización original, con precisión de intensidad intacta.
+- Liberar: retirar la serie y borrar la textura GPU y referencias JS cuando corresponda.
+
+CONTROLES 2D
+- Rueda y slider: recorrer los cortes originales.
+- Ventana/Nivel, brillo, contraste y ventana automática.
+- Zoom, desplazamiento, restablecimiento de vista.
+- Abrir ZIP o carpeta para elegir otras secuencias DICOM compatibles.
+
+TECNOLOGÍA Y SEGURIDAD
+- Renderizado tridimensional de vóxeles reales (ray casting), no una rodilla genérica ni una malla simulada.
+- WebGL2/R8 para renderizado GPU si está disponible. Si no, respaldo ray casting por CPU de menor resolución.
+- Los píxeles de la textura 3D se cuantizan a 8 bits solo para la REPRESENTACIÓN VISUAL; el lector 2D no se altera.
+- Volumen DESS: 384 × 384 × 144; extensión aproximada 140 × 140 × 100 mm calculada por DICOM.
+- Geometría: orden por proyección de ImagePositionPatient sobre normal IOP,
+  con control de espacios y desplazamientos fuera de plano; no hay remuestreo oblicuo/MPR.
+- Todo corre exclusivamente en el navegador local y el servidor PowerShell solo en 127.0.0.1.
+- No utiliza Internet, D1/R2, Entheos productivo, APIs remotas, credenciales ni servicios pagos.
+- El estudio original DESS se incluye sin modificar; otros ZIP/folders se pueden cargar manualmente.
+
+DATOS Y ATRIBUCIÓN
+Universidad de Leeds, Wijayathunga et al. (2026), dataset RTKN0668,
+https://archive.researchdata.leeds.ac.uk/1609/ , DOI 10.5518/1834, licencia CC BY 4.0.
+Archivo original: datasets/RTKN0668_MR_DESS.zip
+SHA256 1c378e89d3a2e7aa57a1049f1fa91b9278529e544369d1071d4c453073ce951d
+
+LIMITACIONES IMPORTANTES
+- Investigación y visualización exploratoria, estrictamente NO DIAGNÓSTICA.
+- El volumen representa intensidades, NO segmenta automáticamente huesos, cartílago o menisco.
+- Sin lateralidad validada contra 3D Slicer ni registro anatómico externo.
+- Sin MPR/cortes ortogonales validados, sin malla STL ni exportación clínica.
+- El motor de esta distribución es JavaScript/Canvas/WebGL local, no Cornerstone3D integrado.
+- La ruta WebGL2 aún debe probarse directamente en tu equipo Windows; la prueba automatizada
+  de la DESS completa verificó la ruta CPU (renderizado alternativo) y la carga real.
+- GPU y navegador administran la liberación final de memoria; las referencias se descartan.
+- Si WebGL no está disponible, la renderización CPU puede tardar al rotar.
+
+REVISIÓN PRIVADA · 27/10/2026 · ANATHEOS 3D v0.3
+
+===============================================
+ANATHEOS v0.4 · EDITOR DE REGIONES (27/10/2026)
+===============================================
+
+La nueva versión conserva el manejo de v0.3: extraer el ZIP completo y
+abrir INICIAR_ANATHEOS.cmd (PowerShell integrado de Windows).
+
+PARA MARCAR UNA REGIÓN:
+1. Cargá la RM DESS incluida y permanecé en «Cortes 2D».
+2. Debajo del visor, localizá «04 / REGIONES ANATÓMICAS».
+3. Elegí «Región 1», «Región 2» o «Región 3» y marcá
+   «Dibujar sobre cortes 2D». Arrastrá el mouse sobre la imagen.
+4. Ajustá el radio del pincel. Si deseás extender el trazo a cortes
+   vecinos, elegí una extensión ±1 ... ±4, siempre experimental.
+5. «Expandir por intensidad (2D)» propone una región conectada alrededor
+   de la semilla según la intensidad y tolerancia; NO identifica anatomía.
+6. Para navegar o mover la imagen otra vez, desmarcá la edición.
+7. Hacé clic en «Volumen 3D»: se mostrarán tus regiones coloreadas.
+8. Activá y desactivá las capas desde las casillas de cada región.
+9. «Exportar máscara NRRD» guarda una copia binaria local para revisar en
+   3D Slicer como labelmap. «Importar máscara» restaura esa edición
+   solamente con el estudio y geometría coincidentes.
+
+IMPORTANTE: Los nombres genéricos NO implican reconocimiento automático de
+hueso, músculo, cartílago, vasos o nervios. Revisar toda segmentación.
+No apto para diagnóstico. No modifica las instancias DICOM originales.
+El modo CPU está probado; comprobar la textura de máscaras WebGL2 en tu PC.
+No enviar archivos a servidores.

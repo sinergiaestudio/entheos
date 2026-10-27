@@ -1,0 +1,46 @@
+name: ANATHEOS v0.4 recovered source (no DICOM)
+
+on:
+  push:
+    branches:
+      - anatheos/issue-8j-v04-source-recovery
+    paths:
+      - "demos/anatheos-local-v0.4/**"
+      - ".github/workflows/anatheos-v04-source.yml"
+  pull_request:
+    paths:
+      - "demos/anatheos-local-v0.4/**"
+      - ".github/workflows/anatheos-v04-source.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify-v04-real-sources:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    defaults:
+      run:
+        working-directory: demos/anatheos-local-v0.4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Refuse medical images and archives in public demo sources
+        run: |
+          set -eu
+          forbidden=$(find . -type f \( -iname '*.dcm' -o -iname '*.dicom' -o -iname '*.nii' -o -iname '*.nii.gz' -o -iname '*.nrrd' -o -iname '*.zip' -o -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.glb' -o -iname '*.stl' \) -print)
+          test -z "$forbidden" || { printf 'Refused clinical/binary data:\n%s\n' "$forbidden"; exit 1; }
+          test ! -d datasets
+      - name: Compare recovered sources with original SHA-256 manifest
+        run: |
+          set -eu
+          sed '/^#/d;/^$/d' MANIFEST_SHA256.txt | sha256sum --check
+      - name: Syntax-check real v0.4 application modules
+        run: |
+          node --check app.js
+          node --check volumetric.js
+          node --check segmentation.mjs
+      - name: Run real v0.4 source unit tests
+        run: node --test test_segmentation.mjs test_volume_core.mjs

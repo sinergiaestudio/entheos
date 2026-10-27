@@ -50,7 +50,8 @@ jobs:
           node --check surface-renderer.mjs
           node --check surface-ui.mjs
           node --check browser_spl_real.mjs
-          node --test test_segmentation.mjs test_volume_core.mjs test_surfaces.mjs
+          node --check spl-provenance.mjs
+          node --test test_segmentation.mjs test_volume_core.mjs test_surfaces.mjs test_spl_provenance.mjs
       - name: Install temporary free Chromium tools in CI only
         run: |
           npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.56.1

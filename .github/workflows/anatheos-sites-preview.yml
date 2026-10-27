@@ -32,5 +32,12 @@ jobs:
         run: ./node_modules/.bin/playwright install --only-shell chromium
       - name: Render preview and exercise synthetic ZIP / interactive controls
         run: bash scripts/anatheos-sites-preview-ci.sh
+      - name: Archive synthetic-only UI screenshot for Direction review
+        uses: actions/upload-artifact@v4
+        with:
+          name: anatheos-sites-demo-synthetic-screenshot
+          path: .sites-runtime/anatheos-sites-demo-synthetic.png
+          retention-days: 7
+          if-no-files-found: error
       - name: Confirm no product dependency or lockfile modifications
         run: git diff --exit-code -- package.json package-lock.json

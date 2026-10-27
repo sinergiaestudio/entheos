@@ -28,7 +28,7 @@ async function initialize() {
 
 function removeImageId(imageId) {
   if (!imageId) return;
-  const index = Number(imageId.slice("dicomfile:".length));
+  const index = Number(imageId.slice("dicomfile:".length).split("?")[0]);
   try { cache.removeImageLoadObject(imageId); } catch { /* best effort, benchmark separately */ }
   if (Number.isSafeInteger(index)) {
     wadouri.fileManager.remove(index);
@@ -62,7 +62,9 @@ async function decodeSelected(file) {
   await initialize();
   if (generation !== selectionGeneration) return;
   window.__anatheosProbe = { state: "loading", step: "fileManager.add" };
-  const imageId = wadouri.fileManager.add(file);
+  const baseImageId = wadouri.fileManager.add(file);
+  const requestedFrame = /-frame([1-8])\.dcm$/i.exec(file.name)?.[1];
+  const imageId = requestedFrame ? baseImageId + "?frame=" + requestedFrame : baseImageId;
   currentImageId = imageId;
   try {
     // Disable pre-scaling so image.getPixelData() may be compared to
@@ -88,6 +90,7 @@ async function decodeSelected(file) {
       rows: image.rows,
       columns: image.columns,
       pixelCount: pixels.length,
+      frameNumberRequested: requestedFrame ? Number(requestedFrame) : 1,
       samples,
       slope,
       intercept,

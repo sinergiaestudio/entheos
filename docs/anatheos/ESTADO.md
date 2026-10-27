@@ -39,6 +39,13 @@ PR #26 fusionado con método `merge` exclusivamente a la rama piloto. **HEAD ini
 - El caso implícito genera diagnóstico de parser en consola: mantenido explícito en CI y pendiente de verificar fixture conforme con Slicer. No existe validación médica, benchmark de RAM total, codec comprimido/multiframe ni Slicer independiente.
 - [CI general #40420653604](https://github.com/sinergiaestudio/entheos/actions/runs/40420653604) PASS. Prototipo aislado en PR #31, sin cambios en el visor P1A ni en los paquetes permanentes. Este anexo tiene un nuevo SHA documental pendiente de CI.
 
+## G2a-D · RLE Lossless y dos frames comprobados en Chromium · 26/10/2026
+
+- [PR #32](https://github.com/sinergiaestudio/entheos/pull/32), rama aislada derivada del PR #31, exclusivamente DRAFT. [GitHub Actions #40429001197](https://github.com/sinergiaestudio/entheos/actions/runs/40429001197) sobre `06ed4c38325cffdf63b1e2a5b5918c03276371c6`: **PASS de decodificador Chromium real** para un RLE Lossless sintético single-frame y dos frames distintos comprimidos dentro de otro archivo Part10; valor de seis muestras y transformación de intensidad exactos en cada cuadro. **3/3 tests estructurales RLE PASS**, sin errores de script nuevos.
+- [CI general #40429001245](https://github.com/sinergiaestudio/entheos/actions/runs/40429001245): **60/60 PASS**, 0 FAIL/SKIPPED. [Acta técnica y límites](RLE_MULTIFRAME_CHROMIUM_2026-10-26.md). El firmware de la demo usa únicamente datos inventados, navegador en loopback y dependencias npm no persistentes.
+- Los dos frames **no prueban Enhanced CT/RM conforme**: SOP Class clásico y ausencia de functional groups por frame. JPEG/JPEG-LS/JPEG2000, RM, Slicer, GC/WASM, cancelación real y seguridad remota continúan NO VALIDADOS. La licencia `rechoir` sigue bajo auditoría.
+- Este checkpoint exige revalidar el **nuevo SHA documental** antes de afirmar HEAD final PASS. PR #29 permanece DRAFT; piloto/main/Site intactos.
+
 ## Panel ejecutivo
 
 | Dimensión | Estado verificable al elaborar este registro | Evidencia |

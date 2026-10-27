@@ -65,6 +65,10 @@
 
 - [Cornerstone 5.13.1 en Chromium: píxeles y HU comprobados, avisos de parser, memoria y SBOM](CHROMIUM_CORNERSTONE_G2A_2026-10-26.md). Rama de investigación separada PR #31, con destino exclusivamente al SPIKE de PR #30; **no sustituye P1A ni habilita uso médico**.
 
+## Decodificación RLE Lossless en navegador · G2a-D
+
+- [RLE Lossless sintético 16-bit: un frame y dos frames encapsulados](RLE_MULTIFRAME_CHROMIUM_2026-10-26.md) — prueba real Chromium en rama aislada PR #32; **sin afirmar Enhanced CT/RM ni reemplazar P1A**.
+
 ## Tablero de ingeniería
 
 - **PR piloto, borrador, no fusionar:** [#5](https://github.com/sinergiaestudio/entheos/pull/5).

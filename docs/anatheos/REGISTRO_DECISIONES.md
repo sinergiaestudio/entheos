@@ -75,6 +75,14 @@
 - **Condiciones:** conservar P1A, cero datos médicos reales, ningún nuevo costo, sin deploy ni dependencia persistente. No pasar a G3 sin referencia independiente. La licencia declarada de `rechoir` requiere revisión.
 - **Estado:** propuesta/investigación no autorizada como reemplazo; [detalle](CHROMIUM_CORNERSTONE_G2A_2026-10-26.md). No sustituye P-002/P-011 ni D-001–D-010.
 
+### P-013 · Extender laboratorio Cornerstone a RLE Lossless encapsulado (no adopción)
+
+- **Fecha/Issue:** 26/10/2026, #8. Aporte técnico a la rama de investigación PR #32, dependiente de #31, sin destino directo a `main` ni piloto.
+- **Resultado demostrado:** [CI #40429001197](https://github.com/sinergiaestudio/entheos/actions/runs/40429001197) ejecutó realmente Cornerstone 5.13.1 en Chromium y decodificó correctamente RLE Lossless 16-bit Part10 de un cuadro, y los dos cuadros de una muestra sintética encapsulada con Basic Offset Table. Muestras exactas y transformaciones slope/intercept comprobadas. 3/3 pruebas del generador RLE.
+- **Limitaciones:** el multiframe es una prueba de encapsulación/índices; no constituye Enhanced CT/MR IOD conforme. La compilación WASM de otros codecs, Slicer independiente, licencias completas, RAM/cancelación y flag ON remoto siguen pendientes. P1A permanece intocado.
+- **Consecuencia:** [acta RLE](RLE_MULTIFRAME_CHROMIUM_2026-10-26.md) y CI verificable; prohibido transferir este resultado al ámbito clínico o adopción estable sin nueva aprobación. Se preservan D-001–D-010 y P-002/P-011/P-012.
+- **Estado:** avance **solo del spike**, sin autorización de merge/deploy.
+
 ## Formato para decisión nueva
 
 ### D-0XX — Título

@@ -10,7 +10,7 @@ function makeZip(entries) {
   const archive = zipSync(entries, {level:4});
   return new Blob([Uint8Array.from(archive).buffer]);
 }
-const fake = (layer) => makeSyntheticDicom({scenario:96,layer});
+const fake = (layer) => makeSyntheticDicom({scenario:96,layer,position:[10,20,30+layer]});
 
 test("Sites preview accepts original Part10 ZIP with no filename extension", async () => {
   const zip = makeZip({ "RTKN0668_MR_DESS/10001": fake(1), "RTKN0668_MR_DESS/10002": fake(2) });

@@ -1,88 +1,70 @@
-name: Temporary ANATHEOS public MR dataset transfer (no deploy)
+name: Temporary ANATHEOS 3D code snapshots (no deploy)
 on:
   push:
     branches: [anatheos/public-dataset-transfer-rtkn0668]
 permissions:
   contents: read
 jobs:
-  gather-public-open-mri:
+  snapshot-public-source:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 20
     steps:
-      - name: Download only publicly licensed Leeds MR sequences and mesh
+      - name: Checkout public Entheos source and reachable history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Archive pinned ANATHEOS versions without git data or dependencies
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p rtkn0668
-          base=https://archive.researchdata.leeds.ac.uk/1609
-          declare -a downloads=(
-            "3/RTKN0668_MR_2D_T2_nofs_TSE_SAG_IW.zip"
-            "4/RTKN0668_MR_2D_TSE_COR_FS_IW.zip"
-            "5/RTKN0668_MR_2D_TSE_SAG_IW.zip"
-            "6/RTKN0668_MR_DESS.zip"
-            "7/RTKN0668_MR_MEDIC.zip"
-            "8/RTKN0668_MR_VIBE.zip"
-            "9/RTKN0668_geom.stl"
-            "10/RTKN0668_readme.txt"
-          )
-          for remote in "${downloads[@]}"; do
-            name="${remote#*/}"
-            echo "Downloading public dataset object: $name"
-            curl --fail --location --show-error --silent --retry 3 --retry-all-errors --connect-timeout 25 --max-time 550 \
-              "$base/$remote" --output "rtkn0668/$name"
-            if [[ "$name" == *.zip ]]; then
-              unzip -tqq "rtkn0668/$name"
-            fi
-            test -s "rtkn0668/$name"
-          done
-          (cd rtkn0668 && sha256sum RTKN0668_* > SHA256SUMS.txt)
-          cat >rtkn0668/SOURCE_AND_LICENSE.txt <<'INFO'
-          Dataset: Wijayathunga, N., Day, G. A., Jones, A., Wilcox, R. and Mengoni, M. (2026)
-          High resolution CT and MR images of cadaveric knees - dataset 01 (RTKN0668)
-          University of Leeds Research Data Repository, DOI https://doi.org/10.5518/1834
-          Original: https://archive.researchdata.leeds.ac.uk/1609/
-          License: Creative Commons Attribution 4.0 International (CC BY 4.0)
-          Contents: six publicly released MRI sequences (DESS, 2D TSE COR, 2D TSE SAG, 2D T2 noFS SAG, MEDIC, VIBE), anatomical STL, original README.
-          Deliberately excluded: two separate CT datasets (~2 GB and ~4 GB); not needed for first MRI viewer and significantly larger.
-          This archive is an unmodified research dataset backup for non-diagnostic experimental use.
-          Not committed to Git. Verify original DICOM metadata/anonymization and imaging syntax before loading into ANATHEOS.
+          mkdir -p snapshots
+          archive_sha() {
+            local label="$1" sha="$2"
+            git cat-file -e "${sha}^{commit}"
+            git archive --format=zip --output="snapshots/${label}.zip" "$sha"
+          }
+          archive_sha "ENTHEOS_MAIN_8e760228" "8e7602280d6c4fddc234c1973537839592683798"
+          archive_sha "ANATHEOS_PILOT_19c945cf" "19c945cf69ff69daa95804639a4aabc9ce9ad7db"
+          archive_sha "ANATHEOS_G1B_PR29_27d57c87" "27d57c878a4f6b603293f80f99b4cf003e18e1dd"
+          archive_sha "ANATHEOS_CORNERSTONE_PR30_9c0b02d1" "9c0b02d12d94606768e393fd3d9fdc4094baa087"
+          archive_sha "ANATHEOS_CHROMIUM_PR31_efa28fde" "efa28fde437283d3f7911fe1dddadbb944da5d95"
+          archive_sha "ANATHEOS_MULTIFRAME_LAB_ca52eb6a" "ca52eb6acde08ce70bd1f439b87d756b0cbe2ec2"
+          (cd snapshots && sha256sum *.zip >SHA256SUMS_SOURCE.txt)
+          cat >snapshots/RECUPERACION.txt <<'INFO'
+          ANATHEOS 3D · CODE SNAPSHOTS · 2026-10-26 (America/Argentina/Buenos_Aires).
+          Each ZIP is a snapshot of tracked PUBLIC repository source at the exact SHA in its filename.
+          This is not a full git history bundle and does not include GitHub issues or comments.
+          Unzip to a fresh folder to inspect. Keep the permanent GitHub repository as the versioned truth.
+          Stable pilot and main were not modified. Developer draft source snapshots are separate.
+          Dataset binaries are backed up in a separate Drive folder, not included here.
+          Do not deploy, publish patient records or enable experimental features.
           INFO
-          du -sh rtkn0668
-      - name: Stage independent A public dataset group under 100 MiB, NOT in Git
+          du -sh snapshots
+          du -h snapshots/*.zip
+      - name: Upload code snapshot group A stable + integration
         uses: actions/upload-artifact@v4
         with:
-          name: ANATHEOS-RTKN0668-MRI-A-Leeds-CCBY4
+          name: ANATHEOS-source-stable-and-security
           path: |
-            rtkn0668/RTKN0668_MR_DESS.zip
-            rtkn0668/RTKN0668_MR_2D_TSE_SAG_IW.zip
-            rtkn0668/RTKN0668_MR_2D_TSE_COR_FS_IW.zip
-            rtkn0668/SHA256SUMS.txt
-            rtkn0668/SOURCE_AND_LICENSE.txt
+            snapshots/ENTHEOS_MAIN_8e760228.zip
+            snapshots/ANATHEOS_PILOT_19c945cf.zip
+            snapshots/ANATHEOS_G1B_PR29_27d57c87.zip
+            snapshots/SHA256SUMS_SOURCE.txt
+            snapshots/RECUPERACION.txt
           if-no-files-found: error
-          compression-level: 0
           retention-days: 7
-      - name: Stage independent B public dataset group under 100 MiB, NOT in Git
+          compression-level: 0
+      - name: Upload code snapshot group B Cornerstone labs
         uses: actions/upload-artifact@v4
         with:
-          name: ANATHEOS-RTKN0668-MRI-B-Leeds-CCBY4
+          name: ANATHEOS-source-cornerstone-labs
           path: |
-            rtkn0668/RTKN0668_MR_2D_T2_nofs_TSE_SAG_IW.zip
-            rtkn0668/RTKN0668_MR_MEDIC.zip
-            rtkn0668/SHA256SUMS.txt
-            rtkn0668/SOURCE_AND_LICENSE.txt
+            snapshots/ANATHEOS_CORNERSTONE_PR30_9c0b02d1.zip
+            snapshots/ANATHEOS_CHROMIUM_PR31_efa28fde.zip
+            snapshots/ANATHEOS_MULTIFRAME_LAB_ca52eb6a.zip
+            snapshots/SHA256SUMS_SOURCE.txt
+            snapshots/RECUPERACION.txt
           if-no-files-found: error
-          compression-level: 0
           retention-days: 7
-      - name: Stage independent C public dataset group under 100 MiB, NOT in Git
-        uses: actions/upload-artifact@v4
-        with:
-          name: ANATHEOS-RTKN0668-MRI-C-Leeds-CCBY4
-          path: |
-            rtkn0668/RTKN0668_MR_VIBE.zip
-            rtkn0668/RTKN0668_geom.stl
-            rtkn0668/RTKN0668_readme.txt
-            rtkn0668/SHA256SUMS.txt
-            rtkn0668/SOURCE_AND_LICENSE.txt
-          if-no-files-found: error
           compression-level: 0
-          retention-days: 7

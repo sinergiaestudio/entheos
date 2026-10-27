@@ -19,8 +19,8 @@ const projection = (s: DicomSlice) =>
 function startingWindow(slice: DicomSlice): { center: number; width: number } {
   const values: number[] = [];
   const view = new DataView(slice.buffer);
-  for (let y = 0; y < slice.rows; y += 12)
-    for (let x = 0; x < slice.columns; x += 12)
+  for (let y = 0; y < slice.rows; y += Math.max(1, Math.floor(slice.rows / 32)))
+    for (let x = 0; x < slice.columns; x += Math.max(1, Math.floor(slice.columns / 32)))
       values.push(pixelValue(slice, x, y, view));
   values.sort((a, b) => a - b);
   const lo = values[Math.floor(values.length * 0.02)] ?? 0;
@@ -211,6 +211,7 @@ export function AnatheosSiteDemoClient() {
               <p className="text-xs text-[#68717a]">Orientación DICOM LPS · lateralidad no validada con 3D Slicer</p>
             </div>
             <div className="flex flex-wrap gap-2">
+              <button type="button" disabled={!image} onClick={()=>{if(image){const auto=startingWindow(image);setCenter(auto.center);setWidth(auto.width);}}} className={buttonStyle}>Auto W/L</button>
               <button type="button" className={buttonStyle} onClick={()=>{setZoom(1);setPan({x:0,y:0});}}>Restablecer</button>
               <button type="button" disabled={!image} className={buttonStyle} onClick={()=>setZoom(z=>clamp(z/1.25,0.25,8))}>−</button>
               <button type="button" disabled={!image} className={buttonStyle} onClick={()=>setZoom(z=>clamp(z*1.25,0.25,8))}>+</button>

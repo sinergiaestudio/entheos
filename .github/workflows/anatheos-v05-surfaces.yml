@@ -1,0 +1,74 @@
+name: ANATHEOS v0.5 · independent local surfaces (no medical images)
+on:
+  push:
+    branches:
+      - anatheos/issue-8k-v05-spl-surfaces
+    paths:
+      - "demos/anatheos-local-v0.5/**"
+      - ".github/workflows/anatheos-v05-surfaces.yml"
+  pull_request:
+    paths:
+      - "demos/anatheos-local-v0.5/**"
+      - ".github/workflows/anatheos-v05-surfaces.yml"
+permissions:
+  contents: read
+jobs:
+  source-and-synthetic-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Refuse medical images, downloadable models, archives and clinical media
+        run: |
+          set -eu
+          if find demos/anatheos-local-v0.5 -type f \( -iname '*.dcm' -o -iname '*.dicom' -o -iname '*.nrrd' -o -iname '*.nii' -o -iname '*.nii.gz' -o -iname '*.stl' -o -iname '*.obj' -o -iname '*.zip' -o -iname '*.png' -o -iname '*.jpg' \) | grep .; then
+            echo 'Clinical material or model data in public source: rejected'; exit 1
+          fi
+      - name: Check original v0.4 source bits inherited by new demo
+        working-directory: demos/anatheos-local-v0.5
+        run: |
+          set -eu
+          # HTML/CSS are intentionally extended; their v0.4 hashes are verified in the untouched v0.4 folder.
+          (cd ../anatheos-local-v0.4 && sed '/^#/d;/^$/d' MANIFEST_SHA256.txt | sha256sum --check)
+          node --check app.js
+          node --check volumetric.js
+          node --check segmentation.mjs
+      - name: Syntax-check all local modules
+        working-directory: demos/anatheos-local-v0.5
+        run: |
+          node --check surface-core.mjs
+          node --check surface-renderer.mjs
+          node --check surface-ui.mjs
+      - name: Node tests for preserved masks and independent surfaces
+        working-directory: demos/anatheos-local-v0.5
+        run: node --test test_segmentation.mjs test_volume_core.mjs test_surfaces.mjs
+      - name: Temporary free Playwright and Chromium for synthetic UI smoke
+        run: |
+          npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.56.1
+          ./node_modules/.bin/playwright install --only-shell chromium
+      - name: Exercise real local v0.5 UI with invented non-medical triangles
+        run: |
+          set -euo pipefail
+          mkdir -p .sites-runtime
+          (cd demos/anatheos-local-v0.5 && python3 -m http.server 8774 --bind 127.0.0.1) > .sites-runtime/anatheos-v05-http.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 40); do
+            if curl --silent --output /dev/null --max-time 1 http://127.0.0.1:8774/; then ready=1;break;fi
+            sleep 1
+          done
+          test "$ready" = "1"
+          node demos/anatheos-local-v0.5/browser_smoke.mjs
+      - name: Save only synthetic-browser capture (no patient imagery)
+        uses: actions/upload-artifact@v4
+        with:
+          name: anatheos-v05-synthetic-mesh-smoke
+          path: .sites-runtime/anatheos-v05-synthetic.png
+          if-no-files-found: error
+          retention-days: 7
+      - name: No product dependencies modified
+        run: git diff --exit-code -- package.json package-lock.json

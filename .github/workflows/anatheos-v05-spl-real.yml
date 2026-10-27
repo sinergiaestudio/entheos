@@ -26,7 +26,7 @@ jobs:
       - name: Verify no reference medical assets were added to the public repository
         run: |
           set -eu
-          if find demos/anatheos-local-v0.5 -type f | grep -Ei '\\.(dcm|dicom|nrrd|nii|stl|obj|zip|png|jpg)
+          if find demos/anatheos-local-v0.5 -type f | grep -Ei '\.(dcm|dicom|nrrd|nii|stl|obj|zip|png|jpg)$'; then
             echo "FAIL: imaging data or model artifacts included in public source"
             exit 1
           fi

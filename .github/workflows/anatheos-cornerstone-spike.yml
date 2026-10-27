@@ -46,6 +46,8 @@ jobs:
         run: bash spikes/anatheos-cornerstone/vinext-probe.sh
       - name: Install Chromium free browser binary in ephemeral CI
         run: ./node_modules/.bin/playwright install --only-shell chromium
+      - name: Verify generated synthetic RLE headers and Basic Offset Table
+        run: node --test spikes/anatheos-cornerstone/synthetic-rle.test.mjs
       - name: Decode synthetic Part10 pixels in actual Chromium with Cornerstone
         run: bash spikes/anatheos-cornerstone/chromium-local-ci.sh
       - name: Prove no tracked lockfile or Entheos dependency change

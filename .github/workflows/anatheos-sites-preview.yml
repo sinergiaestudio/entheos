@@ -1,0 +1,36 @@
+name: ANATHEOS Site Demo v0.1 · Browser Smoke (no deploy)
+
+on:
+  pull_request:
+    paths:
+      - "components/anatheos/site-demo-client.tsx"
+      - "lib/anatheos/site-demo-zip.ts"
+      - "app/app/anatheos-3d/demo/**"
+      - "tests/anatheos-sites-demo.test.mjs"
+      - "scripts/anatheos-sites-preview-chromium.mjs"
+      - "scripts/anatheos-sites-preview-ci.sh"
+      - ".github/workflows/anatheos-sites-preview.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  browser-local:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install repository dependencies
+        run: npm run install:ci
+      - name: Install free ephemeral browser automation (no lockfile change)
+        run: npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.56.1
+      - name: Install Chromium Headless Shell for local smoke
+        run: ./node_modules/.bin/playwright install --only-shell chromium
+      - name: Render preview and exercise synthetic ZIP / interactive controls
+        run: bash scripts/anatheos-sites-preview-ci.sh
+      - name: Confirm no product dependency or lockfile modifications
+        run: git diff --exit-code -- package.json package-lock.json

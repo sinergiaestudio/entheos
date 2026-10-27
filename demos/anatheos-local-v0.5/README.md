@@ -26,6 +26,10 @@ Los modelos de la colección del Surgical Planning Laboratory incluyen **femur-9
 
 **Los archivos de imágenes médicas, etiquetas y mallas del atlas NO se redistribuyen dentro de esta rama pública ni se incorporan en la CI.** Se descargan independientemente en el equipo del investigador y se importan con el botón «Importar superficies». El visor utiliza sólo el contenido local aportado por el usuario. El nombre del archivo o la selección de procedencia **no certifican** su origen por sí solos.
 
+## Preflight técnico específico
+
+Consultar [`ATLAS_SPL_PREFLIGHT.md`](ATLAS_SPL_PREFLIGHT.md): inspección real de NRRD LPS 512×512×119, fémur/tibia etiquetados, y etiqueta 3 no asignada.
+
 ## Ejecutar en Windows
 
 1. Descargar el ZIP del código de esta rama, extraer sólo la subcarpeta `demos/anatheos-local-v0.5` a una carpeta de trabajo, y ejecutar `INICIAR_ANATHEOS.cmd` (servidor PowerShell de loopback del visor original).

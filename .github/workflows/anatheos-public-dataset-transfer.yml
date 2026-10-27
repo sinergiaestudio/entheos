@@ -1,0 +1,58 @@
+name: Temporary ANATHEOS public MR dataset transfer (no deploy)
+on:
+  push:
+    branches: [anatheos/public-dataset-transfer-rtkn0668]
+permissions:
+  contents: read
+jobs:
+  gather-public-open-mri:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Download only publicly licensed Leeds MR sequences and mesh
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p rtkn0668
+          base=https://archive.researchdata.leeds.ac.uk/1609
+          declare -a downloads=(
+            "3/RTKN0668_MR_2D_T2_nofs_TSE_SAG_IW.zip"
+            "4/RTKN0668_MR_2D_TSE_COR_FS_IW.zip"
+            "5/RTKN0668_MR_2D_TSE_SAG_IW.zip"
+            "6/RTKN0668_MR_DESS.zip"
+            "7/RTKN0668_MR_MEDIC.zip"
+            "8/RTKN0668_MR_VIBE.zip"
+            "9/RTKN0668_geom.stl"
+            "10/RTKN0668_readme.txt"
+          )
+          for remote in "${downloads[@]}"; do
+            name="${remote#*/}"
+            echo "Downloading public dataset object: $name"
+            curl --fail --location --show-error --silent --retry 3 --retry-all-errors --connect-timeout 25 --max-time 550 \
+              "$base/$remote" --output "rtkn0668/$name"
+            if [[ "$name" == *.zip ]]; then
+              unzip -tqq "rtkn0668/$name"
+            fi
+            test -s "rtkn0668/$name"
+          done
+          (cd rtkn0668 && sha256sum RTKN0668_* > SHA256SUMS.txt)
+          cat >rtkn0668/SOURCE_AND_LICENSE.txt <<'INFO'
+          Dataset: Wijayathunga, N., Day, G. A., Jones, A., Wilcox, R. and Mengoni, M. (2026)
+          High resolution CT and MR images of cadaveric knees - dataset 01 (RTKN0668)
+          University of Leeds Research Data Repository, DOI https://doi.org/10.5518/1834
+          Original: https://archive.researchdata.leeds.ac.uk/1609/
+          License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+          Contents: six publicly released MRI sequences (DESS, 2D TSE COR, 2D TSE SAG, 2D T2 noFS SAG, MEDIC, VIBE), anatomical STL, original README.
+          Deliberately excluded: two separate CT datasets (~2 GB and ~4 GB); not needed for first MRI viewer and significantly larger.
+          This archive is an unmodified research dataset backup for non-diagnostic experimental use.
+          Not committed to Git. Verify original DICOM metadata/anonymization and imaging syntax before loading into ANATHEOS.
+          INFO
+          du -sh rtkn0668
+      - name: Stage public dataset for connector handoff, NOT in Git
+        uses: actions/upload-artifact@v4
+        with:
+          name: ANATHEOS-RTKN0668-complete-MRI-Leeds-CCBY4
+          path: rtkn0668/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7

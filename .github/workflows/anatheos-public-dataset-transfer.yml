@@ -48,11 +48,41 @@ jobs:
           Not committed to Git. Verify original DICOM metadata/anonymization and imaging syntax before loading into ANATHEOS.
           INFO
           du -sh rtkn0668
-      - name: Stage public dataset for connector handoff, NOT in Git
+      - name: Stage independent A public dataset group under 100 MiB, NOT in Git
         uses: actions/upload-artifact@v4
         with:
-          name: ANATHEOS-RTKN0668-complete-MRI-Leeds-CCBY4
-          path: rtkn0668/
+          name: ANATHEOS-RTKN0668-MRI-A-Leeds-CCBY4
+          path: |
+            rtkn0668/RTKN0668_MR_DESS.zip
+            rtkn0668/RTKN0668_MR_2D_TSE_SAG_IW.zip
+            rtkn0668/RTKN0668_MR_2D_TSE_COR_FS_IW.zip
+            rtkn0668/SHA256SUMS.txt
+            rtkn0668/SOURCE_AND_LICENSE.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+      - name: Stage independent B public dataset group under 100 MiB, NOT in Git
+        uses: actions/upload-artifact@v4
+        with:
+          name: ANATHEOS-RTKN0668-MRI-B-Leeds-CCBY4
+          path: |
+            rtkn0668/RTKN0668_MR_2D_T2_nofs_TSE_SAG_IW.zip
+            rtkn0668/RTKN0668_MR_MEDIC.zip
+            rtkn0668/SHA256SUMS.txt
+            rtkn0668/SOURCE_AND_LICENSE.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+      - name: Stage independent C public dataset group under 100 MiB, NOT in Git
+        uses: actions/upload-artifact@v4
+        with:
+          name: ANATHEOS-RTKN0668-MRI-C-Leeds-CCBY4
+          path: |
+            rtkn0668/RTKN0668_MR_VIBE.zip
+            rtkn0668/RTKN0668_geom.stl
+            rtkn0668/RTKN0668_readme.txt
+            rtkn0668/SHA256SUMS.txt
+            rtkn0668/SOURCE_AND_LICENSE.txt
           if-no-files-found: error
           compression-level: 0
           retention-days: 7

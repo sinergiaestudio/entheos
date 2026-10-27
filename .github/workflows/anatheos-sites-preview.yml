@@ -39,9 +39,11 @@ jobs:
           path: .sites-runtime/anatheos-sites-demo-synthetic.png
           retention-days: 7
           if-no-files-found: error
-      - name: Record exact Git HEAD in no-DICOM snapshot
+      - name: Record PR source HEAD in no-DICOM snapshot
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          git rev-parse HEAD > .sites-runtime/anatheos-sites-preview-head.txt
+          printf '%s\n' "$PR_HEAD_SHA" > .sites-runtime/anatheos-sites-preview-head.txt
       - name: Archive code-only recovery package for Drive
         uses: actions/upload-artifact@v4
         with:

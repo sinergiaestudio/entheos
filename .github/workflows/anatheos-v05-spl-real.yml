@@ -1,0 +1,78 @@
+name: ANATHEOS v0.5 · real SPL reference preflight (ephemeral only)
+on:
+  push:
+    branches:
+      - anatheos/issue-8l-v05-atlas-real-preflight
+    paths:
+      - "demos/anatheos-local-v0.5/**"
+      - ".github/workflows/anatheos-v05-spl-real.yml"
+  pull_request:
+    paths:
+      - "demos/anatheos-local-v0.5/**"
+      - ".github/workflows/anatheos-v05-spl-real.yml"
+permissions:
+  contents: read
+jobs:
+  spl-real-private-runner:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      SPL_ATLAS_TMP_DIR: /tmp/anatheos-spl-atlas
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify no reference medical assets were added to the public repository
+        run: |
+          set -eu
+          if find demos/anatheos-local-v0.5 -type f | grep -Ei '\.(dcm|dicom|nrrd|nii|stl|obj|zip|png|jpg)$'; then
+            echo "FAIL: imaging data or model artifacts included in public source"
+            exit 1
+          fi
+      - name: Download ONLY official public atlas reference into disposable runner folder
+        run: |
+          set -euo pipefail
+          mkdir -p "$SPL_ATLAS_TMP_DIR"
+          base="https://raw.githubusercontent.com/lorensen/SPLKneeAtlas/a033300264aec8625a56512be3865c10cdbcb61b"
+          curl --fail --location --retry 3 --silent --show-error "$base/Atlas/SPLKneeAtlasLabels.nrrd" -o "$SPL_ATLAS_TMP_DIR/SPLKneeAtlasLabels.nrrd"
+          curl --fail --location --retry 3 --silent --show-error "$base/Models/STL/femur-95.stl" -o "$SPL_ATLAS_TMP_DIR/femur-95.stl"
+          curl --fail --location --retry 3 --silent --show-error "$base/Models/STL/tibia-96.stl" -o "$SPL_ATLAS_TMP_DIR/tibia-96.stl"
+          test "$(stat -c%s "$SPL_ATLAS_TMP_DIR/femur-95.stl")" = 16447884
+          test "$(stat -c%s "$SPL_ATLAS_TMP_DIR/tibia-96.stl")" = 13344284
+          test "$(stat -c%s "$SPL_ATLAS_TMP_DIR/SPLKneeAtlasLabels.nrrd")" = 466136
+      - name: Verify exact label-mesh identities and candidate physical correspondence
+        run: python3 demos/anatheos-local-v0.5/preflight_spl_real.py "$SPL_ATLAS_TMP_DIR"
+      - name: Preserve prior code and run all local unit tests
+        working-directory: demos/anatheos-local-v0.5
+        run: |
+          node --check surface-core.mjs
+          node --check surface-renderer.mjs
+          node --check surface-ui.mjs
+          node --check browser_spl_real.mjs
+          node --check spl-provenance.mjs
+          node --test test_segmentation.mjs test_volume_core.mjs test_surfaces.mjs test_spl_provenance.mjs
+      - name: Install temporary free Chromium tools in CI only
+        run: |
+          npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.56.1
+          ./node_modules/.bin/playwright install --only-shell chromium
+      - name: Render BOTH genuine anatomical models in local Chromium — NO image export
+        run: |
+          set -euo pipefail
+          mkdir -p .sites-runtime
+          (cd demos/anatheos-local-v0.5 && python3 -m http.server 8774 --bind 127.0.0.1) > .sites-runtime/anatheos-v05-http.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 40); do
+            if curl --silent --output /dev/null --max-time 1 http://127.0.0.1:8774/; then ready=1;break;fi
+            sleep 1
+          done
+          test "$ready" = "1"
+          node demos/anatheos-local-v0.5/browser_spl_real.mjs
+      - name: Secure deletion of original atlas study from ephemeral working directory
+        if: always()
+        run: |
+          rm -rf "$SPL_ATLAS_TMP_DIR"
+          test ! -e "$SPL_ATLAS_TMP_DIR"
+          git diff --exit-code -- package.json package-lock.json

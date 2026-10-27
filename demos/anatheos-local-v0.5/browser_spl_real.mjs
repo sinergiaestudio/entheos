@@ -1,0 +1,41 @@
+import {chromium} from 'playwright';
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import path from 'node:path';
+const atlas=process.env.SPL_ATLAS_TMP_DIR;
+assert(atlas,'Set SPL_ATLAS_TMP_DIR to a local ephemeral folder containing the public SPL meshes');
+const url=process.env.ANATHEOS_V05_SMOKE_URL||'http://127.0.0.1:8774/';
+const browser=await chromium.launch({headless:true,args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl','--no-sandbox']});
+const page=await browser.newPage({viewport:{width:1480,height:920}});
+const errors=[],external=[];
+page.on('pageerror',e=>errors.push(String(e)));
+page.on('request',r=>{if(!r.url().startsWith(url.replace(/\/$/,'')))external.push(r.url())});
+try{
+ await page.goto(url,{waitUntil:'networkidle'});
+ await page.locator('#surfaceSource').selectOption('spl-knee');
+ await page.locator('#surfaceFile').setInputFiles([
+   path.join(atlas,'femur-95.stl'),path.join(atlas,'tibia-96.stl')]);
+ await page.waitForFunction(()=>document.querySelectorAll('.surface-row').length===2,null,{timeout:120000});
+ assert.equal(await page.locator('#surfaceCanvas').isVisible(),true);
+ const names=await page.locator('.surface-row .surface-select').allTextContents();
+ assert(names[0].includes('328.956'),names.join(' | '));
+ assert(names[1].includes('266.884'),names.join(' | '));
+ const sig=async()=>createHash('sha256').update(await page.locator('#surfaceCanvas').screenshot()).digest('hex');
+ const both=await sig();
+ await page.locator('.surface-row').first().locator('button').last().click();
+ const one=await sig();
+ assert.notEqual(both,one,'Hiding tibia must change actual WebGL raster image');
+ assert.deepEqual(await page.locator('.surface-row input[type=checkbox]').evaluateAll(xs=>xs.map(x=>x.checked)),[true,false]);
+ await page.locator('#surfaceAll').click();
+ await page.locator('.surface-row').last().locator('input[type=color]').fill('#f6bd60');
+ await page.locator('.surface-row').last().locator('input[type=range]').evaluate(el=>{el.value='35';el.dispatchEvent(new Event('input',{bubbles:true}))});
+ const updated=await sig();assert.notEqual(one,updated);
+ const canvas=page.locator('#surfaceCanvas');
+ await canvas.hover();const bounds=await canvas.boundingBox();
+ await page.mouse.move(bounds.x+bounds.width/2,bounds.y+bounds.height/2);
+ await page.mouse.down();await page.mouse.move(bounds.x+bounds.width/2+90,bounds.y+bounds.height/2+35,{steps:10});await page.mouse.up();
+ const turned=await sig();assert.notEqual(updated,turned,'Rotation must change displayed real mesh image');
+ assert.equal(errors.length,0,JSON.stringify(errors));
+ assert.equal(external.length,0,JSON.stringify(external));
+ console.log('PASS real SPL atlas in ANATHEOS WebGL2: 328956 femur + 266884 tibia facets, individual visibility/opacity/color, rotation; zero JS errors and external browser requests');
+} finally {await browser.close()}

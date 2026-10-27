@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      SPL_ATLAS_TMP_DIR: ${{ runner.temp }}/anatheos-spl-atlas
+      SPL_ATLAS_TMP_DIR: /tmp/anatheos-spl-atlas
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

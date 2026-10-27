@@ -9,7 +9,7 @@ page.on('request',r=>{if(!r.url().startsWith(url.replace(/\/$/,'')))outside.push
 try{
  await page.goto(url,{waitUntil:'networkidle'});
  assert.equal(await page.locator('#surfaceButton').count(),1);
- await page.locator('#surfaceSource').selectOption('spl-knee');
+ await page.locator('#surfaceSource').selectOption('other-unverified');
  await page.locator('#surfaceFile').setInputFiles([
   {name:'femur-95.stl',mimeType:'application/octet-stream',buffer:stl(0)},
   {name:'tibia-96.stl',mimeType:'application/octet-stream',buffer:stl(60)}]);

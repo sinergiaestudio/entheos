@@ -214,3 +214,51 @@ body[data-b5-view="mixed"] #volumeControls:not([hidden]){display:flex!important}
 .b7-assisted #b7Discard{background:#1b2b33}
 #b7Status{font-size:11px;color:#a8d8df;min-height:20px}
 @media(max-width:660px){.b7-sliders{grid-template-columns:1fr}}
+
+/* B7.2: 2D, DICOM intensity volume and SAME-STUDY mask meshes in 3 panes. */
+.viewer[data-ux-mode="triple"]{isolation:isolate}
+.viewer[data-ux-mode="triple"] #scanCanvas,
+.viewer[data-ux-mode="triple"] #volumeCanvas,
+.viewer[data-ux-mode="triple"] #surfaceCanvas{position:absolute!important;inset:auto!important;top:0!important;bottom:auto!important;width:33.33333%!important;height:100%!important;display:block}
+.viewer[data-ux-mode="triple"] #scanCanvas{left:0!important;z-index:1;background:#131e26;border-right:1px solid #405564}
+.viewer[data-ux-mode="triple"] #volumeCanvas{left:33.33333%!important;z-index:2;background:#162735;border-right:1px solid #405564}
+.viewer[data-ux-mode="triple"] #surfaceCanvas{left:66.66667%!important;z-index:3;background:#111e2b}
+.viewer[data-ux-mode="triple"] #surfaceCanvas[hidden]{display:none!important}
+.viewer[data-ux-mode="triple"] #uxMixedLabel2d,.viewer[data-ux-mode="triple"] #uxMixedLabel3d{display:none!important}
+.viewer .triptych-label{display:none;position:absolute;top:12px;z-index:8;color:#deedf1;font-size:10px;line-height:1.6;background:#0b1921e8;border:1px solid #425d6a;padding:6px 8px;border-radius:7px;pointer-events:none;max-width:31%}
+.viewer .triptych-label span{display:block;font-size:10px;color:#7ec4d3}
+.viewer[data-ux-mode="triple"] #triptychLabel2d{display:block;left:10px}
+.viewer[data-ux-mode="triple"] #triptychLabelVolume{display:block;left:calc(33.33333% + 10px)}
+.viewer[data-ux-mode="triple"] #triptychLabelMesh{display:block;left:calc(66.66667% + 10px)}
+.viewer[data-ux-mode="triple"] #triptychNoMask:not([hidden]){display:flex;position:absolute;top:0;left:66.66667%;width:33.33333%;height:100%;flex-direction:column;align-items:center;justify-content:center;z-index:4;padding:22px;background:#111f2a;color:#e3edf1;text-align:center}
+#triptychNoMask strong{font-size:13px}
+#triptychNoMask p{font-size:11px;line-height:1.7;color:#aec1cb;max-width:250px}
+.viewer[data-ux-mode="triple"] .orientationNotice{top:51px;right:35%;max-width:28%;font-size:9px}
+.viewer[data-ux-mode="triple"] .viewerOverlayActions{z-index:7;right:35%;max-width:29%}
+.viewer[data-ux-mode="triple"] .viewerFooter{z-index:9}
+.triptych-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:#0d1a22;border:1px solid #2d4c5d;border-radius:10px;padding:11px 12px}
+.triptych-tools[hidden]{display:none!important}
+.triptych-tools strong{color:#e5eef2;font-size:12px;margin-right:8px}
+.triptych-tools button{background:#1b2e3a;border:1px solid #406677;border-radius:7px;color:#d9ecf1;padding:8px 10px;font-size:11px}
+.triptych-tools button[aria-pressed=true]{background:#286e7a;border-color:#7bbac7}
+#triptychToolStatus{color:#a8ccd7;font-size:10px;flex-basis:100%}
+.triptych-tissue-type{display:flex;flex-direction:column;gap:7px;padding:12px;border:1px solid #385d69;background:#142731;border-radius:9px;margin-bottom:12px}
+.triptych-tissue-type label{color:#d5edf2;font-size:11px}
+.triptych-tissue-type select{background:#1d313a;color:#e5f2f3;border:1px solid #4a6a74;padding:9px;border-radius:7px}
+.triptych-tissue-type p{color:#b1c8cf;font-size:10px;line-height:1.7;margin:0}
+body[data-b5-view="triple"] .sliceBar{display:flex!important}
+body[data-b5-view="triple"] .controls{display:none!important}
+body[data-b5-view="triple"] #volumeControls:not([hidden]){display:flex!important}
+@media(max-width:680px){
+ .viewer[data-ux-mode="triple"]{height:75dvh;min-height:690px}
+ .viewer[data-ux-mode="triple"] #scanCanvas,.viewer[data-ux-mode="triple"] #volumeCanvas,.viewer[data-ux-mode="triple"] #surfaceCanvas{width:100%!important;height:33.333333%!important;left:0!important}
+ .viewer[data-ux-mode="triple"] #scanCanvas{top:0!important;border-bottom:1px solid #405564}
+ .viewer[data-ux-mode="triple"] #volumeCanvas{top:33.333333%!important;border-bottom:1px solid #405564}
+ .viewer[data-ux-mode="triple"] #surfaceCanvas{top:66.666667%!important}
+ .viewer[data-ux-mode="triple"] #triptychLabel2d{left:8px;top:5px}
+ .viewer[data-ux-mode="triple"] #triptychLabelVolume{left:8px;top:calc(33.333333% + 5px)}
+ .viewer[data-ux-mode="triple"] #triptychLabelMesh{left:8px;top:calc(66.666667% + 5px)}
+ .viewer .triptych-label{max-width:95%;font-size:9px}
+ .viewer[data-ux-mode="triple"] #triptychNoMask:not([hidden]){left:0;top:66.666667%;width:100%;height:33.333333%;padding:10px 32px}
+ .viewer[data-ux-mode="triple"] .orientationNotice,.viewer[data-ux-mode="triple"] .viewerOverlayActions{display:none}
+}

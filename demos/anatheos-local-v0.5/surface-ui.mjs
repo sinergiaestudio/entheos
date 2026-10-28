@@ -15,6 +15,13 @@ function syncSurfaceUI(){
 }
 function resetSurfaceView(){if(!renderer)return;renderer.yaw=.5;renderer.pitch=.18;renderer.zoom=1.6;renderer.draw();}
 function showMode(){
+ if($('viewerRoot').dataset.uxMode==='triple'){
+  const same=renderer?.meshes?.length&&renderer.meshes.every(m=>m.provenance?.kind==='same-study-manual');
+  if(same){showTriptychGeometry();return;}
+  // Explicit 'Superficies' action opens the independent viewer for external
+  // STL/SPL without presenting them as Leeds in the triple workspace.
+  $('twoDButton').click();
+ }
  // Exit previous volume mode so DICOM GPU controls cannot affect STL surfaces.
  if(!active)$('twoDButton').click();
  if(!renderer){try{renderer=new SurfaceRenderer($('surfaceCanvas'));}catch(e){status(e.message);return;}}
@@ -51,6 +58,7 @@ function leaveMode(){
  if(!active)return;
  active=false;
  $('surfaceCanvas').hidden=true;
+ $('triptychNoMask').hidden=true;
  $('surfaceButton').setAttribute('aria-pressed','false');
  syncSurfaceUI();
  // app.js has already restored 2D or 3D DICOM UI; do not overwrite it.
@@ -117,7 +125,7 @@ window.addEventListener('anatheos:show-same-study-surfaces',event=>{
 });
 function discardStaleSameStudy(){
  if(renderer?.meshes?.some(m=>m.sourceId==='dicom-derived')){
-  renderer.clear();uiRows();status('Modelos de máscara descartados: la serie o los vóxeles marcados cambiaron. Regenerá las superficies.');
+  renderer.clear();uiRows();showTriptychGeometry();status('Modelos de máscara descartados: la serie o los vóxeles marcados cambiaron. Regenerá las superficies.');
  }
 }
 window.addEventListener('anatheos:study-reset',discardStaleSameStudy);
@@ -183,8 +191,28 @@ void checkAtlasCached();
 
 $('surfaceFile').addEventListener('change',async e=>{await loadMeshes([...e.target.files]);e.target.value='';});
 $('surfaceOpen').addEventListener('click',()=>$('surfaceFile').click());
-$('surfaceButton').addEventListener('click',showMode);
-for(const id of ['twoDButton','threeDButton','mixedButton'])$(id).addEventListener('click',leaveMode);
+
+/* Only locally derived, same-study mask meshes may share the triple DICOM view.
+ * A public SPL atlas from another knee is NEVER shown beside Leeds as a match.
+ */
+function showTriptychGeometry(){
+ if($('viewerRoot').dataset.uxMode!=='triple')return;
+ if(!renderer){try{renderer=new SurfaceRenderer($('surfaceCanvas'));}catch(error){status('Visor de mallas: '+error.message);}}
+ const allowed=Boolean(renderer?.meshes?.length)&&renderer.meshes.every(m=>m.provenance?.kind==='same-study-manual');
+ active=allowed;
+ $('surfaceCanvas').hidden=!allowed;
+ $('triptychNoMask').hidden=allowed;
+ $('surfaceHelpOverlay').hidden=true;
+ if(allowed)requestAnimationFrame(()=>renderer?.draw());
+}
+window.addEventListener('anatheos:triptych-activated',()=>requestAnimationFrame(showTriptychGeometry));
+window.addEventListener('anatheos:triptych-left',()=>{
+ if($('surfaceButton').getAttribute('aria-pressed')!=='true'){
+  active=false;$('surfaceCanvas').hidden=true;$('triptychNoMask').hidden=true;
+ }
+});
+$('surfaceButton').addEventListener('click',()=>{if($('viewerRoot').dataset.uxMode==='triple')$('twoDButton').click();showMode();});
+for(const id of ['twoDButton','threeDButton','mixedButton','tripleButton'])$(id).addEventListener('click',leaveMode);
 $('surfaceAll').addEventListener('click',()=>{if(!renderer)return;renderer.meshes.forEach(x=>x.visible=true);uiRows();renderer.draw();});
 $('surfaceClear').addEventListener('click',()=>{renderer?.clear();uiRows();status('Modelos retirados de memoria. '+emptyHint);});
 $('surfaceReset').addEventListener('click',resetSurfaceView);

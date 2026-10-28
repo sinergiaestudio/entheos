@@ -9,7 +9,7 @@ import {proposeConnected3D,acceptConnected3D} from './assisted-segmentation-3d.m
  * Cornerstone3D compatibility is tracked in separate G2a browser experiments.
  */
 const $=id=>document.getElementById(id);
-const state={mode:'2d',mixed:false,volumeRenderer:null,volumeToken:0,series:[],current:null,index:0,wlCenter:350,wlWidth:850,brightness:0,contrast:100,zoom:1,panX:0,panY:0,loadGeneration:0,source:'',imageKey:'',lastPixels:null,segMask:null,segCount:[0,0,0,0],segVersion:0,segVisibility:7,segOverlayKey:'',segEdit:false,b7Picking:false,b7Seed:null,b7Draft:null,b7DraftVersion:0};
+const state={mode:'2d',mixed:false,volumeRenderer:null,volumeToken:0,series:[],current:null,index:0,wlCenter:350,wlWidth:850,brightness:0,contrast:100,zoom:1,panX:0,panY:0,loadGeneration:0,source:'',imageKey:'',lastPixels:null,segMask:null,segCount:[0,0,0,0],segVersion:0,segVisibility:7,segOverlayKey:'',segEdit:false,annotationMode:'none',measureStart:null,annotations:[],tissueTypes:['','',''],b7Picking:false,b7Seed:null,b7Draft:null,b7DraftVersion:0};
 const LONG=new Set(['OB','OD','OF','OL','OV','OW','SQ','UC','UR','UT','UN']);
 const NUMTAG=new Set([0x00280002,0x00280010,0x00280011,0x00280100,0x00280101,0x00280102,0x00280103,0x00280006]);
 const TAGS=new Map([[0x00020010,'syntax'],[0x00080060,'modality'],[0x0008103e,'description'],[0x00080016,'sopClass'],[0x0020000e,'seriesUid'],[0x00200013,'instance'],[0x00200032,'ipp'],[0x00200037,'iop'],[0x00280002,'samples'],[0x00280004,'photo'],[0x00280008,'frames'],[0x00280010,'rows'],[0x00280011,'columns'],[0x00280030,'spacing'],[0x00280100,'bitsAllocated'],[0x00280101,'bitsStored'],[0x00280102,'highBit'],[0x00280103,'signed'],[0x00281052,'intercept'],[0x00281053,'slope'],[0x00281050,'dicomCenter'],[0x00281051,'dicomWidth'],[0x7fe00010,'pixels']]);
@@ -98,7 +98,7 @@ async function unpackMember(buffer,entry){
 function vecCross(a,b){return[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
 function dot(a,b){return a.reduce((sum,v,i)=>sum+v*b[i],0);}
 function orientCheck(a,b){return a.iop.every((v,k)=>Math.abs(v-b.iop[k])<0.0003);}
-function clean(){state.b7Picking=false;state.b7Seed=null;state.b7Draft=null;state.b7DraftVersion++;$('b7SeedStatus').textContent='Sin semilla seleccionada.';$('b7Accept').disabled=true;$('b7Discard').disabled=true;$('b7Discard').disabled=true;window.dispatchEvent(new Event('anatheos:study-reset'));stopVolume();state.mode='2d';state.mixed=false;switchModeButtons();state.segMask=null;state.segVersion++;state.segCount=[0,0,0,0];state.segOverlayKey='';state.segEdit=false;$('segEdit').checked=false;state.current=null;state.series=[];state.index=0;state.imageKey='';state.lastPixels=null;state.source='';state.panX=0;state.panY=0;state.zoom=1;updateControls();render();}
+function clean(){state.annotationMode='none';state.measureStart=null;state.annotations=[];state.tissueTypes=['','',''];state.b7Picking=false;state.b7Seed=null;state.b7Draft=null;state.b7DraftVersion++;$('b7SeedStatus').textContent='Sin semilla seleccionada.';$('b7Accept').disabled=true;$('b7Discard').disabled=true;$('b7Discard').disabled=true;window.dispatchEvent(new Event('anatheos:study-reset'));stopVolume();state.mode='2d';state.mixed=false;switchModeButtons();state.segMask=null;state.segVersion++;state.segCount=[0,0,0,0];state.segOverlayKey='';state.segEdit=false;$('segEdit').checked=false;state.current=null;state.series=[];state.index=0;state.imageKey='';state.lastPixels=null;state.source='';state.panX=0;state.panY=0;state.zoom=1;updateControls();render();}
 function cancelCurrent(){state.loadGeneration++;$('loading').hidden=true;}
 function showLoad(detail,progress=0){$('loading').hidden=false;$('loadingDetail').textContent=detail;$('loadingProgress').style.width=progress+'%';}
 function toast(msg){const el=$('toast');el.textContent=msg;el.classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('visible'),4200);}
@@ -181,7 +181,7 @@ function clamp(n,low,high){return Math.max(low,Math.min(high,n));}
 function currentFrame(){return state.current?.items[state.index];}
 function updateControls(){const active=currentFrame(),has=!!active;
  $('threeDButton').disabled=!has;
- $('mixedButton').disabled=!has;
+ $('mixedButton').disabled=!has;$('tripleButton').disabled=!has;
 
  $('emptyViewer').style.display=has?'none':'flex';$('viewBadge').hidden=!has;
  $('studyTitle').textContent=has?state.current.description:'Sin estudio cargado';$('studySubtitle').textContent=has?`${state.current.items.length} instancias · ${active.modality} · ${state.source}`:'Seleccioná una secuencia para comenzar.';
@@ -247,9 +247,25 @@ function render(){if(state.mode==='3d'&&!state.mixed){state.volumeRenderer?.draw
   ctx.drawImage(segOverlayCanvas,-frame.columns/2,-frame.rows/2);
  }
  ctx.restore();
+ // Annotation overlay in screen pixels, calibrated on source DICOM plane.
+ const toScreen=([x,y])=>[w/2+state.panX*ratio+(x-frame.columns/2)*scale,h/2+state.panY*ratio+(y-frame.rows/2)*scale];
+ ctx.save();ctx.lineWidth=1.6*ratio;ctx.font=(11*ratio)+'px Segoe UI,Arial,sans-serif';
+ for(const note of state.annotations.filter(n=>n.z===state.index)){
+  const [x,y]=toScreen(note.a);
+  ctx.strokeStyle=note.type==='measure'?'#ffe09b':'#78e5f2';ctx.fillStyle=ctx.strokeStyle;
+  ctx.beginPath();ctx.moveTo(x-6*ratio,y);ctx.lineTo(x+6*ratio,y);ctx.moveTo(x,y-6*ratio);ctx.lineTo(x,y+6*ratio);ctx.stroke();
+  if(note.type==='measure'){const [ex,ey]=toScreen(note.b);ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(ex,ey);ctx.stroke();ctx.fillText(note.mm.toFixed(2)+' mm',Math.min(x,ex)+8*ratio,Math.min(y,ey)-10*ratio);}
+  else ctx.fillText('Punto '+Math.floor(note.a[0])+', '+Math.floor(note.a[1]),x+8*ratio,y-8*ratio);
+ }
+ if(state.measureStart?.z===state.index){const [x,y]=toScreen(state.measureStart.p);ctx.fillStyle='#ffe09b';ctx.fillText('Elegí segundo punto',x+8*ratio,y-8*ratio);}
+ ctx.restore();
  if(state.mode==='3d'&&state.mixed)state.volumeRenderer?.draw();
 }
-function chooseSlice(index){if(!state.current)return;state.index=clamp(Math.round(index),0,state.current.items.length-1);state.imageKey='';updateControls();render();}
+function chooseSlice(index){if(!state.current)return;state.index=clamp(Math.round(index),0,state.current.items.length-1);state.imageKey='';updateControls();render();
+ const mm=currentFrame()?.projection,caption='Corte '+(state.index+1)+(Number.isFinite(mm)?' · '+mm.toFixed(2)+' mm':'');
+ for(const id of ['triptychSlice2d','triptychSliceVolume','triptychSliceMesh'])$(id).textContent=caption;
+ window.dispatchEvent(new CustomEvent('anatheos:active-slice',{detail:{index:state.index,seriesUid:state.current.uid,positionMm:mm}}));
+}
 function resetView(){state.panX=state.panY=0;state.zoom=1;render();}
 $('loadIncluded').onclick=loadIncluded;$('zipButton').onclick=()=>$('zipInput').click();$('folderButton').onclick=()=>$('folderInput').click();
 $('zipInput').onchange=e=>{if(e.target.files[0])loadZipFile(e.target.files[0]);e.target.value='';};$('folderInput').onchange=e=>{if(e.target.files.length)loadFiles(e.target.files);e.target.value='';};
@@ -262,6 +278,17 @@ $('autoWindow').onclick=()=>{const f=currentFrame();if(!f)return;const data=[];f
 $('zoomIn').onclick=()=>{state.zoom=clamp(state.zoom*1.25,.3,10);render();};$('zoomOut').onclick=()=>{state.zoom=clamp(state.zoom/1.25,.3,10);render();};$('fitButton').onclick=resetView;
 canvas.addEventListener('wheel',e=>{if(!currentFrame())return;e.preventDefault();if(e.ctrlKey||e.metaKey){state.zoom=clamp(state.zoom*(e.deltaY>0?.9:1.1),.3,10);render();}else chooseSlice(state.index+(e.deltaY>0?1:-1));},{passive:false});
 let dragging=false,lastX=0,lastY=0;canvas.onpointerdown=e=>{if(!currentFrame())return;
+ if(state.annotationMode!=='none'){
+  const xy=pointToPixel(e);if(!xy)return;const p=xy.map(Math.floor),frame=currentFrame();
+  if(state.annotationMode==='point')state.annotations.push({type:'point',z:state.index,a:p});
+  if(state.annotationMode==='measure'){
+   if(state.measureStart?.z===state.index){
+    const a=state.measureStart.p,mm=Math.hypot((p[0]-a[0])*frame.spacing[1],(p[1]-a[1])*frame.spacing[0]);
+    state.annotations.push({type:'measure',z:state.index,a,b:p,mm});state.measureStart=null;
+    $('triptychToolStatus').textContent='Distancia 2D, corte '+(state.index+1)+': '+mm.toFixed(2)+' mm. No diagnóstica.';
+   }else{state.measureStart={z:state.index,p};$('triptychToolStatus').textContent='Primer punto elegido. Marcá el segundo en el mismo corte.';}
+  }render();return;
+ }
  if(state.b7Picking){
   const xy=pointToPixel(e);state.b7Picking=false;
   if(xy){state.b7Seed={x:Math.floor(xy[0]),y:Math.floor(xy[1]),z:state.index};
@@ -277,20 +304,22 @@ updateControls();render();
 
 /* ANATHEOS v0.2 true volumetric rendering from the uploaded DICOM pixels. */
 function switchModeButtons(){
- const is3d=state.mode==='3d',mixed=is3d&&state.mixed;
- $('threeDButton').setAttribute('aria-pressed',String(is3d&&!mixed));
- $('mixedButton').setAttribute('aria-pressed',String(mixed));
+ const is3d=state.mode==='3d',triple=is3d&&state.mixed==='triple',mixed=is3d&&Boolean(state.mixed)&&!triple;
+ $('threeDButton').setAttribute('aria-pressed',String(is3d&&!mixed&&!triple));
+ $('mixedButton').setAttribute('aria-pressed',String(mixed));$('tripleButton').setAttribute('aria-pressed',String(triple));
  $('twoDButton').setAttribute('aria-pressed',String(!is3d));
- $('scanCanvas').hidden=is3d&&!mixed;
+ $('scanCanvas').hidden=is3d&&!state.mixed;
  $('volumeCanvas').hidden=!is3d;
  $('volumeControls').hidden=!is3d;
  $('viewerOverlayActions').hidden=!is3d;
- $('sliceRange').disabled=(is3d&&!mixed)||!currentFrame();
- $('viewBadge').textContent=mixed?'MIXTO · DICOM 2D + VOLUMEN REAL':is3d?'VOLUMEN REAL · GPU':'ORIGINAL · DICOM';
- $('viewerInfo').textContent=mixed?'Izquierda: cortes DICOM · derecha: rotar volumen · rueda: zoom':is3d?'Arrastrar: rotar · rueda: acercar':'Ctrl + rueda: zoom · arrastrar: mover · rueda: cortes';
+ $('sliceRange').disabled=(is3d&&!state.mixed)||!currentFrame();
+ $('triptychTools').hidden=!triple;$('viewBadge').textContent=triple?'TRIPLE · MISMA SERIE · SOLO MÁSCARAS PROPIAS':mixed?'MIXTO · DICOM 2D + VOLUMEN REAL':is3d?'VOLUMEN REAL · GPU':'ORIGINAL · DICOM';
+ $('viewerInfo').textContent=triple?'Corte editable, volumen de intensidades y superficies del mismo DICOM':mixed?'Izquierda: cortes DICOM · derecha: rotar volumen · rueda: zoom':is3d?'Arrastrar: rotar · rueda: acercar':'Ctrl + rueda: zoom · arrastrar: mover · rueda: cortes';
  $('orientationNote').textContent=is3d?'DICOM original · orientación radiológica pendiente de validar':'Orientación indicada por DICOM · lateralidad no validada en Slicer';
  $('volumeStatus').textContent=is3d?'Volumen activo · representación no diagnóstica':'';
- $('viewerRoot').dataset.uxMode=mixed?'mixed':is3d?'volume':'slice';
+ const mm=currentFrame()?.projection,caption=currentFrame()?'Corte '+(state.index+1)+(Number.isFinite(mm)?' · '+mm.toFixed(2)+' mm':''):'—';
+  for(const id of ['triptychSlice2d','triptychSliceVolume','triptychSliceMesh'])$(id).textContent=caption;
+  $('viewerRoot').dataset.uxMode=triple?'triple':mixed?'mixed':is3d?'volume':'slice';window.dispatchEvent(new Event(triple?'anatheos:triptych-activated':'anatheos:triptych-left'));
 }
 function stopVolume(){
  state.volumeToken++;
@@ -327,7 +356,7 @@ async function enableVolume(asMixed=false){
  }finally{if(token===state.volumeToken)$('loading').hidden=true;else $('loading').hidden=true;}
 }
 $('threeDButton').onclick=()=>void enableVolume(false);
-$('mixedButton').onclick=()=>void enableVolume(true);
+$('mixedButton').onclick=()=>void enableVolume(true);$('tripleButton').onclick=()=>void enableVolume('triple');
 $('twoDButton').onclick=()=>{stopVolume();state.mode='2d';state.mixed=false;switchModeButtons();updateControls();render();};
 for(const id of ['volumeOpacity','volumeThreshold','volumeQuality'])$(''+id).addEventListener('input',()=>{
  const r=state.volumeRenderer;if(!r)return;
@@ -437,7 +466,11 @@ function syncMaskCounts(){
  for(let id=1;id<=3;id++)$('segCount'+id).textContent=state.segCount[id].toLocaleString('es-AR')+' vóxeles';
 }
 function maskChange(){state.segVersion++;state.segOverlayKey='';state.b7Draft=null;state.b7DraftVersion++;$('b7Accept').disabled=true;$('b7Discard').disabled=true;window.dispatchEvent(new Event('anatheos:mask-changed'));render();}
-function finishPaint(){paintingSeg=false;syncMaskCounts();maskChange();$('segStatus').textContent='Marcas locales actualizadas. Su interpretación anatómica requiere revisión.';}
+function finishPaint(){paintingSeg=false;syncMaskCounts();maskChange();$('segStatus').textContent='Marcas locales actualizadas. Su interpretación anatómica requiere revisión.';
+ if(state.mode==='3d'&&state.mixed==='triple'&&state.segCount.slice(1).some(Boolean)){
+  setTimeout(()=>{if(state.mode==='3d'&&state.mixed==='triple'&&!$('segBuildSurface').disabled)$('segBuildSurface').click();},0);
+ }
+}
 function pointToPixel(e){
  const frame=currentFrame();if(!frame)return null;
  const rect=canvas.getBoundingClientRect(),ratio=canvas.width/rect.width;
@@ -449,7 +482,7 @@ function pointToPixel(e){
  return [col,row];
 }
 function paintFromPointer(e){
- if(!state.segMask||state.mode!=='2d')return;
+ if(!state.segMask||(state.mode!=='2d'&&state.mixed!=='triple'))return;
  const xy=pointToPixel(e);if(!xy)return;
  paintingSeg=true;
  const label=Number($('segSelected').value);
@@ -462,7 +495,7 @@ function paintFromPointer(e){
 }
 $('segEdit').addEventListener('change',e=>{
  state.segEdit=e.target.checked;
- if(state.segEdit&&state.mode==='3d'){$('twoDButton').click();}
+ if(state.segEdit&&state.mode==='3d'&&state.mixed!=='triple'){$('twoDButton').click();}
  canvas.classList.toggle('seg-paint-active',state.segEdit);
  $('segStatus').textContent=state.segEdit?'Editor manual activo: arrastrá sobre el corte. Desactivá para desplazarte.':'Editor desactivado; arrastrar desplaza el corte.';
 });
@@ -510,7 +543,7 @@ $('segFile').onchange=async e=>{
 // B7.1: local proposal first, explicit acceptance second, never replacing unrelated labels.
 $('b7PickSeed').addEventListener('click',()=>{
  if(!state.current)return;
- if(state.mode==='3d')$('twoDButton').click();
+ if(state.mode==='3d'&&state.mixed!=='triple')$('twoDButton').click();
  if(state.segEdit){$('segEdit').checked=false;state.segEdit=false;canvas.classList.remove('seg-paint-active');}
  state.b7Seed=null;$('b7Propose').disabled=true;invalidateB7Draft('Nueva selección de semilla: propuesta anterior descartada.');
  state.b7Picking=true;$('b7Status').textContent='Hacé clic sobre un punto del corte DICOM para colocar la semilla.';
@@ -589,3 +622,46 @@ $('segBuildSurface').addEventListener('click',async()=>{
 // Detach annotations and renderer when an unrelated series is loaded.
 const clearOldStatus=clean;
 // The owning clean() above clears mask references before new DICOM records are read.
+
+/* B7.2: explicit two-click 2D measurement and per-label provisional soft tissue.
+ * The 3 existing numeric labels stay untouched, including NRRD compatibility.
+ * Tissue descriptors are exploratory in-memory UI metadata, never anatomy AI.
+ */
+function selectTriptychTool(tool){
+ state.annotationMode=(tool==='measure'||tool==='point')?tool:'none';
+ state.measureStart=null;
+ if(tool==='paint'){
+  if(!$('segEdit').checked){$('segEdit').checked=true;$('segEdit').dispatchEvent(new Event('change',{bubbles:true}));}
+ }else if($('segEdit').checked){
+  $('segEdit').checked=false;$('segEdit').dispatchEvent(new Event('change',{bubbles:true}));
+ }
+ for(const [id,kind] of [['triptychMeasure','measure'],['triptychPoint','point']])
+  $(id).setAttribute('aria-pressed',String(state.annotationMode===kind));
+ $('triptychToolStatus').textContent=tool==='paint'?'Pincel manual DICOM activo. El STL se vuelve a calcular al terminar el trazo.'
+ :tool==='measure'?'Elegí dos puntos sobre el MISMO corte: distancia plana según PixelSpacing DICOM.'
+ :tool==='point'?'Marcá un punto de interés sobre el corte 2D original.'
+ :'Mover el corte o navegar con la rueda; Ctrl + rueda para ampliar.';
+ render();
+}
+$('triptychPaint').onclick=()=>selectTriptychTool('paint');
+$('triptychMeasure').onclick=()=>selectTriptychTool('measure');
+$('triptychPoint').onclick=()=>selectTriptychTool('point');
+$('triptychMove').onclick=()=>selectTriptychTool('move');
+$('triptychClearNotes').onclick=()=>{
+ state.annotations=[];state.measureStart=null;render();
+ $('triptychToolStatus').textContent='Marcas 2D eliminadas, sin modificar la máscara ni las imágenes DICOM.';
+};
+const tissueLabels={oseo:'Óseo',cartilago:'Cartílago',menisco:'Menisco',ligamento:'Ligamento',
+ tendon:'Tendón',musculo:'Músculo',grasa:'Tejido adiposo',liquido:'Líquido articular',vaso:'Vasos',nervio:'Nervios',otro:'Otro'};
+function updateProvisionalTissue(){
+ const selected=Number($('segSelected').value)-1,tag=state.tissueTypes[selected]||'';
+ $('triptychTissueCategory').value=tag;
+ $('triptychTissueStatus').textContent=tag?'Región '+(selected+1)+': hipótesis manual «'+tissueLabels[tag]+'». Etiqueta NO validada.'
+ :'Región '+(selected+1)+' sin identificación anatómica; el nombre no cambia vóxeles ni STL.';
+}
+$('segSelected').addEventListener('change',updateProvisionalTissue);
+$('triptychTissueCategory').addEventListener('change',event=>{
+ state.tissueTypes[Number($('segSelected').value)-1]=event.target.value;
+ updateProvisionalTissue();
+});
+updateProvisionalTissue();

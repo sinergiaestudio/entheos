@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {VOLUME_STYLES,normalizeVolumeStyle,prepareVolumeTexture} from './volumetric.js';
+assert.deepEqual(VOLUME_STYLES,{original:0,relief:1,amber:2});
+assert.deepEqual(normalizeVolumeStyle('original',65),{style:'original',code:0,lighting:.65});
+assert.equal(normalizeVolumeStyle('amber',150).lighting,1);
+assert.equal(normalizeVolumeStyle('relief',-20).lighting,0);
+assert.throws(()=>normalizeVolumeStyle('bone-segmentation'),/no reconocido/);
+assert.throws(()=>normalizeVolumeStyle('amber',NaN),/invalida/);
+assert.throws(()=>normalizeVolumeStyle('relief',Infinity),/invalida/);
+const frames=[0,1,2].map(z=>({iop:[1,0,0,0,1,0],ipp:[0,0,z],spacing:[1,1],rows:2,columns:2,values:Int32Array.from([10,40,60,100].map(x=>x+z*10)),slope:1,intercept:0}));
+const series={items:frames,spacingBetween:1};
+const original=await prepareVolumeTexture(series);
+assert.equal(original.output.length,12);
+assert.equal(original.output[0],0);
+assert.equal(original.output[11],255);
+assert.deepEqual(frames[0].values,Int32Array.from([10,40,60,100]));
+console.log('PASS UX-N3: 3 known presets, lighting limits, no original DICOM changes');

@@ -12,6 +12,7 @@ function refreshLayers(){
  find('uxLayerDicom').hidden=!dicom;
  find('uxLayerExternal').hidden=dicom;
  find('uxVolumeOpacityControl').hidden=!(view==='volume'||view==='mixed')||!loaded;
+ find('uxRenderMaterials').hidden=!(view==='volume'||view==='mixed')||!loaded;
  find('uxDicomTag').textContent=loaded?'Original':'Sin cargar';
  find('uxLayerContext').textContent=view==='surface'?'Mallas independientes · atlas externo':loaded?(view==='mixed'?'2D + 3D del mismo estudio DICOM':view==='volume'?'Intensidades del estudio DICOM':'Cortes del estudio DICOM'):'Sin estudio activo';
  find('uxDicomDescription').textContent=loaded?(view==='mixed'?'Dos vistas del mismo estudio DICOM: cortes originales y volumen de intensidades, sin anatomía segmentada.':view==='volume'?'Volumen del mismo estudio: intensidades reales, no estructuras identificadas.':'Imagen original: los cortes no implican segmentación de huesos o tejidos.'):'Abrí tu estudio para explorar los cortes y el volumen original.';

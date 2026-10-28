@@ -5,6 +5,15 @@
  * NOT certified clinical patient-facing L/R labels. No external dependencies.
  */
 function ensure(test,reason){if(!test)throw new Error(reason);}
+export const VOLUME_STYLES=Object.freeze({
+ original:0, relief:1, amber:2
+});
+export function normalizeVolumeStyle(style,lighting=65){
+ ensure(Object.prototype.hasOwnProperty.call(VOLUME_STYLES,style),'Preset de volumen no reconocido.');
+ const strength=Number(lighting);
+ ensure(Number.isFinite(strength),'Iluminacion de volumen invalida.');
+ return Object.freeze({style,code:VOLUME_STYLES[style],lighting:Math.max(0,Math.min(1,strength/100))});
+}
 const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
 const volumeDot=(a,b)=>a.reduce((s,v,i)=>s+v*b[i],0);
 const norm=a=>Math.hypot(...a);
@@ -78,6 +87,9 @@ uniform float uThreshold;
 uniform float uOpacity;
 uniform float uClip;
 uniform int uPalette;
+uniform int uStyle;
+uniform vec3 uTexel;
+uniform float uLighting;
 uniform float uWindowLow;
 uniform float uWindowHigh;
 uniform int uSteps;
@@ -109,6 +121,23 @@ void main(){
   float a=clamp(response*uOpacity*10.0/float(steps),0.,.09);
   float luminance=.60+.40*visible;
   vec3 tissue=uPalette==0 ? vec3(1.) : mix(vec3(.62,.70,.77),vec3(.95,.88,.79),visible);
+  // Experimental MATERIAL PRESET on actual R8 intensity, not tissue classification.
+  if(uStyle==2){
+   float warm=smoothstep(.07,.98,visible);
+   tissue=mix(vec3(.32,.16,.065),vec3(1.0,.82,.49),warm);
+  }
+  if(uStyle>0 && uLighting>0. && response>.025){
+    // Forward finite differences along texture axes. Three extra texture lookups
+    // only on visible samples; cap rays for safe integrated GPU performance.
+    vec3 grad=vec3(texture(uVolume,coords+vec3(uTexel.x,0.,0.)).r-value,
+                    texture(uVolume,coords+vec3(0.,uTexel.y,0.)).r-value,
+                    texture(uVolume,coords+vec3(0.,0.,uTexel.z)).r-value);
+    float edge=clamp(length(grad)*10.,0.,1.);
+    vec3 normal=-normalize(grad+vec3(.00001));
+    float diffuse=max(dot(normal,normalize(vec3(.44,.69,.57))),0.);
+    float shade=mix(1.,.50+.72*diffuse,uLighting*edge);
+    luminance*=shade;
+  }
   if(uHasLabels==1){
    int label=int(floor(texture(uLabels,coords).r*255.0+.5));
    if(label>=1&&label<=3&&((uLabelShow&(1<<(label-1)))!=0)){
@@ -129,7 +158,7 @@ function createProgram(gl){const p=gl.createProgram();ensure(p,'No se pudo crear
 export class VolumeRenderer {
  constructor(canvas,prepared){
   this.canvas=canvas;this.prepared=prepared;this.yaw=.55;this.pitch=.32;this.zoom=1.55;this.preview=false;
-  this.threshold=.07;this.opacity=1.5;this.steps=220;this.low=0;this.high=1;this.clip=1;this.palette=0;
+  this.threshold=.07;this.opacity=1.5;this.steps=220;this.low=0;this.high=1;this.clip=1;this.palette=0;this.style=0;this.lighting=.65;
   this.mask=null;this.maskTexture=null;this.labelVisibility=7;this.labelOpacity=.75;
   const gl=canvas.getContext('webgl2',{alpha:false,antialias:false,preserveDrawingBuffer:true,powerPreference:'high-performance'});
   this.gl=gl;
@@ -156,7 +185,7 @@ export class VolumeRenderer {
   gl.texParameteri(gl.TEXTURE_3D,gl.TEXTURE_WRAP_R,gl.CLAMP_TO_EDGE);
   gl.texImage3D(gl.TEXTURE_3D,0,gl.R8,geo.x,geo.y,geo.z,0,gl.RED,gl.UNSIGNED_BYTE,output);
   ensure(gl.getError()===gl.NO_ERROR,'No se pudo transferir el volumen a la GPU.');
-  this.locations={};for(const name of ['uLabels','uHasLabels','uLabelShow','uLabelOpacity','uVolume','uHalf','uView','uRight','uUp','uAspect','uZoom','uThreshold','uOpacity','uWindowLow','uWindowHigh','uSteps','uClip','uPalette'])this.locations[name]=gl.getUniformLocation(this.program,name);
+  this.locations={};for(const name of ['uLabels','uHasLabels','uLabelShow','uLabelOpacity','uVolume','uHalf','uView','uRight','uUp','uAspect','uZoom','uThreshold','uOpacity','uWindowLow','uWindowHigh','uSteps' ,'uClip','uPalette','uStyle','uTexel','uLighting'])this.locations[name]=gl.getUniformLocation(this.program,name);
   const m=Math.max(...geo.spanMm);this.half=geo.spanMm.map(v=>.5*v/m);
   this.draw();
  }
@@ -196,8 +225,10 @@ export class VolumeRenderer {
   gl.uniform1i(u.uLabels,1);
   gl.uniform1i(u.uVolume,0);gl.uniform3fv(u.uHalf,this.half);gl.uniform3fv(u.uView,v);gl.uniform3fv(u.uRight,right);gl.uniform3fv(u.uUp,up);
   gl.uniform1f(u.uAspect,w/h);gl.uniform1f(u.uZoom,this.zoom);gl.uniform1f(u.uThreshold,this.threshold);gl.uniform1f(u.uOpacity,this.opacity);
-  gl.uniform1f(u.uWindowLow,this.low);gl.uniform1f(u.uWindowHigh,this.high);gl.uniform1i(u.uSteps,this.steps);
+  gl.uniform1f(u.uWindowLow,this.low);gl.uniform1f(u.uWindowHigh,this.high);gl.uniform1i(u.uSteps,this.style===0?this.steps:Math.min(140,this.steps));
   gl.uniform1f(u.uClip,this.clip);gl.uniform1i(u.uPalette,this.palette);
+  gl.uniform1i(u.uStyle,this.style);gl.uniform1f(u.uLighting,this.lighting);
+  gl.uniform3fv(u.uTexel,[1/this.prepared.geo.x,1/this.prepared.geo.y,1/this.prepared.geo.z]);
   gl.drawArrays(gl.TRIANGLE_STRIP,0,4);
  }
  drawSoftware(){
@@ -210,7 +241,7 @@ export class VolumeRenderer {
   const dir=[-sy*cp,-sp,-cy*cp],view=dir.map(v=>-v),right=[cy,0,-sy];
   const up=[-sp*sy,cp,-sp*cy];
   const result=context.createImageData(w,h),pixels=result.data;
-  const steps=Math.min(140,Math.max(40,Math.round(this.steps*.6)));
+  const steps=Math.min(this.style===0?140:100,Math.max(40,Math.round(this.steps*.6)));
   const zoom=this.zoom,threshold=this.threshold,opacity=this.opacity;
   const low=this.low,high=this.high,width=Math.max(high-low,.005);
   const sx=(2/w)*w/h*1.25/zoom,syy=(2/h)*1.25/zoom;
@@ -250,6 +281,21 @@ export class VolumeRenderer {
       let red=this.palette===0?1:(.62+(.95-.62)*visible);
       let green=this.palette===0?1:(.70+(.88-.70)*visible);
       let blue=this.palette===0?1:(.77+(.79-.77)*visible);
+      if(this.style===2){
+        const t=Math.max(0,Math.min(1,(visible-.07)/.91));
+        const warm=t*t*(3-2*t);
+        red=.32+.68*warm;green=.16+.66*warm;blue=.065+.425*warm;
+      }
+      if(this.style>0&&this.lighting>0&&response>.025){
+        const index=(iz*ny+iy)*nx+ix;
+        const gx=voxels[index+(ix<nx-1?1:0)]/255-val;
+        const gy=voxels[index+(iy<ny-1?nx:0)]/255-val;
+        const gz=voxels[index+(iz<nz-1?nx*ny:0)]/255-val;
+        const magnitude=Math.hypot(gx,gy,gz),edge=Math.min(1,magnitude*10);
+        const d=Math.max(.00001,magnitude);
+        const diffuse=Math.max(0,(-gx*.44-gy*.69-gz*.57)/(d*Math.hypot(.44,.69,.57)));
+        luminance*=1+(Math.max(0,Math.min(1,this.lighting*edge)))*((.50+.72*diffuse)-1);
+      }
       if(this.mask){
        const id=this.mask.data[(iz*ny+iy)*nx+ix];
        if(id>=1&&id<=3&&(this.labelVisibility&(1<<(id-1)))){

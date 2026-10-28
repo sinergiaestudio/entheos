@@ -174,3 +174,14 @@ body[data-b5-view="mixed"] #volumeControls:not([hidden]){display:flex!important}
  #uxMixedLabel3d{left:12px;top:calc(50% + 10px)}
  .viewer[data-ux-mode="mixed"] .orientationNotice{top:calc(50% + 44px);right:10px;max-width:65%}
 }
+
+/* UX-N3: compact, accessible material controls for *intensity volume*, not organs. */
+.ux-material-controls{border-bottom:1px solid var(--anat-divider);padding:15px 0 18px;display:flex;flex-direction:column;gap:8px}
+.ux-material-controls[hidden]{display:none!important}
+.ux-material-controls label{font-size:11px;color:var(--anat-text);display:flex;justify-content:space-between;gap:10px;line-height:1.5}
+.ux-material-controls output{color:var(--anat-accent)}
+.ux-material-controls select{width:100%;max-width:100%;background:#1a2830;border:1px solid #42535c;border-radius:7px;color:#e8f2f5;padding:9px 7px;font-size:11px}
+.ux-material-controls input{width:100%}
+.ux-material-controls p,.ux-material-controls small{margin:0;font-size:10px;color:var(--anat-muted);line-height:1.65}
+.ux-material-controls small{border-left:2px solid var(--anat-accent);padding-left:8px}
+.ux-render-note{font-size:11px;color:var(--anat-muted);line-height:1.6;margin:0;padding:0 8px}

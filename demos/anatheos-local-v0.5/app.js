@@ -286,6 +286,8 @@ async function enableVolume(asMixed=false){
   state.volumeRenderer.steps=Number($('volumeQuality').value);
   state.volumeRenderer.clip=Number($('volumeClip').value)/100;
   state.volumeRenderer.palette=$('volumePalette').value==='gray'?0:1;
+  state.volumeRenderer.style=({original:0,relief:1,amber:2})[$('volumeStyle').value]??0;
+  state.volumeRenderer.lighting=Number($('volumeLighting').value)/100;
   if(state.segMask&&state.segCount.slice(1).some(Boolean))state.volumeRenderer.setSegmentation(state.segMask,state.segVisibility);
   if(state.mixed)render();else state.volumeRenderer.draw();
   $('volumeStatus').textContent=`Volumen ${g.x} × ${g.y} × ${g.z} · ${g.spanMm.map(v=>v.toFixed(1)).join(' × ')} mm · ${(prepared.textureBytes/1048576).toFixed(1)} MiB de textura R8 · ${state.volumeRenderer.backend}`;
@@ -322,6 +324,28 @@ function updatePalette(source){
  if(state.volumeRenderer){state.volumeRenderer.palette=value==='gray'?0:1;state.volumeRenderer.draw();}
 }
 for(const id of ['volumePalette','volumePaletteHUD'])$(id).addEventListener('change',e=>updatePalette(e.target));
+function updateStyleControls(origin){
+ const value=origin.value;
+ $('volumeStyle').value=value;
+ $('uxVolumeStyle').value=value;
+ const r=state.volumeRenderer;
+ if(r){r.style=({original:0,relief:1,amber:2})[value]??0;r.draw();}
+ const note=value==='original'?'Intensidades originales en escala de visualización.':
+  value==='relief'?'Relieve por gradiente de intensidad; no identifica tejidos.':
+  'Preset ámbar de intensidades. No representa huesos segmentados.';
+ $('volumeStyleNote').textContent=note;
+ $('uxStyleNote').textContent=note;
+}
+for(const id of ['volumeStyle','uxVolumeStyle'])$(id).addEventListener('change',e=>updateStyleControls(e.target));
+function updateLighting(origin){
+ const value=Number(origin.value);
+ $('volumeLighting').value=String(value);$('uxVolumeLighting').value=String(value);
+ $('volumeLightingReadout').textContent=value+'%';
+ $('uxVolumeLightingValue').textContent=value+'%';
+ if(state.volumeRenderer){state.volumeRenderer.lighting=value/100;state.volumeRenderer.draw();}
+}
+for(const id of ['volumeLighting','uxVolumeLighting'])$(id).addEventListener('input',e=>updateLighting(e.target));
+
 
 // Focus mode expands the DICOM canvas and collapses non-essential panels;
 // fullscreen uses the standard browser Fullscreen API, never a remote Site.

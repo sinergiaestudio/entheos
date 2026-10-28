@@ -1,9 +1,9 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'">
-<title>ANATHEOS 3D · UX-N2 · vistas sincronizadas</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="ux-shell.css"></head>
+<title>ANATHEOS 3D · UX-N3 · materiales de intensidad</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="ux-shell.css"></head>
 <body>
-<header class="topbar"><div class="brand"><span class="logo">A<span>3</span></span><div><strong>ANATHEOS <em>3D</em></strong><small>UX-N2 · 2D / 3D / MIXTO · EXPERIMENTAL</small></div></div><div class="topright"><span class="dot"></span><span>100 % local · sin nube</span><span class="pill">NO DIAGNÓSTICO</span></div></header>
+<header class="topbar"><div class="brand"><span class="logo">A<span>3</span></span><div><strong>ANATHEOS <em>3D</em></strong><small>UX-N3 · MATERIALIDAD DEL VOLUMEN · EXPERIMENTAL</small></div></div><div class="topright"><span class="dot"></span><span>100 % local · sin nube</span><span class="pill">NO DIAGNÓSTICO</span></div></header>
 <div class="layout" id="uxN1Layout">
  <aside class="sidebar" aria-label="Panel de estudio">
   <section class="sideblock"><div class="overline">01 / ESTUDIO</div><h2>Explorador DICOM</h2><p class="dim">Abrí la serie DESS incluida o importá una carpeta/ZIP desde tu equipo.</p>
@@ -34,6 +34,9 @@
   <label>Calidad / muestras <input id="volumeQuality" type="range" min="60" max="320" step="20" value="220"></label>
   <label>Profundidad de cortes <output id="volumeClipReadout">100%</output><input id="volumeClip" type="range" min="5" max="100" value="100"></label>
   <label>Paleta de intensidades<select id="volumePalette"><option value="gray" selected>Grises</option><option value="tint">Pseudocolor</option></select></label>
+  <label>Estilo de representación (no segmenta)<select id="volumeStyle"><option value="original" selected>Original · intensidad</option><option value="relief">Relieve de intensidad · gris</option><option value="amber">Ámbar · pseudocolor</option></select></label>
+  <label>Iluminación del relieve <output id="volumeLightingReadout">65%</output><input id="volumeLighting" type="range" min="0" max="100" step="5" value="65"></label>
+  <p id="volumeStyleNote" class="ux-render-note">Intensidades originales en escala de visualización.</p>
   <button id="volumeReset">Restablecer rotación</button>
  </div><p id="volumeStatus" role="status">Ningún volumen cargado.</p>
  <p class="volumeCaution">Profundidad recorta el eje de cortes DICOM, no segmenta tejidos. El volumen representa intensidades reales, no estructuras segmentadas ni una malla. La orientación y lateralidad clínicas deben contrastarse con 3D Slicer. No apto para diagnóstico.</p>
@@ -69,6 +72,14 @@
       <div class="ux-layer-item"><span class="ux-layer-swatch ux-layer-swatch-image" aria-hidden="true"></span><span class="ux-layer-name">Imagen RM original</span><span class="ux-layer-tag" id="uxDicomTag">Sin cargar</span></div>
       <p class="ux-layer-explain" id="uxDicomDescription">El volumen utiliza los vóxeles del estudio DICOM. No hay segmentación anatómica automática.</p>
       <div id="uxVolumeOpacityControl" hidden><label for="uxVolumeOpacity">Opacidad del volumen <output id="uxVolumeOpacityValue">150 %</output></label><input id="uxVolumeOpacity" type="range" min="10" max="200" step="5" value="150"><small>Opacidad de intensidades, no de un hueso identificado.</small></div>
+      <div id="uxRenderMaterials" class="ux-material-controls">
+        <label for="uxVolumeStyle">Estilo 3D · mismo volumen</label>
+        <select id="uxVolumeStyle"><option value="original" selected>Original · intensidad</option><option value="relief">Relieve de intensidad · gris</option><option value="amber">Ámbar · pseudocolor</option></select>
+        <label for="uxVolumeLighting">Iluminación del relieve <output id="uxVolumeLightingValue">65%</output></label>
+        <input id="uxVolumeLighting" type="range" min="0" max="100" step="5" value="65">
+        <p id="uxStyleNote">Intensidades originales en escala de visualización.</p>
+        <small>Estos estilos no reconstruyen huesos ni reconocen tejidos. La RM original permanece intacta.</small>
+      </div>
       <div class="ux-not-yet" role="note"><strong>Estructuras anatómicas</strong><p>Fémur, tibia, cartílago y meniscos aparecerán aquí sólo cuando existan segmentaciones válidas <em>de este mismo estudio</em>. No se muestran capas ficticias.</p></div>
     </div>
     <div id="uxLayerExternal" hidden>

@@ -38,10 +38,9 @@ try{
  // Mark and measure on actual source pixel geometry; no anatomy is inferred.
  await page.locator('#triptychPoint').click();
  const canvas=page.locator('#scanCanvas');
- await canvas.click({position:{x:canvas?65:65,y:105}});
+ {const b=await canvas.boundingBox();await canvas.click({position:{x:b.width*.50,y:b.height*.50}});}
  await page.locator('#triptychMeasure').click();
- await canvas.click({position:{x:90,y:130}});
- await canvas.click({position:{x:124,y:130}});
+ {const b=await canvas.boundingBox();await canvas.click({position:{x:b.width*.46,y:b.height*.50}});await canvas.click({position:{x:b.width*.57,y:b.height*.50}});}
  assert.match(await page.locator('#triptychToolStatus').innerText(),/mm/);
  await page.locator('#triptychClearNotes').click();
  assert.match(await page.locator('#triptychToolStatus').innerText(),/sin modificar/);

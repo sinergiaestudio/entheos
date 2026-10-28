@@ -34,8 +34,15 @@ function showMode(){
   :renderer.meshes.length&&renderer.meshes.every(m=>m.provenance?.hashVerified)
   ?'SPL Knee Atlas · SHA-256 auténtico · RAS / mm · OTRO espécimen'
   :'Superficies externas · no verificadas respecto de la RM actual';
- $('frameLabel').textContent='SUPERFICIES 3D · STL/OBJ · SIN DIAGNOSTICO';
- $('viewerInfo').textContent=renderer.meshes.length?'Arrastrar: rotar · Rueda: zoom':'Sin modelos importados';
+ const originalSPL=renderer.meshes.length>0&&renderer.meshes.every(m=>m.provenance?.hashVerified);
+ $('frameLabel').textContent=sameStudy
+  ?'MALLAS DE MÁSCARAS MANUALES · MISMA RM · SIN VALIDAR'
+  :originalSPL
+  ?'ATLAS SPL EXTERNO · NO GENERADO DE LA RM LEEDS'
+  :'STL/OBJ IMPORTADOS · ORIGEN SIN VALIDAR';
+ $('viewerInfo').textContent=renderer.meshes.length
+  ?'Arrastrar: girar objeto · rueda: zoom · Capas: aislar para estudiar solapamientos'
+  :'Sin modelos importados';
  syncSurfaceUI();
  if(!renderer.meshes.length)status(emptyHint);
  renderer.draw();

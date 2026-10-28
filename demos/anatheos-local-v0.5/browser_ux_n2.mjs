@@ -1,0 +1,66 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {chromium} from 'playwright';
+const base='http://127.0.0.1:8774/';
+const synthetic=await readFile(process.env.SYNTH_DICOM_ZIP || '/tmp/anatheos-uxn2-test.zip');
+const browser=await chromium.launch({headless:true,args:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--no-sandbox']});
+try{
+ const page=await browser.newPage({viewport:{width:1440,height:900}});
+ const jsErrors=[],outbound=[];
+ page.on('pageerror',e=>jsErrors.push(e.message));
+ page.on('request',r=>{if(!r.url().startsWith(base))outbound.push(r.url());});
+ await page.route('**/datasets/RTKN0668_MR_DESS.zip',route=>{
+  if(route.request().method()==='HEAD')return route.fulfill({status:200,headers:{'content-type':'application/zip','content-length':String(synthetic.length)},body:''});
+  return route.fulfill({status:200,contentType:'application/zip',body:synthetic});
+ });
+ await page.goto(base,{waitUntil:'networkidle'});
+ await page.waitForFunction(()=>document.querySelector('#studyTitle')?.textContent==='SYNTHETIC_TEST_NOT_PATIENT',null,{timeout:20000});
+ assert.equal(await page.locator('#mixedButton').isEnabled(),true);
+ const original=await page.locator('#sliceCurrent').innerText();
+ await page.locator('#mixedButton').click();
+ await page.waitForFunction(()=>document.querySelector('#mixedButton')?.getAttribute('aria-pressed')==='true' && document.querySelector('#volumeStatus')?.textContent.includes('Volumen 32'),null,{timeout:60000});
+ assert.equal(await page.locator('#viewerRoot').getAttribute('data-ux-mode'),'mixed');
+ assert.equal(await page.locator('#scanCanvas').isVisible(),true);
+ assert.equal(await page.locator('#volumeCanvas').isVisible(),true);
+ assert.equal(await page.locator('#threeDButton').getAttribute('aria-pressed'),'false');
+ assert.match(await page.locator('#uxLayerContext').innerText(),/2D \+ 3D del mismo estudio/);
+ assert.equal(await page.locator('#uxLayerExternal').isVisible(),false);
+ const widths=await page.evaluate(()=>[document.querySelector('#scanCanvas'),document.querySelector('#volumeCanvas')].map(c=>({css:getComputedStyle(c).width,rect:c.getBoundingClientRect().width,pixels:c.width,height:c.height})));
+ assert(widths.every(w=>w.rect>100&&w.pixels>=32&&w.height>=32),JSON.stringify(widths));
+ await page.locator('#next').click();
+ await page.waitForFunction(old=>document.querySelector('#sliceCurrent')?.textContent!==old,original);
+ assert.equal(await page.locator('#volumeCanvas').isVisible(),true);
+ assert.equal(await page.locator('#viewerRoot').getAttribute('data-ux-mode'),'mixed');
+ // Switching 3D<->mixed should NOT reconstruct a second 3D texture (loading remains hidden).
+ await page.locator('#threeDButton').click();
+ await page.waitForFunction(()=>document.querySelector('#viewerRoot').dataset.uxMode==='volume');
+ assert.equal(await page.locator('#scanCanvas').isVisible(),false);
+ assert.equal(await page.locator('#volumeCanvas').isVisible(),true);
+ assert.equal(await page.locator('#loading').isVisible(),false);
+ await page.locator('#mixedButton').click();
+ await page.waitForFunction(()=>document.querySelector('#viewerRoot').dataset.uxMode==='mixed');
+ assert.equal(await page.locator('#loading').isVisible(),false);
+ await page.locator('#uxVolumeOpacity').evaluate(el=>{el.value='115';el.dispatchEvent(new Event('input',{bubbles:true}))});
+ assert.equal(await page.locator('#volumeOpacity').inputValue(),'115');
+ await page.locator('#twoDButton').click();
+ assert.equal(await page.locator('#mixedButton').getAttribute('aria-pressed'),'false');
+ assert.equal(await page.locator('#volumeCanvas').isVisible(),false);
+ await page.screenshot({path:'/tmp/anatheos-uxn2-synthetic-not-medical.png'});
+ assert.deepEqual(jsErrors,[]);
+ assert.deepEqual(outbound,[]);
+ await page.close();
+ const narrow=await browser.newPage({viewport:{width:390,height:844}});
+ await narrow.route('**/datasets/RTKN0668_MR_DESS.zip',route=>{
+  if(route.request().method()==='HEAD')return route.fulfill({status:200,headers:{'content-type':'application/zip'},body:''});
+  return route.fulfill({status:200,contentType:'application/zip',body:synthetic});
+ });
+ await narrow.goto(base,{waitUntil:'networkidle'});
+ await narrow.waitForFunction(()=>document.querySelector('#mixedButton')?.disabled===false,null,{timeout:20000});
+ await narrow.locator('#mixedButton').click();
+ await narrow.waitForFunction(()=>document.querySelector('#viewerRoot').dataset.uxMode==='mixed'&&!document.querySelector('#loading').hidden===false,null,{timeout:60000});
+ const boxes=await narrow.evaluate(()=>{const a=document.querySelector('#scanCanvas').getBoundingClientRect(),b=document.querySelector('#volumeCanvas').getBoundingClientRect();return {a:{x:a.x,y:a.y,w:a.width,h:a.height},b:{x:b.x,y:b.y,w:b.width,h:b.height}}});
+ assert(boxes.b.y>=boxes.a.y+boxes.a.h-2,JSON.stringify(boxes));
+ assert(Math.abs(boxes.a.w-boxes.b.w)<=2,JSON.stringify(boxes));
+ await narrow.close();
+ console.log('PASS UX-N2: authentic 2D+voxel 3D from same SYNTHETIC DICOM, slice synchronization, no repeated volume preparation, mobile stack, no external requests');
+} finally{await browser.close();}

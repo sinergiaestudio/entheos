@@ -13,6 +13,7 @@ page.on('request',r=>{if(!r.url().startsWith(url.replace(/\/$/,'')))external.pus
 try{
  await page.goto(url,{waitUntil:'networkidle'});
  await page.locator('#surfaceButton').click();
+ await page.locator('#surfaceManual summary').click();
  await page.locator('#surfaceSource').selectOption('spl-knee');
  await page.locator('#surfaceFile').setInputFiles([
    path.join(atlas,'femur-95.stl'),path.join(atlas,'tibia-96.stl')]);

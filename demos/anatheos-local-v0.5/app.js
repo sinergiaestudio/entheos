@@ -1,5 +1,6 @@
 import { inspectVolumeGeometry, prepareVolumeTexture, VolumeRenderer } from './volumetric.js';
 import { createMask, paintDisk, growRegion2D, eraseRegion, countRegions, toNrrd, fromNrrd, REGION_COLORS } from './segmentation.mjs';
+import {makeMaskSurfaceSTLs} from './mask-to-surface.mjs';
 /* ANATHEOS Demo Local v0.1 — native uncompressed DICOM browser viewer.
  * Operates only on File/Blob bytes provided by the user or localhost package.
  * No remote API or data telemetry. Experimental; not medical/diagnostic.
@@ -95,7 +96,7 @@ async function unpackMember(buffer,entry){
 function vecCross(a,b){return[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
 function dot(a,b){return a.reduce((sum,v,i)=>sum+v*b[i],0);}
 function orientCheck(a,b){return a.iop.every((v,k)=>Math.abs(v-b.iop[k])<0.0003);}
-function clean(){stopVolume();state.mode='2d';state.mixed=false;switchModeButtons();state.segMask=null;state.segVersion++;state.segCount=[0,0,0,0];state.segOverlayKey='';state.segEdit=false;$('segEdit').checked=false;state.current=null;state.series=[];state.index=0;state.imageKey='';state.lastPixels=null;state.source='';state.panX=0;state.panY=0;state.zoom=1;updateControls();render();}
+function clean(){window.dispatchEvent(new Event('anatheos:study-reset'));stopVolume();state.mode='2d';state.mixed=false;switchModeButtons();state.segMask=null;state.segVersion++;state.segCount=[0,0,0,0];state.segOverlayKey='';state.segEdit=false;$('segEdit').checked=false;state.current=null;state.series=[];state.index=0;state.imageKey='';state.lastPixels=null;state.source='';state.panX=0;state.panY=0;state.zoom=1;updateControls();render();}
 function cancelCurrent(){state.loadGeneration++;$('loading').hidden=true;}
 function showLoad(detail,progress=0){$('loading').hidden=false;$('loadingDetail').textContent=detail;$('loadingProgress').style.width=progress+'%';}
 function toast(msg){const el=$('toast');el.textContent=msg;el.classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('visible'),4200);}
@@ -184,7 +185,8 @@ function updateControls(){const active=currentFrame(),has=!!active;
  $('seriesList').replaceChildren();if(has){for(const s of state.series){const c=document.createElement('div');c.className='seriesCard';const title=document.createElement('strong');title.textContent=s.description;const n=document.createElement('span');n.textContent=`${s.items.length} cortes · ${s.items[0].rows}×${s.items[0].columns}`;c.append(title,n);$('seriesList').append(c);}}
  else $('seriesList').innerHTML='<div class="empty">Todavía no se cargaron imágenes.</div>';
  $('sliceRange').disabled=!has;$('windowRange').disabled=!has;$('levelRange').disabled=!has;
- $('segSave').disabled=!has;$('segOpen').disabled=!has;$('segClearLayer').disabled=!has;$('segClearAll').disabled=!has;$('segEdit').disabled=!has;
+ $('segSave').disabled=!has;$('segOpen').disabled=!has;
+ $('segBuildSurface').disabled=!has||!state.segCount.slice(1).some(Boolean);$('segClearLayer').disabled=!has;$('segClearAll').disabled=!has;$('segEdit').disabled=!has;
  if(has){$('sliceRange').min=0;$('sliceRange').max=state.current.items.length-1;$('sliceRange').value=state.index;
   const center=state.wlCenter,width=state.wlWidth;
   $('windowRange').max=Math.max(4096,Math.ceil(width*3));$('windowRange').value=clamp(width,1,Number($('windowRange').max));
@@ -403,9 +405,10 @@ switchModeButtons();
 let paintingSeg=false;
 function syncMaskCounts(){
  state.segCount=state.segMask?countRegions(state.segMask):[0,0,0,0];
+ $('segBuildSurface').disabled=!state.current||!state.segCount.slice(1).some(Boolean);
  for(let id=1;id<=3;id++)$('segCount'+id).textContent=state.segCount[id].toLocaleString('es-AR')+' vóxeles';
 }
-function maskChange(){state.segVersion++;state.segOverlayKey='';render();}
+function maskChange(){state.segVersion++;state.segOverlayKey='';window.dispatchEvent(new Event('anatheos:mask-changed'));render();}
 function finishPaint(){paintingSeg=false;syncMaskCounts();maskChange();$('segStatus').textContent='Marcas locales actualizadas. Su interpretación anatómica requiere revisión.';}
 function pointToPixel(e){
  const frame=currentFrame();if(!frame)return null;
@@ -476,6 +479,26 @@ $('segFile').onchange=async e=>{
   $('segStatus').textContent='Máscara NRRD recuperada; dimensiones y geometría verificadas.';
  }catch(err){$('segStatus').textContent='Máscara rechazada: '+(err.message||'archivo inválido');}
 };
+$('segBuildSurface').addEventListener('click',async()=>{
+ if(!state.current||!state.segMask||!state.segCount.slice(1).some(Boolean)){
+  $('segMeshStatus').textContent='Sin regiones pintadas ni NRRD válida para el estudio actual.';return;
+ }
+ $('segBuildSurface').disabled=true;
+ $('segMeshStatus').textContent='Comprobando geometría DICOM y construyendo superficies físicas LPS…';
+ await yieldUI();
+ try{
+  const meshes=makeMaskSurfaceSTLs(state.segMask,state.current);
+  const id=(state.current.uid||'serie-sin-uid')+'|'+state.loadGeneration;
+  const accepted=window.dispatchEvent(new CustomEvent('anatheos:show-same-study-surfaces',{
+   detail:{meshes,studyId:id,segVersion:state.segVersion},cancelable:true
+  }));
+  if(!accepted)throw Error('El visor de superficies rechazó el cambio; revisá la escena existente.');
+  $('segMeshStatus').textContent=meshes.length+' regiones manuales derivadas de la MISMA serie; '+meshes.reduce((n,m)=>n+m.triangles,0).toLocaleString('es-AR')+' triángulos LPS mm. Sin anatomía identificada.';
+ }catch(e){$('segMeshStatus').textContent='No se generó superficie: '+e.message;}
+ finally{$('segBuildSurface').disabled=!state.current||!state.segCount.slice(1).some(Boolean);}
+});
+// Regions are generated solely from the in-memory labelmap currently bound to
+// state.current, never from external SPL assets or synthesized anatomy.
 // Detach annotations and renderer when an unrelated series is loaded.
 const clearOldStatus=clean;
 // The owning clean() above clears mask references before new DICOM records are read.

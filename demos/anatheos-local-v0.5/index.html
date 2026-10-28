@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'">
-<title>ANATHEOS 3D · UX-N3 · materiales de intensidad</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="ux-shell.css"></head>
+<title>ANATHEOS 3D · B6.1 · superficies de regiones manuales</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="ux-shell.css"></head>
 <body>
 <header class="topbar"><div class="brand"><span class="logo">A<span>3</span></span><div><strong>ANATHEOS <em>3D</em></strong><small>UX-N3 · MATERIALIDAD DEL VOLUMEN · EXPERIMENTAL</small></div></div><div class="topright"><span class="dot"></span><span>100 % local · sin nube</span><span class="pill">NO DIAGNÓSTICO</span></div></header>
 <div class="layout" id="uxN1Layout">
@@ -61,7 +61,12 @@
  <div id="segLayers" class="segLayers"><label><input type="checkbox" id="segVisible1" checked><i style="background:#fb6c82"></i>Región 1 · sin validar <output id="segCount1">0 vóxeles</output></label>
  <label><input type="checkbox" id="segVisible2" checked><i style="background:#64d6e4"></i>Región 2 · sin validar <output id="segCount2">0 vóxeles</output></label>
  <label><input type="checkbox" id="segVisible3" checked><i style="background:#f7c66b"></i>Región 3 · sin validar <output id="segCount3">0 vóxeles</output></label></div>
- <div class="segBottom"><button id="segClearLayer" disabled>Vaciar región seleccionada</button><button id="segClearAll" disabled>Vaciar todas las marcas</button><span id="segStatus" role="status">Cargá la RM para editar máscaras de manera local.</span></div></div>
+ <div class="segBottom"><button id="segClearLayer" disabled>Vaciar región seleccionada</button><button id="segClearAll" disabled>Vaciar todas las marcas</button><span id="segStatus" role="status">Cargá la RM para editar máscaras de manera local.</span></div><div class="b6-same-study">
+ <strong>B6.1 · Superficies de mis máscaras (mismo estudio)</strong>
+ <p>Convertí regiones realmente pintadas o importadas como NRRD alineado en superficies 3D. Conservan las coordenadas físicas DICOM LPS en mm. <b>No identifica automáticamente fémur, tibia ni tejidos.</b> El acabado geométrico inicial sigue los límites de los vóxeles.</p>
+ <button id="segBuildSurface" type="button" disabled>Visualizar mis regiones en 3D</button>
+ <span id="segMeshStatus" role="status" aria-live="polite">Primero creá una máscara manual o importá una NRRD del mismo estudio.</span>
+ </div></div>
  <p class="segCaution">El área dibujada es una máscara exploratoria, NO una estructura reconocida automáticamente. Las regiones se visualizan sobre el corte 2D y en el volumen 3D sin cambiar los DICOM originales. El archivo NRRD exportado se puede revisar como mapa de etiquetas en 3D Slicer.</p>
  </section><section class="meta"><div class="metaHeader"><span class="overline">METADATOS DE IMAGEN</span><span id="sourceLabel">—</span></div><div class="metaGrid"><div><small>MATRIZ</small><strong id="metaMatrix">—</strong></div><div><small>SPACING</small><strong id="metaSpacing">—</strong></div><div><small>ORIENTACIÓN IOP</small><strong id="metaOrientation">—</strong></div><div><small>TRANSFER SYNTAX</small><strong id="metaSyntax">—</strong></div><div><small>INSTANCIAS</small><strong id="metaCount">—</strong></div><div><small>PROYECCIÓN LPS</small><strong id="metaPosition">—</strong></div></div></section>
  </main>
@@ -83,7 +88,7 @@
       <div class="ux-not-yet" role="note"><strong>Estructuras anatómicas</strong><p>Fémur, tibia, cartílago y meniscos aparecerán aquí sólo cuando existan segmentaciones válidas <em>de este mismo estudio</em>. No se muestran capas ficticias.</p></div>
     </div>
     <div id="uxLayerExternal" hidden>
-      <div class="ux-origin-strip"><span class="ux-origin-dot" aria-hidden="true"></span><div><strong>Modelo anatómico externo</strong><p>Referencia de otro espécimen. No registrado con la RM Leeds.</p></div></div>
+      <div class="ux-origin-strip"><span class="ux-origin-dot" aria-hidden="true"></span><div><strong id="uxModelOriginTitle">Modelo anatómico externo</strong><p id="uxModelOriginDescription">Referencia de otro espécimen. No registrado con la RM Leeds.</p></div></div>
       <div class="surface-headers" aria-hidden="true"><span>Estructura</span><span>Visible</span><span>Color</span><span>Opac.</span><span>Solo</span></div>
       <div id="surfaceLayers" class="surface-layers" aria-live="polite">Sin mallas importadas.</div>
     </div>

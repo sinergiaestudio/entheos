@@ -185,3 +185,11 @@ body[data-b5-view="mixed"] #volumeControls:not([hidden]){display:flex!important}
 .ux-material-controls p,.ux-material-controls small{margin:0;font-size:10px;color:var(--anat-muted);line-height:1.65}
 .ux-material-controls small{border-left:2px solid var(--anat-accent);padding-left:8px}
 .ux-render-note{font-size:11px;color:var(--anat-muted);line-height:1.6;margin:0;padding:0 8px}
+
+/* B6.1: deliberate manual-mask conversion affordance, same-study provenance. */
+.b6-same-study{margin-top:14px;padding:16px;border:1px solid #365a67;border-radius:10px;background:#132229;display:flex;flex-direction:column;gap:10px}
+.b6-same-study strong{color:#e1edf0;font-size:13px}
+.b6-same-study p{color:#adbec7;font-size:11px;line-height:1.65;margin:0}
+.b6-same-study button{width:max-content;max-width:100%;padding:10px 14px;background:#276e7c;border:1px solid #4c909d;color:white;font-weight:600;border-radius:8px}
+.b6-same-study button:disabled{background:#22353c;border-color:#405057;color:#91a5ad;cursor:not-allowed}
+#segMeshStatus{font-size:11px;color:#bdcdd5;line-height:1.6}

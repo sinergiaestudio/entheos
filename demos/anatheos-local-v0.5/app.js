@@ -98,7 +98,7 @@ async function unpackMember(buffer,entry){
 function vecCross(a,b){return[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
 function dot(a,b){return a.reduce((sum,v,i)=>sum+v*b[i],0);}
 function orientCheck(a,b){return a.iop.every((v,k)=>Math.abs(v-b.iop[k])<0.0003);}
-function clean(){state.b7Picking=false;state.b7Seed=null;state.b7Draft=null;state.b7DraftVersion++;window.dispatchEvent(new Event('anatheos:study-reset'));stopVolume();state.mode='2d';state.mixed=false;switchModeButtons();state.segMask=null;state.segVersion++;state.segCount=[0,0,0,0];state.segOverlayKey='';state.segEdit=false;$('segEdit').checked=false;state.current=null;state.series=[];state.index=0;state.imageKey='';state.lastPixels=null;state.source='';state.panX=0;state.panY=0;state.zoom=1;updateControls();render();}
+function clean(){state.b7Picking=false;state.b7Seed=null;state.b7Draft=null;state.b7DraftVersion++;$('b7SeedStatus').textContent='Sin semilla seleccionada.';$('b7Accept').disabled=true;$('b7Discard').disabled=true;$('b7Discard').disabled=true;window.dispatchEvent(new Event('anatheos:study-reset'));stopVolume();state.mode='2d';state.mixed=false;switchModeButtons();state.segMask=null;state.segVersion++;state.segCount=[0,0,0,0];state.segOverlayKey='';state.segEdit=false;$('segEdit').checked=false;state.current=null;state.series=[];state.index=0;state.imageKey='';state.lastPixels=null;state.source='';state.panX=0;state.panY=0;state.zoom=1;updateControls();render();}
 function cancelCurrent(){state.loadGeneration++;$('loading').hidden=true;}
 function showLoad(detail,progress=0){$('loading').hidden=false;$('loadingDetail').textContent=detail;$('loadingProgress').style.width=progress+'%';}
 function toast(msg){const el=$('toast');el.textContent=msg;el.classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('visible'),4200);}
@@ -512,6 +512,7 @@ $('b7PickSeed').addEventListener('click',()=>{
  if(!state.current)return;
  if(state.mode==='3d')$('twoDButton').click();
  if(state.segEdit){$('segEdit').checked=false;state.segEdit=false;canvas.classList.remove('seg-paint-active');}
+ state.b7Seed=null;$('b7Propose').disabled=true;invalidateB7Draft('Nueva selección de semilla: propuesta anterior descartada.');
  state.b7Picking=true;$('b7Status').textContent='Hacé clic sobre un punto del corte DICOM para colocar la semilla.';
 });
 function invalidateB7Draft(reason){

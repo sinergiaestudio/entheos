@@ -40,6 +40,7 @@ $('b5AdvancedToggle').addEventListener('click',()=>{
  $('b5AdvancedToggle').setAttribute('aria-pressed',String(on));
  $('b5AdvancedToggle').textContent=on?'Ocultar controles avanzados':'Controles avanzados';
 });
+$('surfaceSource').addEventListener('change',syncPresentation);
 $('b5OpenStudy').addEventListener('click',()=>{
  manualChoice=true;
  $('zipInput').click();

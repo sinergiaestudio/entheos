@@ -121,3 +121,7 @@ body.ux-streamlined.viewer-focus .workspace{grid-column:1;grid-row:1;max-width:1
 body.ux-streamlined.viewer-focus .viewer{height:calc(100dvh - 150px);min-height:430px}
 body.ux-streamlined.viewer-focus .sidebar,body.ux-streamlined.viewer-focus .ux-layers{display:none!important}
 @media(max-width:650px){body.ux-streamlined.viewer-focus .viewer{height:calc(100dvh - 177px)}}
+
+/* Real screenshot QA: the inherited .secondary{flex:1} must NOT stretch the
+ * compact Editar action across the entire toolbar. Keep it a small utility. */
+body.ux-streamlined .viewerTools #b5AdvancedToggle.ux-clean-editor{flex:0 0 auto!important;width:auto!important;min-width:76px!important;max-width:138px}

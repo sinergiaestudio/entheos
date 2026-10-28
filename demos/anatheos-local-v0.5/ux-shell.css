@@ -200,3 +200,17 @@ body[data-b5-view="mixed"] #volumeControls:not([hidden]){display:flex!important}
 .b6-same-study select{background:#1a2a31;color:#e9f4f6;padding:9px 10px;border:1px solid #3e6370;border-radius:7px}
 .b6-same-study input[type=range]{width:100%;accent-color:#57a5b2}
 .b6-same-study small{font-size:11px;color:#bacad0;line-height:1.6}
+
+/* B7.1: progressive, review-before-accept local 3D seed selection. */
+.b7-assisted{padding:15px;margin:13px 0;border:1px solid #4d777d;border-radius:10px;background:#122429;display:flex;flex-direction:column;gap:10px;color:#e1edf1}
+.b7-assisted strong{font-size:13px;font-weight:650}.b7-assisted p{font-size:11px;line-height:1.6;color:#b8cfd6;margin:0}
+.b7-assisted small{font-size:10px;color:#b1c4cb;line-height:1.6;border-left:2px solid #57a5b2;padding-left:8px}
+.b7-step,.b7-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.b7-step span{font-size:11px;color:#b3d5dd}
+.b7-sliders{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.b7-sliders label{font-size:11px;color:#d6e8ed;display:flex;flex-direction:column;gap:8px}
+.b7-sliders output{color:#89d7dc}.b7-sliders input{accent-color:#57a5b2;width:100%}
+.b7-assisted button{background:#1c5964;color:white;border:1px solid #4b8890;padding:9px 12px;border-radius:8px;font-size:11px}
+.b7-assisted button:disabled{background:#1d343b;color:#90a5af;border-color:#3b535b;cursor:not-allowed}
+.b7-assisted #b7Discard{background:#1b2b33}
+#b7Status{font-size:11px;color:#a8d8df;min-height:20px}
+@media(max-width:660px){.b7-sliders{grid-template-columns:1fr}}

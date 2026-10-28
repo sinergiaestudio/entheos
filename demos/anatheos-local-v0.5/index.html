@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'">
-<title>ANATHEOS 3D · B6.2 · superficies continuas del mismo estudio</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="ux-shell.css"></head>
+<title>ANATHEOS 3D · B7.1 · segmentación 3D asistida</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="ux-shell.css"></head>
 <body>
 <header class="topbar"><div class="brand"><span class="logo">A<span>3</span></span><div><strong>ANATHEOS <em>3D</em></strong><small>UX-N3 · MATERIALIDAD DEL VOLUMEN · EXPERIMENTAL</small></div></div><div class="topright"><span class="dot"></span><span>100 % local · sin nube</span><span class="pill">NO DIAGNÓSTICO</span></div></header>
 <div class="layout" id="uxN1Layout">
@@ -58,6 +58,16 @@
  <label>Radio del pincel <output id="segRadiusOut">6 px</output><input id="segRadius" type="range" min="1" max="24" value="6"></label>
  <label>Región seleccionada<select id="segSelected"><option value="1">Región 1</option><option value="2">Región 2</option><option value="3">Región 3</option></select></label><label>Extender trazo<select id="segSlices"><option value="0" selected>Solo corte actual</option><option value="1">±1 corte</option><option value="2">±2 cortes</option><option value="3">±3 cortes</option><option value="4">±4 cortes</option></select></label></div>
  <div class="segGrowOptions"><label>Tolerancia al nivel <output id="segToleranceOut">8%</output><input type="range" id="segTolerance" min="1" max="30" value="8"></label><label>Radio máximo del relleno <output id="segGrowRadiusOut">45 px</output><input type="range" id="segGrowRadius" min="10" max="70" value="45"></label><span>Relleno de intensidad sobre un solo corte: propuesta editable, no reconocimiento de anatomía.</span></div>
+ <div class="b7-assisted" id="b7Assisted" aria-label="Propuesta tridimensional asistida">
+  <strong>B7.1 · Proponer una región 3D desde la RM actual</strong>
+  <p>Elegí un punto inicial sobre un corte. Se busca un conjunto <b>conectado en 3D</b> con intensidad similar y radio físico limitado. <b>No reconoce fémur, tibia ni otros tejidos.</b> Revisá varios cortes antes de aceptar.</p>
+  <div class="b7-step"><button type="button" id="b7PickSeed" disabled>1. Elegir semilla en el corte</button><span id="b7SeedStatus">Sin semilla seleccionada.</span></div>
+  <div class="b7-sliders"><label for="b7Tolerance">Tolerancia de intensidad · unidad del DICOM <output id="b7ToleranceOut">70</output><input id="b7Tolerance" type="range" min="0" max="500" step="10" value="70"></label>
+   <label for="b7Radius">Radio físico máximo <output id="b7RadiusOut">15 mm</output><input id="b7Radius" type="range" min="3" max="35" step="1" value="15"></label></div>
+  <div class="b7-actions"><button type="button" id="b7Propose" disabled>2. Preparar propuesta</button><button type="button" id="b7Accept" disabled>3. Aceptar y mostrar 3D</button><button type="button" id="b7Discard" disabled>Descartar</button></div>
+  <p id="b7Status" role="status" aria-live="polite">La propuesta no modifica la máscara hasta su aceptación. Se visualiza en cian sobre los cortes.</p>
+  <small>Se preservan los DICOM originales. Sin diagnóstico, sin reconocimiento anatómico, sin envío a la nube. El radio y la tolerancia son límites de búsqueda, no una garantía de segmentación correcta.</small>
+ </div>
  <div id="segLayers" class="segLayers"><label><input type="checkbox" id="segVisible1" checked><i style="background:#fb6c82"></i>Región 1 · sin validar <output id="segCount1">0 vóxeles</output></label>
  <label><input type="checkbox" id="segVisible2" checked><i style="background:#64d6e4"></i>Región 2 · sin validar <output id="segCount2">0 vóxeles</output></label>
  <label><input type="checkbox" id="segVisible3" checked><i style="background:#f7c66b"></i>Región 3 · sin validar <output id="segCount3">0 vóxeles</output></label></div>

@@ -16,6 +16,8 @@ $files = @{
  '/ux-n1.mjs' = 'ux-n1.mjs'
  '/ux-clean.mjs' = 'ux-clean.mjs'
  '/ux-clean.css' = 'ux-clean.css'
+ '/ux-n5.mjs' = 'ux-n5.mjs'
+ '/ux-n5.css' = 'ux-n5.css'
  '/mask-to-surface.mjs' = 'mask-to-surface.mjs'
  '/continuous-mask-surface.mjs' = 'continuous-mask-surface.mjs'
  '/assisted-segmentation-3d.mjs' = 'assisted-segmentation-3d.mjs'
@@ -54,7 +56,7 @@ foreach ($tryPort in 8765..8775) {
 }
 if (-not $listener) { Write-Error 'No se pudo abrir un puerto local entre 8765 y 8775.'; exit 1 }
 $address = "http://127.0.0.1:$port/"
-Write-Host 'ANATHEOS 3D · UX-N4 · visor despejado · motor B7.2' -ForegroundColor Cyan
+Write-Host 'ANATHEOS 3D · UX-N5 · estación 3D refinada · motor B7.2' -ForegroundColor Cyan
 Write-Host 'Servidor limitado a tu computadora (127.0.0.1).'
 Write-Host "Abrir: $address" -ForegroundColor White
 Write-Host 'Para detener: Ctrl+C o cerrar esta ventana.'

@@ -72,6 +72,7 @@ try{
  // Three real panes and manual edit are available without duplicated chrome.
  await page.locator('#tripleButton').click();
  await page.waitForFunction(()=>document.querySelector('#viewerRoot')?.dataset.uxMode==='triple');
+ await page.waitForFunction(()=>document.querySelector('#triptychNoMask')?.hidden===false||document.querySelector('#surfaceCanvas')?.hidden===false,null,{timeout:15000});
  for(const id of ['scanCanvas','volumeCanvas','triptychTools'])
   assert.equal(await page.locator('#'+id).isVisible(),true,id);
  assert.equal(await page.locator('#surfaceCanvas').isVisible(),false);

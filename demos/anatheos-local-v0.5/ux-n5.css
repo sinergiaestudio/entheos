@@ -1,0 +1,137 @@
+/*
+ * ANATHEOS UX-N5: refined visual acceptance layer following the exact UX-001
+ * design direction. Presentation only; never emulates anatomical tissue.
+ * Overrides prior UX-N4 deliberately, not by changing renderer geometry.
+ */
+body.ux-streamlined{
+ --ux5-ink:#e7edf0;--ux5-secondary:#aabdc4;--ux5-border:#273742;
+ --ux5-pane:#0c141b;--ux5-stage:#101b25;
+ font-family:system-ui,"Segoe UI",Arial,sans-serif;
+ font-kerning:normal;
+}
+body.ux-streamlined .layout{background:#080c0f}
+body.ux-streamlined .sidebar,body.ux-streamlined .ux-layers{background:#0a1014}
+body.ux-streamlined .sidebar{border-right-color:#24323a}
+body.ux-streamlined .ux-layers{border-left-color:#24323a}
+body.ux-streamlined .topbar{background:#080d11}
+body.ux-streamlined .brand strong{color:#f0f3f4;letter-spacing:.01em}
+body.ux-streamlined .brand small{color:#a5b5ba;opacity:.8;letter-spacing:.015em}
+body.ux-streamlined .sidebar .sideblock{border-color:#223039}
+body.ux-streamlined .sidebar .overline,body.ux-streamlined .ux-kicker{color:#7ea4b2;font-size:10px;letter-spacing:.1em}
+body.ux-streamlined .sidebar .sideblock h2{color:#e3ecf0;font-size:13px;font-weight:650}
+body.ux-streamlined .sidebar .seriesCard{border-left:2px solid #5ca7b7;background:#101b23}
+body.ux-streamlined .sidebar .seriesCard strong{font-weight:660;color:#dfe8ec;font-size:12px}
+body.ux-streamlined .sidebar .seriesCard span{font-size:10px;color:#a9bac2}
+body.ux-streamlined .workspace{background:#080c10}
+body.ux-streamlined .worktop h1{font-size:12px;font-weight:570;letter-spacing:.005em;color:#a6bac4}
+body.ux-streamlined .viewer{
+ background:radial-gradient(ellipse at 50% 45%,#142736 0%,#111f2b 46%,#0d1721 100%);
+ border:1px solid #30414c;
+ border-radius:12px;
+ box-shadow:0 10px 34px #0000001a;
+}
+body.ux-streamlined .viewer canvas{outline:0}
+body.ux-streamlined .viewerFooter{background:linear-gradient(0deg,#0a1119e6 0%,#0a111900 100%);border-top:1px solid #25344299}
+body.ux-streamlined .viewerTools .ux-clean-mode[aria-pressed=true]{background:#256f7e!important;box-shadow:none!important}
+body.ux-streamlined .viewerTools .ux-clean-mode:not([aria-pressed=true]):hover{background:#20313a!important}
+body.ux-streamlined .ux-clean-mode-group{background:#0d171e;border-color:#2d3b44}
+body.ux-streamlined .viewerTools #focusButton,body.ux-streamlined .viewerTools #fullscreenButton{background:#17232b!important}
+body.ux-streamlined .viewerTools #b5AdvancedToggle.ux-clean-editor{background:#14212a!important;color:#cfe2e8!important}
+body.ux-streamlined .viewerTools .ux-clean-menu>summary{background:#14232c;border-color:#314754}
+body.ux-streamlined .ux-clean-disclosure>summary{border-color:#304550;color:#a8c5d0;background:#0d171e}
+body.ux-streamlined .ux-clean-disclosure>summary:hover{background:#172731}
+body.ux-streamlined .ux-layers .ux-side-head{padding-bottom:3px}
+body.ux-streamlined .ux-layers .ux-side-head h2{font-size:16px;font-weight:660;color:#e4eef1;letter-spacing:-.02em}
+body.ux-streamlined .ux-layers .ux-layer-item{border-bottom:1px solid #23323c;gap:9px}
+body.ux-streamlined .ux-layers .ux-layer-swatch{border-radius:50%;width:9px;height:9px}
+body.ux-streamlined .ux-layers .ux-layer-name{font-size:11px;color:#e0eaee;font-weight:560}
+body.ux-streamlined .ux-layers .ux-layer-tag{background:#101b22;color:#b6cbd3;border-color:#324a57;font-size:9px}
+body.ux-streamlined .ux-layers .ux-origin-strip{background:#111f29;border:1px solid #2b4653;border-left:2px solid #bfa278;border-radius:7px}
+body.ux-streamlined .ux-layers .ux-origin-dot{background:#c6a77a}
+body.ux-streamlined .ux-layers .surface-layers{color:#c4d6dc}
+body.ux-streamlined .ux-layers .surface-headers{color:#92a6af;font-size:9px}
+body.ux-streamlined .ux-layers .surface-row{border-top-color:#2a3d48;padding:9px 0;gap:5px}
+body.ux-streamlined .ux-layers .surface-row .surface-select{padding:6px 5px;background:#101e27;border:1px solid #334d5b;border-radius:7px;color:#dae8ee;line-height:1.5}
+body.ux-streamlined .ux-layers .surface-row .surface-select[aria-pressed=true]{outline:1px solid #89b9c7;outline-offset:0}
+body.ux-streamlined .ux-layers .surface-row input[type=checkbox]{accent-color:#60b3c2}
+body.ux-streamlined .ux-layers .surface-row input[type=color]{height:25px;border:1px solid #364953;border-radius:6px}
+body.ux-streamlined .ux-layers .surface-row input[type=range]{accent-color:#69b8c5}
+body.ux-streamlined .ux-layers .ux-clean-inspector-disclosure{margin-top:7px}
+body.ux-streamlined .ux-clean-inspector-disclosure>summary{background:#101c25;padding:10px 12px}
+body.ux-streamlined .viewer .triptych-label{
+ border:1px solid #3a5765;
+ background:#0a1821ed;
+ padding:7px 9px;
+ font-weight:570;
+ font-size:9px;
+ letter-spacing:.06em;
+ color:#d8e5ed;
+ max-width:31%;
+}
+body.ux-streamlined .viewer .triptych-label span{font-size:9px;font-weight:450;letter-spacing:0;color:#93b9c6}
+body.ux-streamlined .viewer[data-ux-mode=triple] #scanCanvas{border-right-color:#2c4553}
+body.ux-streamlined .viewer[data-ux-mode=triple] #volumeCanvas{border-right-color:#2c4553}
+body.ux-streamlined .viewer[data-ux-mode=triple] #triptychNoMask:not([hidden]){background:#101d28}
+body.ux-streamlined .viewer #triptychNoMask p{color:#a2bac7}
+body.ux-streamlined .triptych-tools{
+ background:#0e1a22;
+ border:1px solid #2d4855;
+ padding:9px 12px;
+ border-radius:9px;
+}
+body.ux-streamlined .triptych-tools button{background:#162935;border-color:#385667;border-radius:7px}
+body.ux-streamlined .triptych-tools button[aria-pressed=true]{background:#276c79;color:#fff}
+body.ux-streamlined .sliceBar{border-color:#293c46;border-radius:9px;background:#0d1820}
+body.ux-streamlined .sliceBar input[type=range]{accent-color:#67b3bf}
+body.ux-streamlined .sliceBar label{font-weight:470}
+body.ux-streamlined #viewBadge{border-radius:7px;color:#c8dce4;background:#0c1922cf}
+body.ux-streamlined .orientationNotice{background:#0c1922b0;color:#adbdc5;border-color:#2b414d;font-size:9px}
+body.ux-streamlined .uxn5-evidence{border-top:1px solid #25353f;margin-top:10px;padding-top:9px;display:flex;flex-direction:column;gap:8px}
+body.ux-streamlined .uxn5-evidence[hidden]{display:none!important}
+body.ux-streamlined .uxn5-evidence-item{display:grid;grid-template-columns:8px minmax(55px,1fr) minmax(0,1.5fr);align-items:center;gap:8px;font-size:10px;color:#adbfc6;line-height:1.4}
+body.ux-streamlined .uxn5-evidence-item strong{font-size:10px;color:#c6d9e1;font-weight:540;text-align:right}
+body.ux-streamlined .uxn5-led{display:inline-block;width:6px;height:6px;border-radius:50%;background:#53646e}
+body.ux-streamlined .uxn5-led[data-state=ready]{background:#77bca3}
+body.ux-streamlined .uxn5-led[data-state=busy]{background:#d0ad6d}
+body.ux-streamlined .uxn5-led[data-state=idle]{background:#647985}
+body.ux-streamlined .loadingCard{background:#142029;border:1px solid #3a515e;color:#f1f4f5;border-radius:12px}
+body.ux-streamlined .loadingCard p{color:#b7c6ce}
+body.ux-streamlined .loadingCard button{color:#d6e4e9;background:#14232b;border-color:#3b5460}
+body.ux-streamlined .loadingCard .progressTrack{background:#29404a}
+body.ux-streamlined .loadingCard .progressTrack div{background:#63a9b8}
+body.ux-streamlined :focus-visible{outline-color:#84cbd8!important}
+@media(min-width:1450px){
+ body.ux-streamlined .layout{grid-template-columns:235px minmax(0,1fr) 245px}
+ body.ux-streamlined .workspace{padding:14px 19px 20px}
+}
+@media(min-width:681px) and (max-width:1250px){
+ /* Triple canvases remain three genuine viewports. Use a 2+1 arrangement
+  * rather than compress each to a narrow 180-250px anatomical thumbnail. */
+ body.ux-streamlined .viewer[data-ux-mode=triple]{height:clamp(630px,85dvh,1000px)}
+ body.ux-streamlined .viewer[data-ux-mode=triple] #scanCanvas,
+ body.ux-streamlined .viewer[data-ux-mode=triple] #volumeCanvas{
+  width:50%!important;height:50%!important;top:0!important
+ }
+ body.ux-streamlined .viewer[data-ux-mode=triple] #scanCanvas{left:0!important}
+ body.ux-streamlined .viewer[data-ux-mode=triple] #volumeCanvas{left:50%!important}
+ body.ux-streamlined .viewer[data-ux-mode=triple] #surfaceCanvas{
+  width:100%!important;height:50%!important;left:0!important;top:50%!important
+ }
+ body.ux-streamlined .viewer[data-ux-mode=triple] #triptychNoMask:not([hidden]){
+  width:100%;height:50%;left:0;top:50%
+ }
+ body.ux-streamlined .viewer[data-ux-mode=triple] #triptychLabel2d{left:10px;top:10px}
+ body.ux-streamlined .viewer[data-ux-mode=triple] #triptychLabelVolume{left:calc(50% + 10px);top:10px}
+ body.ux-streamlined .viewer[data-ux-mode=triple] #triptychLabelMesh{left:10px;top:calc(50% + 10px)}
+ body.ux-streamlined .viewer[data-ux-mode=triple] .triptych-label{max-width:46%}
+ body.ux-streamlined .viewer[data-ux-mode=triple] .orientationNotice,
+ body.ux-streamlined .viewer[data-ux-mode=triple] .viewerOverlayActions{display:none!important}
+}
+@media(max-width:680px){
+ body.ux-streamlined .viewer[data-ux-mode=triple]{height:80dvh;min-height:700px}
+ body.ux-streamlined .viewer[data-ux-mode=triple] .triptych-label{max-width:93%}
+ body.ux-streamlined .ux-layers .surface-row{grid-template-columns:minmax(100px,2fr) repeat(4,minmax(32px,1fr))}
+}
+@media(prefers-reduced-motion:reduce){
+ body.ux-streamlined *,body.ux-streamlined *::before,body.ux-streamlined *::after{transition-duration:0s!important}
+}

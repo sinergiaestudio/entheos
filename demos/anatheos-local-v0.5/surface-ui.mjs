@@ -211,7 +211,7 @@ window.addEventListener('anatheos:triptych-left',()=>{
   active=false;$('surfaceCanvas').hidden=true;$('triptychNoMask').hidden=true;
  }
 });
-$('surfaceButton').addEventListener('click',showMode);
+$('surfaceButton').addEventListener('click',()=>{if($('viewerRoot').dataset.uxMode==='triple')$('twoDButton').click();showMode();});
 for(const id of ['twoDButton','threeDButton','mixedButton','tripleButton'])$(id).addEventListener('click',leaveMode);
 $('surfaceAll').addEventListener('click',()=>{if(!renderer)return;renderer.meshes.forEach(x=>x.visible=true);uiRows();renderer.draw();});
 $('surfaceClear').addEventListener('click',()=>{renderer?.clear();uiRows();status('Modelos retirados de memoria. '+emptyHint);});

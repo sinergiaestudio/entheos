@@ -105,3 +105,14 @@ body[data-b5-view="surface"] .sliceBar,body[data-b5-view="surface"] .controls,bo
 body[data-b5-view="volume"] .sliceBar,body[data-b5-view="volume"] .controls{display:none!important}
 body[data-b5-view="slice"] #volumeControls{display:none!important}
 @media(max-width:760px){.b5-workflow{grid-template-columns:1fr}.b5-workflow-actions{margin-top:6px}.b5-workflow-actions button{flex:1}}
+
+/* B5.2: one-step reference atlas setup, avoid mixing study and atlas controls. */
+.surface-quick-start{display:grid;grid-template-columns:minmax(200px,1fr) auto;gap:10px 16px;align-items:center;padding:17px;border:1px solid #b8d6df;border-radius:11px;margin:12px 0;background:#eaf4f7}
+.surface-quick-start strong{color:#153f51;font-size:14px}.surface-quick-start p{margin:5px 0;line-height:1.6;font-size:12px;color:#345766}
+.surface-quick-start button{padding:12px 17px;border-radius:9px;min-width:210px;cursor:pointer}
+.surface-quick-start button:disabled{cursor:wait;opacity:.6}
+#surfaceAutoSPLStatus{grid-column:1/-1;border-top:1px solid #cae0e7;padding-top:8px;margin:0;color:#456476}
+.surface-manual{background:#fafcfc;border:1px solid #e1e9ec;border-radius:9px;margin:10px 0}.surface-manual summary{padding:13px 15px;cursor:pointer;font-weight:650;font-size:12px;color:#426b7b}
+.surface-manual .segActions{padding:0 12px 6px}.surface-manual .surface-onboarding{margin:8px 12px}.surface-manual .surface-options{padding:8px 12px 13px}
+.surface-layer-title{font-size:13px;color:#315567;padding:10px 16px 3px;margin:0}
+@media(max-width:760px){.surface-quick-start{grid-template-columns:1fr}.surface-quick-start button{width:100%}}

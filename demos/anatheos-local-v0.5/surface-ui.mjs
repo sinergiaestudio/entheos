@@ -4,6 +4,35 @@ import {verifyOriginalSPLMesh,SPL_MESH_MANIFEST} from './spl-provenance.mjs';
 const $=id=>document.getElementById(id);
 const colorFor=['#d6e9f5','#f3c77d','#e59ca1','#78c6c9','#b0a9e2'];
 let renderer=null,active=false,drag=null,modelCounter=0;
+// Keep the SPL/external atlas separate from the geometry of the active DICOM.
+// Both scenes can share one WebGL context, but NEVER share the mesh array.
+let sceneKind='external';
+const scenes={
+ external:{meshes:[],selected:null,yaw:.5,pitch:.18,zoom:1.6},
+ derived:{meshes:[],selected:null,yaw:.5,pitch:.18,zoom:1.6}
+};
+function activateScene(kind){
+ if(!renderer)renderer=new SurfaceRenderer($('surfaceCanvas'));
+ if(kind===sceneKind)return;
+ const prior=scenes[sceneKind];
+ prior.meshes=renderer.meshes;prior.selected=renderer.selected;
+ prior.yaw=renderer.yaw;prior.pitch=renderer.pitch;prior.zoom=renderer.zoom;
+ const next=scenes[kind];
+ renderer.meshes=next.meshes;renderer.selected=next.selected;
+ renderer.yaw=next.yaw;renderer.pitch=next.pitch;renderer.zoom=next.zoom;
+ sceneKind=kind;uiRows();
+}
+function discardDerived(){
+ if(!renderer){scenes.derived.meshes=[];scenes.derived.selected=null;return;}
+ if(sceneKind==='derived')renderer.clear();
+ else{
+  const gl=renderer.gl;
+  for(const m of scenes.derived.meshes){
+   gl.deleteVertexArray(m.vao);gl.deleteBuffer(m.pos);gl.deleteBuffer(m.nor);
+  }
+ }
+ scenes.derived.meshes=[];scenes.derived.selected=null;
+}
 function status(message){$('surfaceStatus').textContent=message;}
 const emptyHint='Sin modelos cargados. Para el estudio actual, dibujá regiones en Controles avanzados y pulsá Visualizar mis regiones en 3D; para otro espécimen usá Preparar y ver atlas SPL.';
 function syncSurfaceUI(){
@@ -14,17 +43,14 @@ function syncSurfaceUI(){
  $('surfaceHelpOverlay').hidden=!active||ready;
 }
 function resetSurfaceView(){if(!renderer)return;renderer.yaw=.5;renderer.pitch=.18;renderer.zoom=1.6;renderer.draw();}
-function showMode(){
- if($('viewerRoot').dataset.uxMode==='triple'){
-  const same=renderer?.meshes?.length&&renderer.meshes.every(m=>m.provenance?.kind==='same-study-manual');
-  if(same){showTriptychGeometry();return;}
-  // Explicit 'Superficies' action opens the independent viewer for external
-  // STL/SPL without presenting them as Leeds in the triple workspace.
-  $('twoDButton').click();
+function showMode(kind='external'){
+ if($('viewerRoot').dataset.uxMode==='triple'&&kind==='derived'){
+  showTriptychGeometry();return;
  }
+ if($('viewerRoot').dataset.uxMode==='triple')$('twoDButton').click();
  // Exit previous volume mode so DICOM GPU controls cannot affect STL surfaces.
  if(!active)$('twoDButton').click();
- if(!renderer){try{renderer=new SurfaceRenderer($('surfaceCanvas'));}catch(e){status(e.message);return;}}
+ try{activateScene(kind);}catch(e){status(e.message);return;}
  active=true;
  $('surfaceCanvas').hidden=false;
  $('scanCanvas').hidden=true;
@@ -75,7 +101,7 @@ function uiRows(){const root=$('surfaceLayers');root.dataset.origin=renderer?.me
  }
  syncSurfaceUI();
 }
-async function loadMeshes(files){if(!files.length)return;if(!renderer){try{renderer=new SurfaceRenderer($('surfaceCanvas'));}catch(e){status(e.message);return;}}
+async function loadMeshes(files){if(!files.length)return;try{activateScene('external');}catch(e){status(e.message);return;}
  const expected=$('surfaceSource').value;let loaded=0,authenticated=0;
  for(const file of files){try{
    if(!/\.(stl|obj)$/i.test(file.name))throw Error('Formato no admitido: '+file.name);
@@ -96,7 +122,7 @@ window.addEventListener('anatheos:show-same-study-surfaces',event=>{
  try{
   const {meshes,studyId,segVersion}=event.detail||{};
   if(!Array.isArray(meshes)||!meshes.length||!studyId||!Number.isInteger(segVersion))throw Error('Modelo sin procedencia completa.');
-  if(!renderer)renderer=new SurfaceRenderer($('surfaceCanvas'));
+  activateScene('derived');
   if(renderer.meshes.length&&!renderer.meshes.every(m=>m.sourceId==='dicom-derived'&&m.studyId===studyId)){
    throw Error('Hay modelos de otro origen. Vacialos antes de visualizar las regiones de este estudio.');
   }
@@ -116,7 +142,7 @@ window.addEventListener('anatheos:show-same-study-surfaces',event=>{
    added.color=['#fb6c82','#64d6e4','#f7c66b'][mesh.provenance.label-1];
   }
   renderer.selected=renderer.meshes[0];
-  uiRows();showMode();
+  uiRows();if($('viewerRoot').dataset.uxMode==='triple')showTriptychGeometry();else showMode('derived');
   status('B6.2: '+prepared.length+' regiones derivadas de las máscaras MANUALES del mismo estudio DICOM. LPS mm · '+(prepared[0].surfaceMethod==='marching-tetrahedra'?'isosuperficie continua interpolada':'bordes cúbicos de vóxel')+'. Sin identificación anatómica, sin validación Slicer.');
  }catch(error){
   status('B6.1: '+error.message);
@@ -124,8 +150,10 @@ window.addEventListener('anatheos:show-same-study-surfaces',event=>{
  }
 });
 function discardStaleSameStudy(){
- if(renderer?.meshes?.some(m=>m.sourceId==='dicom-derived')){
-  renderer.clear();uiRows();showTriptychGeometry();status('Modelos de máscara descartados: la serie o los vóxeles marcados cambiaron. Regenerá las superficies.');
+ const hasDerived=sceneKind==='derived'?renderer?.meshes.length:scenes.derived.meshes.length;
+ if(hasDerived){
+  discardDerived();uiRows();showTriptychGeometry();
+  status('Malla anterior invalidada: cambió la máscara o la serie DICOM. Se regenerará con datos actuales.');
  }
 }
 window.addEventListener('anatheos:study-reset',discardStaleSameStudy);
@@ -138,6 +166,7 @@ const atlasNames=['femur-95.stl','tibia-96.stl'];
 let preparing=false;
 async function loadAtlasAutomatically(){
  if(preparing)return;
+ try{activateScene('external');}catch(e){atlasStatus.textContent=e.message;return;}
  if(renderer?.meshes.length){
   atlasStatus.textContent='Primero usa Vaciar modelos si hay otra escena abierta: no mezclamos estudios ni reemplazamos trabajo sin permiso.';
   $('surfaceManual').open=true;
@@ -197,11 +226,12 @@ $('surfaceOpen').addEventListener('click',()=>$('surfaceFile').click());
  */
 function showTriptychGeometry(){
  if($('viewerRoot').dataset.uxMode!=='triple')return;
- if(!renderer){try{renderer=new SurfaceRenderer($('surfaceCanvas'));}catch(error){status('Visor de mallas: '+error.message);}}
+ try{activateScene('derived');}catch(error){status('Visor de mallas: '+error.message);}
  const allowed=Boolean(renderer?.meshes?.length)&&renderer.meshes.every(m=>m.provenance?.kind==='same-study-manual');
  active=allowed;
  $('surfaceCanvas').hidden=!allowed;
  $('triptychNoMask').hidden=allowed;
+ $('triptychGenerate').hidden=allowed;
  $('surfaceHelpOverlay').hidden=true;
  if(allowed)requestAnimationFrame(()=>renderer?.draw());
 }
@@ -211,10 +241,10 @@ window.addEventListener('anatheos:triptych-left',()=>{
   active=false;$('surfaceCanvas').hidden=true;$('triptychNoMask').hidden=true;
  }
 });
-$('surfaceButton').addEventListener('click',()=>{if($('viewerRoot').dataset.uxMode==='triple')$('twoDButton').click();showMode();});
+$('surfaceButton').addEventListener('click',()=>{if($('viewerRoot').dataset.uxMode==='triple')$('twoDButton').click();showMode('external');});
 for(const id of ['twoDButton','threeDButton','mixedButton','tripleButton'])$(id).addEventListener('click',leaveMode);
 $('surfaceAll').addEventListener('click',()=>{if(!renderer)return;renderer.meshes.forEach(x=>x.visible=true);uiRows();renderer.draw();});
-$('surfaceClear').addEventListener('click',()=>{renderer?.clear();uiRows();status('Modelos retirados de memoria. '+emptyHint);});
+$('surfaceClear').addEventListener('click',()=>{renderer?.clear();uiRows();showTriptychGeometry();status('Modelos de escena actual retirados. '+emptyHint);});
 $('surfaceReset').addEventListener('click',resetSurfaceView);
 $('clearButton').addEventListener('click',()=>{renderer?.clear();uiRows();leaveMode();});
 const canvas=$('surfaceCanvas');canvas.addEventListener('pointerdown',e=>{if(!active||!renderer)return;drag=[e.clientX,e.clientY];canvas.setPointerCapture(e.pointerId);});

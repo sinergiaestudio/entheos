@@ -190,14 +190,17 @@ function updateControls(){const active=currentFrame(),has=!!active;
  $('sliceRange').disabled=!has;$('windowRange').disabled=!has;$('levelRange').disabled=!has;
  $('segSave').disabled=!has;$('segOpen').disabled=!has;
  $('b7PickSeed').disabled=!has;$('b7Propose').disabled=!has||!state.b7Seed;
- $('segBuildSurface').disabled=!has||!state.segCount.slice(1).some(Boolean);$('segClearLayer').disabled=!has;$('segClearAll').disabled=!has;$('segEdit').disabled=!has;
+ $('segBuildSurface').disabled=!has||!state.segCount.slice(1).some(Boolean);
+ $('triptychGenerate').disabled=!has||!state.segCount.slice(1).some(Boolean);$('segClearLayer').disabled=!has;$('segClearAll').disabled=!has;$('segEdit').disabled=!has;
  if(has){$('sliceRange').min=0;$('sliceRange').max=state.current.items.length-1;$('sliceRange').value=state.index;
   const center=state.wlCenter,width=state.wlWidth;
   $('windowRange').max=Math.max(4096,Math.ceil(width*3));$('windowRange').value=clamp(width,1,Number($('windowRange').max));
   $('levelRange').min=-4096;$('levelRange').max=Math.max(4095,Math.ceil(center+width*2));$('levelRange').value=clamp(center,-4096,Number($('levelRange').max));
   $('windowValue').textContent=width.toFixed(0);$('levelValue').textContent=center.toFixed(0);
   $('sliceCurrent').textContent=state.index+1;$('sliceTotal').textContent='/ '+state.current.items.length;
-  $('slicePosition').textContent=active.projection.toFixed(2)+' mm';$('frameLabel').textContent='CORTE '+(state.index+1)+' / '+state.current.items.length;
+  $('slicePosition').textContent=active.projection.toFixed(2)+' mm';$('frameLabel').textContent=state.mode==='3d'&&state.mixed==='triple'
+    ?'VISTA TRIPLE · RM ORIGINAL Y MÁSCARAS DEL MISMO ESTUDIO'
+    :'CORTE '+(state.index+1)+' / '+state.current.items.length;
   $('metaMatrix').textContent=active.columns+' × '+active.rows;
   $('metaSpacing').textContent=active.spacing.map(v=>v.toFixed(4)).join(' × ')+' mm';
   $('metaOrientation').textContent=active.iop.map(v=>v.toFixed(3)).join(', ');
@@ -313,7 +316,8 @@ function switchModeButtons(){
  $('volumeControls').hidden=!is3d;
  $('viewerOverlayActions').hidden=!is3d;
  $('sliceRange').disabled=(is3d&&!state.mixed)||!currentFrame();
- $('triptychTools').hidden=!triple;$('viewBadge').textContent=triple?'TRIPLE · MISMA SERIE · SOLO MÁSCARAS PROPIAS':mixed?'MIXTO · DICOM 2D + VOLUMEN REAL':is3d?'VOLUMEN REAL · GPU':'ORIGINAL · DICOM';
+ $('triptychTools').hidden=!triple;if(triple)$('frameLabel').textContent='VISTA TRIPLE · RM ORIGINAL Y MÁSCARAS DEL MISMO ESTUDIO';
+  $('viewBadge').textContent=triple?'TRIPLE · MISMA SERIE · SOLO MÁSCARAS PROPIAS':mixed?'MIXTO · DICOM 2D + VOLUMEN REAL':is3d?'VOLUMEN REAL · GPU':'ORIGINAL · DICOM';
  $('viewerInfo').textContent=triple?'Corte editable, volumen de intensidades y superficies del mismo DICOM':mixed?'Izquierda: cortes DICOM · derecha: rotar volumen · rueda: zoom':is3d?'Arrastrar: rotar · rueda: acercar':'Ctrl + rueda: zoom · arrastrar: mover · rueda: cortes';
  $('orientationNote').textContent=is3d?'DICOM original · orientación radiológica pendiente de validar':'Orientación indicada por DICOM · lateralidad no validada en Slicer';
  $('volumeStatus').textContent=is3d?'Volumen activo · representación no diagnóstica':'';
@@ -329,7 +333,7 @@ function stopVolume(){
 async function enableVolume(asMixed=false){
  if(!state.current){toast('Cargá primero una serie DICOM.');return;}
  if(state.mode==='3d'){
-  state.mixed=asMixed;switchModeButtons();requestAnimationFrame(()=>render());
+  state.mixed=asMixed;switchModeButtons();requestAnimationFrame(()=>{render();scheduleTriptychGeometry();});
   return;
  }
  const token=++state.volumeToken;
@@ -349,6 +353,7 @@ async function enableVolume(asMixed=false){
   state.volumeRenderer.lighting=Number($('volumeLighting').value)/100;
   if(state.segMask&&state.segCount.slice(1).some(Boolean))state.volumeRenderer.setSegmentation(state.segMask,state.segVisibility);
   if(state.mixed)render();else state.volumeRenderer.draw();
+   scheduleTriptychGeometry();
   $('volumeStatus').textContent=`Volumen ${g.x} × ${g.y} × ${g.z} · ${g.spanMm.map(v=>v.toFixed(1)).join(' × ')} mm · ${(prepared.textureBytes/1048576).toFixed(1)} MiB de textura R8 · ${state.volumeRenderer.backend}`;
   toast('Volumen DESS construido a partir de los vóxeles reales · giralo arrastrando.');
  }catch(err){if(token!==state.volumeToken)return;const msg=err instanceof Error?err.message:'Error WebGL2';
@@ -462,6 +467,7 @@ switchModeButtons();
 let paintingSeg=false;
 function syncMaskCounts(){
  state.segCount=state.segMask?countRegions(state.segMask):[0,0,0,0];
+ $('triptychGenerate').disabled=!state.current||!state.segCount.slice(1).some(Boolean);
  $('segBuildSurface').disabled=!state.current||!state.segCount.slice(1).some(Boolean);
  for(let id=1;id<=3;id++)$('segCount'+id).textContent=state.segCount[id].toLocaleString('es-AR')+' vóxeles';
 }
@@ -596,12 +602,27 @@ $('segMeshMethod').addEventListener('change',()=>{
 $('segMeshSoftness').addEventListener('input',()=>{
  $('segMeshSoftnessValue').textContent=$('segMeshSoftness').value+'%';
 });
+// Make geometry creation accessible directly from the third pane.
+$('triptychGenerate').onclick=()=>{
+ if(!$('segBuildSurface').disabled)$('segBuildSurface').click();
+};
+function scheduleTriptychGeometry(){
+ if(state.mode!=='3d'||state.mixed!=='triple'||!state.current||
+  !state.segCount.slice(1).some(Boolean))return;
+ requestAnimationFrame(()=>requestAnimationFrame(()=>{
+  if(state.mode==='3d'&&state.mixed==='triple'&&
+    $('surfaceLayers').dataset.origin!=='same-study-manual'&&
+    !$('segBuildSurface').disabled)$('segBuildSurface').click();
+ }));
+}
 $('segBuildSurface').addEventListener('click',async()=>{
  if(!state.current||!state.segMask||!state.segCount.slice(1).some(Boolean)){
   $('segMeshStatus').textContent='Sin regiones pintadas ni NRRD válida para el estudio actual.';return;
  }
  $('segBuildSurface').disabled=true;
+ $('triptychGenerate').disabled=true;
  $('segMeshStatus').textContent='Comprobando geometría DICOM y construyendo superficies físicas LPS…';
+ $('triptychGeometryStatus').textContent='Construyendo STL desde las máscaras reales del estudio. No se utiliza el atlas externo.';
  await yieldUI();
  try{
   const method=$('segMeshMethod').value;
@@ -613,9 +634,17 @@ $('segBuildSurface').addEventListener('click',async()=>{
    detail:{meshes,studyId:id,segVersion:state.segVersion},cancelable:true
   }));
   if(!accepted)throw Error('El visor de superficies rechazó el cambio; revisá la escena existente.');
+  $('triptychGeometryStatus').textContent=meshes.length+' regiones del estudio generadas correctamente · '+meshes.reduce((n,m)=>n+m.triangles,0).toLocaleString('es-AR')+' triángulos.';
   $('segMeshStatus').textContent=meshes.length+' regiones de la MISMA serie · '+(method==='continuous'?'isosuperficie continua B6.2':'voxel B6.1')+' · '+meshes.reduce((n,m)=>n+m.triangles,0).toLocaleString('es-AR')+' triángulos LPS mm. ANATOMÍA SIN validar.';
- }catch(e){$('segMeshStatus').textContent='No se generó superficie: '+e.message;}
- finally{$('segBuildSurface').disabled=!state.current||!state.segCount.slice(1).some(Boolean);}
+ }catch(e){
+  $('segMeshStatus').textContent='No se generó superficie: '+e.message;
+  $('triptychGeometryStatus').textContent='No se generó superficie: '+e.message+'. Revisá máscara y parámetros o elegí Bloques B6.1 en controles avanzados.';
+ }
+ finally{
+  const disabled=!state.current||!state.segCount.slice(1).some(Boolean);
+  $('segBuildSurface').disabled=disabled;
+  $('triptychGenerate').disabled=disabled;
+ }
 });
 // Regions are generated solely from the in-memory labelmap currently bound to
 // state.current, never from external SPL assets or synthesized anatomy.

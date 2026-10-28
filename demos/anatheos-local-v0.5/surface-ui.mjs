@@ -1,5 +1,5 @@
 import {loadSurface,MAX_SCENE_TRIANGLES} from './surface-core.mjs';
-import {SurfaceRenderer} from './surface-renderer.mjs';
+import {SurfaceRenderer,surfaceOrbitDrag} from './surface-renderer.mjs';
 import {verifyOriginalSPLMesh,SPL_MESH_MANIFEST} from './spl-provenance.mjs';
 const $=id=>document.getElementById(id);
 const colorFor=['#d6e9f5','#f3c77d','#e59ca1','#78c6c9','#b0a9e2'];
@@ -34,8 +34,15 @@ function showMode(){
   :renderer.meshes.length&&renderer.meshes.every(m=>m.provenance?.hashVerified)
   ?'SPL Knee Atlas · SHA-256 auténtico · RAS / mm · OTRO espécimen'
   :'Superficies externas · no verificadas respecto de la RM actual';
- $('frameLabel').textContent='SUPERFICIES 3D · STL/OBJ · SIN DIAGNOSTICO';
- $('viewerInfo').textContent=renderer.meshes.length?'Arrastrar: rotar · Rueda: zoom':'Sin modelos importados';
+ const originalSPL=renderer.meshes.length>0&&renderer.meshes.every(m=>m.provenance?.hashVerified);
+ $('frameLabel').textContent=sameStudy
+  ?'MALLAS DE MÁSCARAS MANUALES · MISMA RM · SIN VALIDAR'
+  :originalSPL
+  ?'ATLAS SPL EXTERNO · NO GENERADO DE LA RM LEEDS'
+  :'STL/OBJ IMPORTADOS · ORIGEN SIN VALIDAR';
+ $('viewerInfo').textContent=renderer.meshes.length
+  ?'Arrastrar: girar objeto · rueda: zoom · Capas: aislar para estudiar solapamientos'
+  :'Sin modelos importados';
  syncSurfaceUI();
  if(!renderer.meshes.length)status(emptyHint);
  renderer.draw();
@@ -183,10 +190,31 @@ $('surfaceClear').addEventListener('click',()=>{renderer?.clear();uiRows();statu
 $('surfaceReset').addEventListener('click',resetSurfaceView);
 $('clearButton').addEventListener('click',()=>{renderer?.clear();uiRows();leaveMode();});
 const canvas=$('surfaceCanvas');canvas.addEventListener('pointerdown',e=>{if(!active||!renderer)return;drag=[e.clientX,e.clientY];canvas.setPointerCapture(e.pointerId);});
-canvas.addEventListener('pointermove',e=>{if(!drag||!active||!renderer)return;renderer.yaw+=(e.clientX-drag[0])*.01;renderer.pitch=Math.max(-1.45,Math.min(1.45,renderer.pitch+(e.clientY-drag[1])*.01));drag=[e.clientX,e.clientY];renderer.draw();});
+canvas.addEventListener('pointermove',e=>{if(!drag||!active||!renderer)return;
+ const angles=surfaceOrbitDrag(renderer.yaw,renderer.pitch,e.clientX-drag[0],e.clientY-drag[1]);
+ renderer.yaw=angles.yaw;renderer.pitch=angles.pitch;
+ drag=[e.clientX,e.clientY];renderer.draw();
+});
 canvas.addEventListener('pointerup',()=>{drag=null;});canvas.addEventListener('pointercancel',()=>{drag=null;});
 canvas.addEventListener('wheel',e=>{if(!active||!renderer)return;e.preventDefault();renderer.zoom=Math.max(.3,Math.min(3.8,renderer.zoom*(e.deltaY>0?.9:1.1)));renderer.draw();},{passive:false});
-window.addEventListener('resize',()=>{if(active)renderer?.draw();});
+// Fullscreen/focus change the canvas CSS box without necessarily emitting a
+// window resize; redraw AFTER layout so WebGL pixels track the new aspect.
+let surfaceRedrawQueued=false;
+function scheduleSurfaceRedraw(){
+ if(surfaceRedrawQueued||!active)return;
+ surfaceRedrawQueued=true;
+ requestAnimationFrame(()=>requestAnimationFrame(()=>{
+  surfaceRedrawQueued=false;
+  if(active)renderer?.draw();
+ }));
+}
+const surfaceResize=typeof ResizeObserver!=='undefined'?new ResizeObserver(scheduleSurfaceRedraw):null;
+surfaceResize?.observe($('viewerRoot'));
+surfaceResize?.observe(canvas);
+window.addEventListener('resize',scheduleSurfaceRedraw);
+document.addEventListener('fullscreenchange',scheduleSurfaceRedraw);
+$('focusButton').addEventListener('click',scheduleSurfaceRedraw);
+$('fullscreenButton').addEventListener('click',scheduleSurfaceRedraw);
 $('surfaceSource').addEventListener('change',()=>{
  if(renderer?.meshes.length&&renderer.meshes[0].sourceId!==$('surfaceSource').value){
   $('surfaceSource').value=renderer.meshes[0].sourceId;

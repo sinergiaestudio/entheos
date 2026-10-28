@@ -1,0 +1,142 @@
+name: ANATHEOS UX-N5 · image-first workstation visual acceptance
+on:
+  push:
+    branches:
+      - anatheos/ux-n5-clinical-workbench-polish
+  pull_request:
+    paths:
+      - "demos/anatheos-local-v0.5/**"
+      - ".github/workflows/anatheos-uxn5-visual-acceptance.yml"
+permissions:
+  contents: read
+jobs:
+  browser-ux-and-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 23
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Static checks and original functional unit tests
+        working-directory: demos/anatheos-local-v0.5
+        run: |
+          set -euo pipefail
+          for f in app.js volumetric.js segmentation.mjs surface-ui.mjs workflow-b5.mjs ux-n1.mjs browser_ux_n1.mjs browser_ux_n2.mjs browser_ux_n3.mjs mask-to-surface.mjs browser_b61_manual_mesh.mjs browser_surface_camera_hotfix.mjs continuous-mask-surface.mjs browser_b62_continuous.mjs assisted-segmentation-3d.mjs browser_b71_assisted.mjs browser_b72_triptych.mjs browser_b72_geometry_recovery.mjs ux-clean.mjs browser_ux_n4_clean.mjs ux-n5.mjs browser_ux_n5_polish.mjs;do node --check "$f";done
+          node --test test_segmentation.mjs test_volume_core.mjs test_surfaces.mjs test_spl_provenance.mjs test_render_styles.mjs test_mask_to_surface.mjs test_surface_camera.mjs test_continuous_mask_surface.mjs test_assisted_3d.mjs
+          test -f ../../docs/anatheos/UX_NORTE_OFICIAL_2026-10-28.md
+          python3 -c 'import json;json.load(open("../../docs/anatheos/UX_NORTE_TOKENS_2026-10-28.json"))'
+      - name: Safe source-only archive — no study files
+        run: |
+          set -euo pipefail
+          src=demos/anatheos-local-v0.5
+          dst=build/ANATHEOS_3D_UX_N5_WINDOWS_CODIGO
+          mkdir -p "$dst"
+          files=(index.html style.css ux-shell.css ux-clean.css ux-n5.css ux-n1.mjs ux-clean.mjs ux-n5.mjs app.js volumetric.js segmentation.mjs mask-to-surface.mjs continuous-mask-surface.mjs assisted-segmentation-3d.mjs
+            surface-core.mjs surface-renderer.mjs surface-ui.mjs spl-provenance.mjs workflow-b5.mjs
+            servidor_local.ps1 INICIAR_ANATHEOS.cmd DETENER_ANATHEOS.cmd detener_anatheos.ps1
+            REINICIAR_ANATHEOS.cmd DIAGNOSTICO_ANATHEOS.cmd diagnostico_anatheos.ps1
+            OBTENER_ATLAS_SPL.cmd obtener_atlas_spl.ps1
+            ATRIBUCION_ATLAS_SPL.txt ATTRIBUTION_CC_BY_4.0.txt
+            GUIA_WINDOWS_B3.md PROTOCOLO_VALIDACION_SLICER_B3.md validar_spl_en_slicer.py
+            README.md ATLAS_SPL_PREFLIGHT.md PREFLIGHT_DESS_SIN_IDENTIFICADORES.json
+            verificar_integridad.ps1 verificar_modulos_locales.ps1 VERIFICAR_INTEGRIDAD.cmd 01_NOVEDADES_Y_SOLUCIONES_V051.txt)
+          for file in "${files[@]}";do test -f "$src/$file";cp "$src/$file" "$dst/$file";done
+          if find build -type f | grep -Ei '\.(dcm|dicom|nrrd|nii|stl|obj|png|jpg|zip)$';then echo 'Forbidden data';exit 1;fi
+          (cd build && zip -qr ANATHEOS_3D_UX_N5_WINDOWS_CODIGO.zip ANATHEOS_3D_UX_N5_WINDOWS_CODIGO)
+          unzip -t build/ANATHEOS_3D_UX_N5_WINDOWS_CODIGO.zip | tail -1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: anatheos-uxn5-code-only-no-patient-data
+          path: build/ANATHEOS_3D_UX_N5_WINDOWS_CODIGO.zip
+          retention-days: 14
+          if-no-files-found: error
+      - name: Desktop and mobile Chromium UX and state regression
+        run: |
+          set -euo pipefail
+          npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.56.1
+          ./node_modules/.bin/playwright install --only-shell chromium
+          (cd demos/anatheos-local-v0.5 && python3 -m http.server 8774 --bind 127.0.0.1) >/tmp/ux-n1-http.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          for i in $(seq 1 30);do if curl -s -o /dev/null http://127.0.0.1:8774/;then break;fi;sleep 1;done
+          node demos/anatheos-local-v0.5/browser_ux_n1.mjs browser_ux_n2.mjs
+          node demos/anatheos-local-v0.5/browser_b5_workflow.mjs
+          python3 demos/anatheos-local-v0.5/generate_uxn2_synthetic.py /tmp/anatheos-uxn2-test.zip
+          timeout 120s node demos/anatheos-local-v0.5/browser_ux_n2.mjs
+          timeout 120s node demos/anatheos-local-v0.5/browser_ux_n3.mjs
+          timeout 100s node demos/anatheos-local-v0.5/browser_b61_manual_mesh.mjs
+          timeout 90s node demos/anatheos-local-v0.5/browser_surface_camera_hotfix.mjs
+          timeout 90s node demos/anatheos-local-v0.5/browser_b62_continuous.mjs
+          timeout 100s node demos/anatheos-local-v0.5/browser_b71_assisted.mjs
+          timeout 120s node demos/anatheos-local-v0.5/browser_b72_triptych.mjs
+          timeout 120s node demos/anatheos-local-v0.5/browser_b72_geometry_recovery.mjs
+          timeout 120s node demos/anatheos-local-v0.5/browser_ux_n4_clean.mjs
+          timeout 120s node demos/anatheos-local-v0.5/browser_ux_n5_polish.mjs
+      - name: Upload no-study screenshot only
+        uses: actions/upload-artifact@v4
+        with:
+          name: anatheos-uxn5-empty-no-study-preview
+          path: /tmp/anatheos-uxn1-empty-shell.png
+          retention-days: 14
+          if-no-files-found: error
+  windows-localhost:
+    runs-on: windows-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: PowerShell 5.1 serves UX assets only over localhost
+        shell: powershell
+        working-directory: demos/anatheos-local-v0.5
+        run: |
+          $ErrorActionPreference='Stop'
+          $root=(Get-Location).Path
+          $tokens=$null;$errors=$null
+          [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $root 'servidor_local.ps1'),[ref]$tokens,[ref]$errors)|Out-Null
+          if($errors.Count){throw "Server syntax: $($errors[0])"}
+          # This test would have FAILED the published v0.8 B7.1 archive:
+          # continuous-mask-surface.mjs was missing from Windows allowlist.
+          & (Join-Path $root 'verificar_modulos_locales.ps1') -Root $root
+          # The public repo contains NO DICOM. For native Windows HTTP transfer
+          # only, create a same-size NONMEDICAL dummy. Never upload this fixture.
+          $fixtureDir=Join-Path $root 'datasets'
+          New-Item -ItemType Directory -Force -Path $fixtureDir | Out-Null
+          $fixture=Join-Path $fixtureDir 'RTKN0668_MR_DESS.zip'
+          if(Test-Path -LiteralPath $fixture){throw 'Medical archive must not be committed to public repository'}
+          [System.IO.File]::WriteAllBytes($fixture,(New-Object byte[] 28685147))
+          $p=Start-Process powershell.exe -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',('"' + (Join-Path $root 'servidor_local.ps1') + '"')) -PassThru -WindowStyle Hidden
+          try{
+           $ok=$false
+           for($retry=0;$retry -lt 45;$retry++){
+            foreach($port in 8765..8775){
+             try{
+              $r=Invoke-WebRequest -Uri "http://127.0.0.1:$port/ux-shell.css" -UseBasicParsing -TimeoutSec 1
+              if($r.StatusCode -eq 200 -and $r.Content -match 'UX-N1'){
+                $js=Invoke-WebRequest -Uri "http://127.0.0.1:$port/ux-n1.mjs" -UseBasicParsing -TimeoutSec 2
+                if($js.StatusCode -eq 200 -and $js.Content -match 'refreshLayers'){$ok=$true;$port=$port;break}
+              }
+             }catch{}
+            }
+            if($ok){break}
+            Start-Sleep -Milliseconds 300
+           }
+           if(-not $ok){throw 'Local UX stylesheet/module not available'}
+           $required=@('index.html','app.js','volumetric.js','segmentation.mjs',
+             'surface-core.mjs','surface-renderer.mjs','surface-ui.mjs',
+             'spl-provenance.mjs','workflow-b5.mjs','ux-n1.mjs',
+             'mask-to-surface.mjs','continuous-mask-surface.mjs',
+             'assisted-segmentation-3d.mjs','style.css','ux-shell.css','ux-clean.css','ux-clean.mjs','ux-n5.css','ux-n5.mjs')
+           foreach($file in $required){
+             $response=Invoke-WebRequest -Uri "http://127.0.0.1:$port/$file" -UseBasicParsing -TimeoutSec 6
+             if($response.StatusCode -ne 200 -or $response.RawContentLength -lt 10){
+               throw "Archivo requerido no accesible desde Windows HTTP: $file"
+             }
+             Write-Host "[HTTP 200] $file"
+           }
+           $dess=Invoke-WebRequest -Uri "http://127.0.0.1:$port/datasets/RTKN0668_MR_DESS.zip" -Method Head -UseBasicParsing -TimeoutSec 12
+           if($dess.StatusCode -ne 200){throw 'Falla de entrega de archivo de estudio'}
+           if([long]$dess.Headers['Content-Length'] -ne 28685147){
+             throw 'Fallo al transmitir Content-Length de archivo grande en servidor PowerShell'
+           }
+           Write-Host 'PASS Windows PowerShell 5.1: JS module import closure, native HTTP 200 all files, DICOM Leeds HEAD 200'
+          }finally{Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue; Remove-Item -LiteralPath $fixture -Force -ErrorAction SilentlyContinue}

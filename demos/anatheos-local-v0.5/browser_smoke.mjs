@@ -10,6 +10,7 @@ try{
  await page.goto(url,{waitUntil:'networkidle'});
  assert.equal(await page.locator('#surfaceButton').count(),1);
  await page.locator('#surfaceButton').click();
+ await page.locator('#surfaceManual summary').click();
  await page.locator('#surfaceSource').selectOption('other-unverified');
  await page.locator('#surfaceFile').setInputFiles([
   {name:'femur-95.stl',mimeType:'application/octet-stream',buffer:stl(0)},

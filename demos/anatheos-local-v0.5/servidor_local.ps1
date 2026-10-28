@@ -15,6 +15,7 @@ $files = @{
  '/workflow-b5.mjs' = 'workflow-b5.mjs'
  '/ux-n1.mjs' = 'ux-n1.mjs'
  '/mask-to-surface.mjs' = 'mask-to-surface.mjs'
+ '/continuous-mask-surface.mjs' = 'continuous-mask-surface.mjs'
  '/assisted-segmentation-3d.mjs' = 'assisted-segmentation-3d.mjs'
  '/ux-shell.css' = 'ux-shell.css'
  '/style.css' = 'style.css'
@@ -51,7 +52,7 @@ foreach ($tryPort in 8765..8775) {
 }
 if (-not $listener) { Write-Error 'No se pudo abrir un puerto local entre 8765 y 8775.'; exit 1 }
 $address = "http://127.0.0.1:$port/"
-Write-Host 'ANATHEOS 3D - v0.6 B5.2 Atlas Local' -ForegroundColor Red
+Write-Host 'ANATHEOS 3D - v0.8 B7.1 Windows | carga DICOM corregida' -ForegroundColor Cyan
 Write-Host 'Servidor limitado a tu computadora (127.0.0.1).'
 Write-Host "Abrir: $address" -ForegroundColor White
 Write-Host 'Para detener: Ctrl+C o cerrar esta ventana.'

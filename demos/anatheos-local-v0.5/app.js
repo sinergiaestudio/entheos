@@ -2,13 +2,14 @@ import { inspectVolumeGeometry, prepareVolumeTexture, VolumeRenderer } from './v
 import { createMask, paintDisk, growRegion2D, eraseRegion, countRegions, toNrrd, fromNrrd, REGION_COLORS } from './segmentation.mjs';
 import {makeMaskSurfaceSTLs} from './mask-to-surface.mjs';
 import {makeContinuousMaskSTLs} from './continuous-mask-surface.mjs';
+import {proposeConnected3D,acceptConnected3D} from './assisted-segmentation-3d.mjs';
 /* ANATHEOS Demo Local v0.1 — native uncompressed DICOM browser viewer.
  * Operates only on File/Blob bytes provided by the user or localhost package.
  * No remote API or data telemetry. Experimental; not medical/diagnostic.
  * Cornerstone3D compatibility is tracked in separate G2a browser experiments.
  */
 const $=id=>document.getElementById(id);
-const state={mode:'2d',mixed:false,volumeRenderer:null,volumeToken:0,series:[],current:null,index:0,wlCenter:350,wlWidth:850,brightness:0,contrast:100,zoom:1,panX:0,panY:0,loadGeneration:0,source:'',imageKey:'',lastPixels:null,segMask:null,segCount:[0,0,0,0],segVersion:0,segVisibility:7,segOverlayKey:'',segEdit:false};
+const state={mode:'2d',mixed:false,volumeRenderer:null,volumeToken:0,series:[],current:null,index:0,wlCenter:350,wlWidth:850,brightness:0,contrast:100,zoom:1,panX:0,panY:0,loadGeneration:0,source:'',imageKey:'',lastPixels:null,segMask:null,segCount:[0,0,0,0],segVersion:0,segVisibility:7,segOverlayKey:'',segEdit:false,b7Picking:false,b7Seed:null,b7Draft:null,b7DraftVersion:0};
 const LONG=new Set(['OB','OD','OF','OL','OV','OW','SQ','UC','UR','UT','UN']);
 const NUMTAG=new Set([0x00280002,0x00280010,0x00280011,0x00280100,0x00280101,0x00280102,0x00280103,0x00280006]);
 const TAGS=new Map([[0x00020010,'syntax'],[0x00080060,'modality'],[0x0008103e,'description'],[0x00080016,'sopClass'],[0x0020000e,'seriesUid'],[0x00200013,'instance'],[0x00200032,'ipp'],[0x00200037,'iop'],[0x00280002,'samples'],[0x00280004,'photo'],[0x00280008,'frames'],[0x00280010,'rows'],[0x00280011,'columns'],[0x00280030,'spacing'],[0x00280100,'bitsAllocated'],[0x00280101,'bitsStored'],[0x00280102,'highBit'],[0x00280103,'signed'],[0x00281052,'intercept'],[0x00281053,'slope'],[0x00281050,'dicomCenter'],[0x00281051,'dicomWidth'],[0x7fe00010,'pixels']]);
@@ -97,7 +98,7 @@ async function unpackMember(buffer,entry){
 function vecCross(a,b){return[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
 function dot(a,b){return a.reduce((sum,v,i)=>sum+v*b[i],0);}
 function orientCheck(a,b){return a.iop.every((v,k)=>Math.abs(v-b.iop[k])<0.0003);}
-function clean(){window.dispatchEvent(new Event('anatheos:study-reset'));stopVolume();state.mode='2d';state.mixed=false;switchModeButtons();state.segMask=null;state.segVersion++;state.segCount=[0,0,0,0];state.segOverlayKey='';state.segEdit=false;$('segEdit').checked=false;state.current=null;state.series=[];state.index=0;state.imageKey='';state.lastPixels=null;state.source='';state.panX=0;state.panY=0;state.zoom=1;updateControls();render();}
+function clean(){state.b7Picking=false;state.b7Seed=null;state.b7Draft=null;state.b7DraftVersion++;$('b7SeedStatus').textContent='Sin semilla seleccionada.';$('b7Accept').disabled=true;$('b7Discard').disabled=true;$('b7Discard').disabled=true;window.dispatchEvent(new Event('anatheos:study-reset'));stopVolume();state.mode='2d';state.mixed=false;switchModeButtons();state.segMask=null;state.segVersion++;state.segCount=[0,0,0,0];state.segOverlayKey='';state.segEdit=false;$('segEdit').checked=false;state.current=null;state.series=[];state.index=0;state.imageKey='';state.lastPixels=null;state.source='';state.panX=0;state.panY=0;state.zoom=1;updateControls();render();}
 function cancelCurrent(){state.loadGeneration++;$('loading').hidden=true;}
 function showLoad(detail,progress=0){$('loading').hidden=false;$('loadingDetail').textContent=detail;$('loadingProgress').style.width=progress+'%';}
 function toast(msg){const el=$('toast');el.textContent=msg;el.classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('visible'),4200);}
@@ -147,6 +148,7 @@ function commitRecords(files,source,errors,notes,gen){
   return{uid,description:first.description||'Serie DICOM',items:compatible,normal,spacingBetween:median};
  }).filter(s=>s.items.length).sort((a,b)=>b.items.length-a.items.length);
  if(!state.series.length)throw Error('Ninguna serie conserva orientación y matriz compatibles');
+ state.b7Seed=null;state.b7Draft=null;state.b7DraftVersion++;$('b7SeedStatus').textContent='Sin semilla seleccionada.';$('b7Accept').disabled=true;
  state.current=state.series[0];state.segMask=createMask(state.current.items[0].columns,state.current.items[0].rows,state.current.items.length);
  state.segVersion++;state.segOverlayKey='';state.segCount=[0,0,0,0];state.index=Math.floor(state.current.items.length/2);state.source=source;
  const active=state.current.items[state.index];
@@ -187,6 +189,7 @@ function updateControls(){const active=currentFrame(),has=!!active;
  else $('seriesList').innerHTML='<div class="empty">Todavía no se cargaron imágenes.</div>';
  $('sliceRange').disabled=!has;$('windowRange').disabled=!has;$('levelRange').disabled=!has;
  $('segSave').disabled=!has;$('segOpen').disabled=!has;
+ $('b7PickSeed').disabled=!has;$('b7Propose').disabled=!has||!state.b7Seed;
  $('segBuildSurface').disabled=!has||!state.segCount.slice(1).some(Boolean);$('segClearLayer').disabled=!has;$('segClearAll').disabled=!has;$('segEdit').disabled=!has;
  if(has){$('sliceRange').min=0;$('sliceRange').max=state.current.items.length-1;$('sliceRange').value=state.index;
   const center=state.wlCenter,width=state.wlWidth;
@@ -207,6 +210,7 @@ function makePixels(frame){const {rows,columns,values,slope,intercept}=frame,out
  const lo=state.wlCenter-state.wlWidth/2,width=Math.max(1,state.wlWidth),gain=state.contrast/100,offset=state.brightness/100;
  for(let i=0;i<values.length;i++){const val=values[i]*slope+intercept;let p=clamp((val-lo)/width,0,1);p=clamp((p-.5)*gain+.5+offset,0,1);let gray=Math.round((frame.photo==='MONOCHROME1'?1-p:p)*255);const k=i*4;dst[k]=dst[k+1]=dst[k+2]=gray;dst[k+3]=255;}return output;
 }
+const b7Overlay=document.createElement('canvas'),b7OverlayCtx=b7Overlay.getContext('2d');let b7OverlayKey='';
 const canvas=$('scanCanvas'),ctx=canvas.getContext('2d',{alpha:false}),offscreen=document.createElement('canvas'),offctx=offscreen.getContext('2d',{alpha:false}),segOverlayCanvas=document.createElement('canvas'),segOverlayCtx=segOverlayCanvas.getContext('2d');
 function render(){if(state.mode==='3d'&&!state.mixed){state.volumeRenderer?.draw();return;}const box=canvas.getBoundingClientRect(),ratio=Math.min(devicePixelRatio||1,2),w=Math.max(10,Math.round(box.width*ratio)),h=Math.max(10,Math.round(box.height*ratio));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
  ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#181b1e';ctx.fillRect(0,0,w,h);
@@ -215,6 +219,19 @@ function render(){if(state.mode==='3d'&&!state.mixed){state.volumeRenderer?.draw
  if(key!==state.imageKey){offscreen.width=frame.columns;offscreen.height=frame.rows;offctx.putImageData(makePixels(frame),0,0);state.imageKey=key;}
  const fit=Math.min(w/frame.columns,h/frame.rows)*.90,scale=fit*state.zoom;
  ctx.save();ctx.translate(w/2+state.panX*ratio,h/2+state.panY*ratio);ctx.scale(scale,scale);ctx.imageSmoothingEnabled=true;ctx.drawImage(offscreen,-frame.columns/2,-frame.rows/2);
+ // The proposal preview is completely separate from original DICOM or accepted labelmap.
+ if(state.b7Draft){
+  const draft=state.b7Draft,signature=[state.index,state.b7DraftVersion].join('|');
+  if(signature!==b7OverlayKey){
+   b7Overlay.width=frame.columns;b7Overlay.height=frame.rows;
+   const image=b7OverlayCtx.createImageData(frame.columns,frame.rows),pixels=image.data,plane=frame.columns*frame.rows,base=state.index*plane;
+   for(const index of draft.indices){if(index<base||index>=base+plane)continue;
+    const k=(index-base)*4;pixels[k]=48;pixels[k+1]=220;pixels[k+2]=234;pixels[k+3]=153;}
+   b7OverlayCtx.putImageData(image,0,0);b7OverlayKey=signature;
+  }
+  ctx.drawImage(b7Overlay,-frame.columns/2,-frame.rows/2);
+ }
+
  if(state.segMask&&state.segCount.slice(1).some(Boolean)){
   const mask=state.segMask,z=state.index,signature=[z,state.segVersion,state.segVisibility].join('|');
   if(signature!==state.segOverlayKey){
@@ -244,7 +261,17 @@ $('brightnessRange').oninput=e=>{state.brightness=Number(e.target.value);updateC
 $('autoWindow').onclick=()=>{const f=currentFrame();if(!f)return;const data=[];for(let i=0;i<f.values.length;i+=17)data.push(f.values[i]*f.slope+f.intercept);data.sort((a,b)=>a-b);let a=data[Math.floor(.02*data.length)],b=data[Math.floor(.98*data.length)];state.wlCenter=(a+b)/2;state.wlWidth=Math.max(1,b-a);updateControls();render();};
 $('zoomIn').onclick=()=>{state.zoom=clamp(state.zoom*1.25,.3,10);render();};$('zoomOut').onclick=()=>{state.zoom=clamp(state.zoom/1.25,.3,10);render();};$('fitButton').onclick=resetView;
 canvas.addEventListener('wheel',e=>{if(!currentFrame())return;e.preventDefault();if(e.ctrlKey||e.metaKey){state.zoom=clamp(state.zoom*(e.deltaY>0?.9:1.1),.3,10);render();}else chooseSlice(state.index+(e.deltaY>0?1:-1));},{passive:false});
-let dragging=false,lastX=0,lastY=0;canvas.onpointerdown=e=>{if(!currentFrame())return;if(state.segEdit){paintFromPointer(e);canvas.setPointerCapture(e.pointerId);return;}dragging=true;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture(e.pointerId);};canvas.onpointermove=e=>{if(state.segEdit&&paintingSeg){paintFromPointer(e);return;}if(!dragging)return;state.panX+=e.clientX-lastX;state.panY+=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;render();};canvas.onpointerup=()=>{dragging=false;if(paintingSeg)finishPaint();};canvas.onpointercancel=()=>{dragging=false;if(paintingSeg)finishPaint();};
+let dragging=false,lastX=0,lastY=0;canvas.onpointerdown=e=>{if(!currentFrame())return;
+ if(state.b7Picking){
+  const xy=pointToPixel(e);state.b7Picking=false;
+  if(xy){state.b7Seed={x:Math.floor(xy[0]),y:Math.floor(xy[1]),z:state.index};
+   $('b7SeedStatus').textContent='Semilla: ('+state.b7Seed.x+', '+state.b7Seed.y+', corte '+(state.b7Seed.z+1)+')';
+   $('b7Propose').disabled=false;
+   $('b7Status').textContent='Semilla colocada. Ajustá tolerancia y radio físico; prepará la propuesta.';
+  }else{$('b7Status').textContent='Punto fuera de la imagen; elegí otra semilla.';}
+  return;
+ }
+ if(state.segEdit){paintFromPointer(e);canvas.setPointerCapture(e.pointerId);return;}dragging=true;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture(e.pointerId);};canvas.onpointermove=e=>{if(state.segEdit&&paintingSeg){paintFromPointer(e);return;}if(!dragging)return;state.panX+=e.clientX-lastX;state.panY+=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;render();};canvas.onpointerup=()=>{dragging=false;if(paintingSeg)finishPaint();};canvas.onpointercancel=()=>{dragging=false;if(paintingSeg)finishPaint();};
 window.addEventListener('resize',()=>render());document.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowUp'].includes(e.key)){if(currentFrame()){e.preventDefault();chooseSlice(state.index-1);}}else if(['ArrowRight','ArrowDown'].includes(e.key)){if(currentFrame()){e.preventDefault();chooseSlice(state.index+1);}}});
 updateControls();render();
 
@@ -409,7 +436,7 @@ function syncMaskCounts(){
  $('segBuildSurface').disabled=!state.current||!state.segCount.slice(1).some(Boolean);
  for(let id=1;id<=3;id++)$('segCount'+id).textContent=state.segCount[id].toLocaleString('es-AR')+' vóxeles';
 }
-function maskChange(){state.segVersion++;state.segOverlayKey='';window.dispatchEvent(new Event('anatheos:mask-changed'));render();}
+function maskChange(){state.segVersion++;state.segOverlayKey='';state.b7Draft=null;state.b7DraftVersion++;$('b7Accept').disabled=true;$('b7Discard').disabled=true;window.dispatchEvent(new Event('anatheos:mask-changed'));render();}
 function finishPaint(){paintingSeg=false;syncMaskCounts();maskChange();$('segStatus').textContent='Marcas locales actualizadas. Su interpretación anatómica requiere revisión.';}
 function pointToPixel(e){
  const frame=currentFrame();if(!frame)return null;
@@ -480,6 +507,52 @@ $('segFile').onchange=async e=>{
   $('segStatus').textContent='Máscara NRRD recuperada; dimensiones y geometría verificadas.';
  }catch(err){$('segStatus').textContent='Máscara rechazada: '+(err.message||'archivo inválido');}
 };
+// B7.1: local proposal first, explicit acceptance second, never replacing unrelated labels.
+$('b7PickSeed').addEventListener('click',()=>{
+ if(!state.current)return;
+ if(state.mode==='3d')$('twoDButton').click();
+ if(state.segEdit){$('segEdit').checked=false;state.segEdit=false;canvas.classList.remove('seg-paint-active');}
+ state.b7Seed=null;$('b7Propose').disabled=true;invalidateB7Draft('Nueva selección de semilla: propuesta anterior descartada.');
+ state.b7Picking=true;$('b7Status').textContent='Hacé clic sobre un punto del corte DICOM para colocar la semilla.';
+});
+function invalidateB7Draft(reason){
+ state.b7Draft=null;state.b7DraftVersion++;$('b7Accept').disabled=true;$('b7Discard').disabled=true;
+ if(reason)$('b7Status').textContent=reason;render();
+}
+for(const [id,out,unit] of [['b7Tolerance','b7ToleranceOut',''],['b7Radius','b7RadiusOut',' mm']]){
+ $(id).addEventListener('input',()=>{$(out).textContent=$(id).value+unit;
+  invalidateB7Draft('Parámetros cambiados. Prepará nuevamente para revisar antes de aceptar.');});
+}
+$('b7Propose').addEventListener('click',async()=>{
+ if(!state.current||!state.b7Seed)return;
+ const generation=state.loadGeneration,version=state.segVersion,series=state.current;
+ $('b7Propose').disabled=true;
+ $('b7Status').textContent='Calculando región conectada 3D desde intensidades DICOM originales…';
+ await yieldUI();
+ try{
+  const proposal=proposeConnected3D(series,{...state.b7Seed,tolerance:Number($('b7Tolerance').value),radiusMm:Number($('b7Radius').value)});
+  if(generation!==state.loadGeneration||version!==state.segVersion||state.current!==series)
+   throw Error('El estudio o la máscara cambiaron. Volvé a elegir semilla.');
+  state.b7Draft=proposal;state.b7DraftVersion++;b7OverlayKey='';
+  $('b7Accept').disabled=false;$('b7Discard').disabled=false;
+  $('b7Status').textContent=proposal.count.toLocaleString('es-AR')+' vóxeles conectados · intensidades '+proposal.intensityMin.toFixed(1)+' a '+proposal.intensityMax.toFixed(1)+'. '+(proposal.touchesRadius?'Advertencia: alcanza el límite del radio. ':'')+'Revisá la previsualización CIAN en distintos cortes antes de aceptar.';
+  render();
+ }catch(e){invalidateB7Draft('Propuesta rechazada: '+e.message);}
+ finally{$('b7Propose').disabled=!state.current||!state.b7Seed;}
+});
+$('b7Discard').addEventListener('click',()=>invalidateB7Draft('Propuesta descartada sin modificar la máscara DICOM.'));
+$('b7Accept').addEventListener('click',()=>{
+ const draft=state.b7Draft;
+ if(!state.current||!state.segMask||!draft)return;
+ try{
+  const report=acceptConnected3D(state.segMask,draft,Number($('segSelected').value));
+  state.b7Seed=null;$('b7SeedStatus').textContent='Sin semilla seleccionada.';
+  $('b7Propose').disabled=true;
+  syncMaskCounts();maskChange();
+  $('b7Status').textContent='Aplicados '+report.added.toLocaleString('es-AR')+' vóxeles a la región seleccionada; '+report.skipped+' ya pertenecían a otras regiones (no modificados). Máscara aún SIN validar anatómicamente.';
+  if(state.segCount.slice(1).some(Boolean))$('segBuildSurface').click();
+ }catch(e){$('b7Status').textContent='No se aplicó: '+e.message;}
+});
 $('segMeshMethod').addEventListener('change',()=>{
  const continuous=$('segMeshMethod').value==='continuous';
  $('segMeshSoftness').disabled=!continuous;

@@ -5,11 +5,45 @@ const $=id=>document.getElementById(id);
 const colorFor=['#d6e9f5','#f3c77d','#e59ca1','#78c6c9','#b0a9e2'];
 let renderer=null,active=false,drag=null,modelCounter=0;
 function status(message){$('surfaceStatus').textContent=message;}
+const emptyHint='No hay mallas: ejecuta OBTENER_ATLAS_SPL.cmd fuera de la app, elige SPL Knee Atlas e importa femur-95.stl y tibia-96.stl desde ATLAS_SPL. La RM Leeds es otro especimen.';
+function syncSurfaceUI(){
+ const ready=Boolean(renderer?.meshes.length);
+ $('surfaceAll').disabled=!ready;
+ $('surfaceReset').disabled=!ready;
+ $('surfaceClear').disabled=!ready;
+ $('surfaceHelpOverlay').hidden=!active||ready;
+}
 function resetSurfaceView(){if(!renderer)return;renderer.yaw=.5;renderer.pitch=.18;renderer.zoom=1.6;renderer.draw();}
-function showMode(){if(!renderer){try{renderer=new SurfaceRenderer($('surfaceCanvas'));}catch(e){status(e.message);return;}}
- active=true;$('surfaceCanvas').hidden=false;$('scanCanvas').hidden=true;$('volumeCanvas').hidden=true;$('emptyViewer').style.display='none';$('viewBadge').hidden=true;$('surfaceButton').setAttribute('aria-pressed','true');$('twoDButton').setAttribute('aria-pressed','false');$('threeDButton').setAttribute('aria-pressed','false');$('orientationNote').textContent=(renderer.meshes.length&&renderer.meshes.every(m=>m.provenance?.hashVerified)?'SPL Knee Atlas · archivos SHA-256 auténticos · RAS / mm (cotas coherentes) · NO registrado en Slicer':'Mallas independientes · SIN registro espacial con DICOM · unidades y ejes pendientes de validación');$('frameLabel').textContent='SUPERFICIES 3D · SIN DIAGNÓSTICO';$('viewerInfo').textContent='Arrastrá: rotar · Rueda: zoom';renderer.draw();}
-function leaveMode(){if(!active)return;active=false;$('surfaceCanvas').hidden=true;$('surfaceButton').setAttribute('aria-pressed','false');$('orientationNote').textContent='Orientación indicada por DICOM · lateralidad no validada en Slicer';if($('studyTitle').textContent==='Sin estudio cargado')$('emptyViewer').style.display='flex';}
-function uiRows(){const root=$('surfaceLayers');root.replaceChildren();if(!renderer?.meshes.length){root.textContent='Sin superficies cargadas. Importá modelos STL/OBJ del mismo atlas.';return;}
+function showMode(){
+ // Exit previous volume mode so DICOM GPU controls cannot affect STL surfaces.
+ if(!active)$('twoDButton').click();
+ if(!renderer){try{renderer=new SurfaceRenderer($('surfaceCanvas'));}catch(e){status(e.message);return;}}
+ active=true;
+ $('surfaceCanvas').hidden=false;
+ $('scanCanvas').hidden=true;
+ $('volumeCanvas').hidden=true;
+ $('emptyViewer').style.display='none';
+ $('viewBadge').hidden=true;
+ $('surfaceButton').setAttribute('aria-pressed','true');
+ $('twoDButton').setAttribute('aria-pressed','false');
+ $('threeDButton').setAttribute('aria-pressed','false');
+ $('orientationNote').textContent=(renderer.meshes.length&&renderer.meshes.every(m=>m.provenance?.hashVerified)?'SPL Knee Atlas · SHA-256 autentico · RAS / mm · NO registrado en Slicer':'Superficies independientes · NO pertenecen a la RM Leeds');
+ $('frameLabel').textContent='SUPERFICIES 3D · STL/OBJ · SIN DIAGNOSTICO';
+ $('viewerInfo').textContent=renderer.meshes.length?'Arrastrar: rotar · Rueda: zoom':'Sin modelos importados';
+ syncSurfaceUI();
+ if(!renderer.meshes.length)status(emptyHint);
+ renderer.draw();
+}
+function leaveMode(){
+ if(!active)return;
+ active=false;
+ $('surfaceCanvas').hidden=true;
+ $('surfaceButton').setAttribute('aria-pressed','false');
+ syncSurfaceUI();
+ // app.js has already restored 2D or 3D DICOM UI; do not overwrite it.
+ if($('studyTitle').textContent==='Sin estudio cargado')$('emptyViewer').style.display='flex';
+}
+function uiRows(){const root=$('surfaceLayers');root.replaceChildren();if(!renderer?.meshes.length){root.textContent='Sin modelos STL/OBJ cargados. Los controles se habilitan despues de importar los archivos.';syncSurfaceUI();return;}
  for(const [n,m] of renderer.meshes.entries()){
   const row=document.createElement('div');row.className='surface-row';const label=document.createElement('button');label.type='button';label.className='surface-select';label.textContent=m.name+` · ${m.triangles.toLocaleString('es-AR')} triángulos`;label.setAttribute('aria-pressed',m===renderer.selected?'true':'false');label.onclick=()=>{renderer.selected=m;uiRows();renderer.draw();};
   const visible=document.createElement('input');visible.type='checkbox';visible.checked=m.visible;visible.title='Mostrar u ocultar '+m.name;visible.onchange=()=>{m.visible=visible.checked;renderer.draw();};
@@ -18,6 +52,7 @@ function uiRows(){const root=$('surfaceLayers');root.replaceChildren();if(!rende
   const isolate=document.createElement('button');isolate.textContent='Solo';isolate.type='button';isolate.onclick=()=>{renderer.meshes.forEach(x=>x.visible=x===m);uiRows();renderer.draw();};
   row.append(label,visible,color,alpha,isolate);root.append(row);
  }
+ syncSurfaceUI();
 }
 async function loadMeshes(files){if(!files.length)return;if(!renderer){try{renderer=new SurfaceRenderer($('surfaceCanvas'));}catch(e){status(e.message);return;}}
  const expected=$('surfaceSource').value;let loaded=0,authenticated=0;
@@ -40,7 +75,7 @@ $('surfaceOpen').addEventListener('click',()=>$('surfaceFile').click());
 $('surfaceButton').addEventListener('click',showMode);
 for(const id of ['twoDButton','threeDButton'])$(id).addEventListener('click',leaveMode);
 $('surfaceAll').addEventListener('click',()=>{if(!renderer)return;renderer.meshes.forEach(x=>x.visible=true);uiRows();renderer.draw();});
-$('surfaceClear').addEventListener('click',()=>{renderer?.clear();uiRows();status('Modelos retirados de memoria; los DICOM y máscaras manuales originales no se modificaron.');});
+$('surfaceClear').addEventListener('click',()=>{renderer?.clear();uiRows();status('Modelos retirados de memoria. '+emptyHint);});
 $('surfaceReset').addEventListener('click',resetSurfaceView);
 $('clearButton').addEventListener('click',()=>{renderer?.clear();uiRows();leaveMode();});
 const canvas=$('surfaceCanvas');canvas.addEventListener('pointerdown',e=>{if(!active||!renderer)return;drag=[e.clientX,e.clientY];canvas.setPointerCapture(e.pointerId);});
@@ -48,5 +83,12 @@ canvas.addEventListener('pointermove',e=>{if(!drag||!active||!renderer)return;re
 canvas.addEventListener('pointerup',()=>{drag=null;});canvas.addEventListener('pointercancel',()=>{drag=null;});
 canvas.addEventListener('wheel',e=>{if(!active||!renderer)return;e.preventDefault();renderer.zoom=Math.max(.3,Math.min(3.8,renderer.zoom*(e.deltaY>0?.9:1.1)));renderer.draw();},{passive:false});
 window.addEventListener('resize',()=>{if(active)renderer?.draw();});
-$('surfaceSource').addEventListener('change',()=>{if(renderer?.meshes.length&&renderer.meshes[0].sourceId!==$('surfaceSource').value){$('surfaceSource').value=renderer.meshes[0].sourceId;status('Primero vaciá modelos para cambiar de espécimen; prohibida la superposición entre estudios.');}});
+$('surfaceSource').addEventListener('change',()=>{
+ if(renderer?.meshes.length&&renderer.meshes[0].sourceId!==$('surfaceSource').value){
+  $('surfaceSource').value=renderer.meshes[0].sourceId;
+  status('Primero vacia modelos para cambiar de especimen; no mezclar estudios distintos.');
+  return;
+ }
+ if(!renderer?.meshes.length)status($('surfaceSource').value==='spl-knee'?'Atlas SPL seleccionado. Ejecuta OBTENER_ATLAS_SPL.cmd y luego Importar superficies.':'Utiliza Importar superficies para elegir archivos STL/OBJ de un mismo estudio.');
+});
 uiRows();

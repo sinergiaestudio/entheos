@@ -31,7 +31,7 @@ foreach ($tryPort in 8765..8775) {
 }
 if (-not $listener) { Write-Error 'No se pudo abrir un puerto local entre 8765 y 8775.'; exit 1 }
 $address = "http://127.0.0.1:$port/"
-Write-Host 'ANATHEOS 3D - Demo Local v0.4' -ForegroundColor Red
+Write-Host 'ANATHEOS 3D - Demo Local v0.5.1' -ForegroundColor Red
 Write-Host 'Servidor limitado a tu computadora (127.0.0.1).'
 Write-Host "Abrir: $address" -ForegroundColor White
 Write-Host 'Para detener: Ctrl+C o cerrar esta ventana.'

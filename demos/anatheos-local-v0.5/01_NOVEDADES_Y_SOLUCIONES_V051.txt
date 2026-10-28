@@ -1,0 +1,8 @@
+ANATHEOS 3D v0.5.1 - Windows: actualizacion correctiva.
+1) Integridad: verificador ASCII para PowerShell 5.1.
+2) Dos visores: Volumen 3D (RM) para Leeds; Superficies 3D (STL) para SPL.
+3) Al entrar en superficies se cierra el modo volumetrico de RM.
+4) Sin STL se muestra ayuda visible; los botones vacios quedan deshabilitados.
+5) Para ver huesos STL, ejecutar OBTENER_ATLAS_SPL.cmd (solo una vez),
+   elegir SPL Knee Atlas e importar femur-95.stl + tibia-96.stl.
+6) No mezclar la RM Leeds con la rodilla del SPL. No diagnostico.

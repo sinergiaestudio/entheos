@@ -142,7 +142,7 @@ export function makeContinuousMaskSTLs(mask,series,{soften=0.15}={}){
   ensure(triangles>0,'La máscara no produce superficie continua no degenerada');
   sceneTriangles+=triangles;
   view.setUint32(80,triangles,true);
-  results.push({label,name:'Región '+label+' · continua · MISMA RM · sin validar',
+  results.push({label,name:'Región '+label+' · continua · MISMA RM · SIN validar',
    buffer:buffer.slice(0,written),triangles,voxels:box.voxels,bounds,
    coordinateSystem:B62_COORDINATES,derivedFrom:'current-study-manual-labelmap',
    surfaceMethod:'marching-tetrahedra',soften,roiCells:field.cells});

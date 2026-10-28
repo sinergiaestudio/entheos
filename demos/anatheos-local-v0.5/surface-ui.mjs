@@ -98,7 +98,7 @@ window.addEventListener('anatheos:show-same-study-surfaces',event=>{
    if(model.triangles!==item.triangles)throw Error('Triángulos inconsistentes de máscara.');
    model.name=item.name;model.originalName='Región '+item.label+' (sin validar)';
    model.sourceId='dicom-derived';model.studyId=studyId;model.segVersion=segVersion;
-   model.coordinateSystem='LPS mm';model.provenance={kind:'same-study-manual',studyId,coordinateSystem:'LPS mm',validatedAnatomy:false,label:item.label,voxels:item.voxels};
+   model.coordinateSystem='LPS mm';model.surfaceMethod=item.surfaceMethod||'voxel-boundary';model.provenance={kind:'same-study-manual',studyId,coordinateSystem:'LPS mm',validatedAnatomy:false,label:item.label,voxels:item.voxels,method:model.surfaceMethod,soften:item.soften??0};
    return model;
   });
   if(prepared.reduce((sum,m)=>sum+m.triangles,0)>MAX_SCENE_TRIANGLES)throw Error('Escena excede el límite de triángulos.');
@@ -109,7 +109,7 @@ window.addEventListener('anatheos:show-same-study-surfaces',event=>{
   }
   renderer.selected=renderer.meshes[0];
   uiRows();showMode();
-  status('B6.1: '+prepared.length+' regiones derivadas de las máscaras MANUALES del mismo estudio DICOM. LPS mm; límites cúbicos de vóxel. Sin identificación anatómica ni registro Slicer.');
+  status('B6.2: '+prepared.length+' regiones derivadas de las máscaras MANUALES del mismo estudio DICOM. LPS mm · '+(prepared[0].surfaceMethod==='marching-tetrahedra'?'isosuperficie continua interpolada':'bordes cúbicos de vóxel')+'. Sin identificación anatómica, sin validación Slicer.');
  }catch(error){
   status('B6.1: '+error.message);
   event.preventDefault();

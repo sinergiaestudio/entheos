@@ -308,11 +308,11 @@ function switchModeButtons(){
  $('threeDButton').setAttribute('aria-pressed',String(is3d&&!mixed&&!triple));
  $('mixedButton').setAttribute('aria-pressed',String(mixed));$('tripleButton').setAttribute('aria-pressed',String(triple));
  $('twoDButton').setAttribute('aria-pressed',String(!is3d));
- $('scanCanvas').hidden=is3d&&!mixed;
+ $('scanCanvas').hidden=is3d&&!state.mixed;
  $('volumeCanvas').hidden=!is3d;
  $('volumeControls').hidden=!is3d;
  $('viewerOverlayActions').hidden=!is3d;
- $('sliceRange').disabled=(is3d&&!mixed)||!currentFrame();
+ $('sliceRange').disabled=(is3d&&!state.mixed)||!currentFrame();
  $('triptychTools').hidden=!triple;$('viewBadge').textContent=triple?'TRIPLE · MISMA SERIE · SOLO MÁSCARAS PROPIAS':mixed?'MIXTO · DICOM 2D + VOLUMEN REAL':is3d?'VOLUMEN REAL · GPU':'ORIGINAL · DICOM';
  $('viewerInfo').textContent=triple?'Corte editable, volumen de intensidades y superficies del mismo DICOM':mixed?'Izquierda: cortes DICOM · derecha: rotar volumen · rueda: zoom':is3d?'Arrastrar: rotar · rueda: acercar':'Ctrl + rueda: zoom · arrastrar: mover · rueda: cortes';
  $('orientationNote').textContent=is3d?'DICOM original · orientación radiológica pendiente de validar':'Orientación indicada por DICOM · lateralidad no validada en Slicer';

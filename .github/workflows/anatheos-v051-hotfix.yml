@@ -1,0 +1,99 @@
+name: ANATHEOS v0.5.1 · Windows hotfix + no-model UI
+on:
+  push:
+    branches:
+      - anatheos/issue-8n-v051-windows-ux-hotfix
+  pull_request:
+    paths:
+      - "demos/anatheos-local-v0.5/**"
+      - ".github/workflows/anatheos-v051-hotfix.yml"
+permissions:
+  contents: read
+jobs:
+  browser-and-zip:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Syntax, units, ASCII-only PowerShell verifier
+        working-directory: demos/anatheos-local-v0.5
+        run: |
+          set -euo pipefail
+          node --check surface-ui.mjs
+          node --check browser_v051_hotfix.mjs
+          node --test test_segmentation.mjs test_volume_core.mjs test_surfaces.mjs test_spl_provenance.mjs
+          if LC_ALL=C grep -n '[^ -~]' verificar_integridad.ps1; then echo 'Non-ASCII in verifier';exit 1;fi
+      - name: Browser regression for empty STL and 2D switching
+        run: |
+          set -euo pipefail
+          npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.56.1
+          ./node_modules/.bin/playwright install --only-shell chromium
+          (cd demos/anatheos-local-v0.5 && python3 -m http.server 8774 --bind 127.0.0.1) > /tmp/anatheos-v051.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          for i in $(seq 1 40); do if curl --silent --output /dev/null http://127.0.0.1:8774/;then break;fi;sleep 1;done
+          node demos/anatheos-local-v0.5/browser_v051_hotfix.mjs
+      - name: Create code-only staging artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=demos/anatheos-local-v0.5
+          stage=ANATHEOS_3D_v0.5.1_Windows_CODIGO
+          mkdir -p "build/$stage"
+          files=(
+            index.html style.css app.js volumetric.js segmentation.mjs
+            surface-core.mjs surface-renderer.mjs surface-ui.mjs spl-provenance.mjs
+            servidor_local.ps1 INICIAR_ANATHEOS.cmd
+            DETENER_ANATHEOS.cmd detener_anatheos.ps1
+            REINICIAR_ANATHEOS.cmd DIAGNOSTICO_ANATHEOS.cmd diagnostico_anatheos.ps1
+            OBTENER_ATLAS_SPL.cmd obtener_atlas_spl.ps1
+            ATRIBUCION_ATLAS_SPL.txt ATTRIBUTION_CC_BY_4.0.txt
+            GUIA_WINDOWS_B3.md PROTOCOLO_VALIDACION_SLICER_B3.md
+            validar_spl_en_slicer.py README.md ATLAS_SPL_PREFLIGHT.md
+            PREFLIGHT_DESS_SIN_IDENTIFICADORES.json
+            verificar_integridad.ps1 VERIFICAR_INTEGRIDAD.cmd 01_NOVEDADES_Y_SOLUCIONES_V051.txt
+          )
+          for file in "${files[@]}";do test -f "$root/$file";cp "$root/$file" "build/$stage/$file";done
+          if find build -type f | grep -Ei '\.(dcm|dicom|nrrd|nii|stl|obj|zip|png|jpg)$';then echo 'DATA INCLUDED';exit 1;fi
+          (cd build && zip -qr ANATHEOS_3D_v0.5.1_Windows_CODIGO.zip "$stage")
+          unzip -t build/ANATHEOS_3D_v0.5.1_Windows_CODIGO.zip | tail -1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: anatheos-v051-source-only-no-study
+          path: build/ANATHEOS_3D_v0.5.1_Windows_CODIGO.zip
+          retention-days: 14
+          if-no-files-found: error
+  windows-verifier:
+    runs-on: windows-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse verifier using native Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $ErrorActionPreference='Stop'
+          $src='demos/anatheos-local-v0.5/verificar_integridad.ps1'
+          $tokens=$null;$problems=$null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $src),[ref]$tokens,[ref]$problems)|Out-Null
+          if($problems.Count){throw "PowerShell parser failed: $($problems[0])"}
+          $temp=Join-Path $env:RUNNER_TEMP 'anatheos-verifier-test'
+          New-Item -ItemType Directory -Path $temp -Force|Out-Null
+          Copy-Item $src (Join-Path $temp 'verificar_integridad.ps1')
+          $lines=@()
+          for($i=1;$i -le 20;$i++){
+            $name="test$i.txt"; $path=Join-Path $temp $name
+            Set-Content -Path $path -Value "synthetic_$i" -Encoding Ascii
+            $h=(Get-FileHash $path -Algorithm SHA256).Hash.ToLowerInvariant()
+            $lines += "$h  $name"
+          }
+          [IO.File]::WriteAllLines((Join-Path $temp 'MANIFIESTO_SHA256_EDICION_COMPLETA.txt'),$lines)
+          & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File (Join-Path $temp 'verificar_integridad.ps1')
+          if($LASTEXITCODE -ne 0){throw 'Valid 20-file manifest was rejected'}
+          Set-Content -Path (Join-Path $temp 'test20.txt') -Value 'TAMPER' -Encoding Ascii
+          & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File (Join-Path $temp 'verificar_integridad.ps1')
+          if($LASTEXITCODE -ne 1){throw 'Tampered file was accepted'}
+          Write-Host 'PASS Windows PowerShell 5.1 verifier: 20 valid files accepted; modified file rejected'
+          $global:LASTEXITCODE=0

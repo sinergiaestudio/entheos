@@ -81,3 +81,9 @@ body.viewer-focus .worktop{padding:3px 1px}
 @media(max-width:700px){.surface-headers{display:none}.surface-row{grid-template-columns:2fr 34px 40px 80px 56px;padding:.5rem .3rem}.surface-select{font-size:.78rem}}
 
 #surfaceCanvas[hidden]{display:none!important}
+
+/* v0.5.1: explicit empty state for STL mode, no DICOM feature changes. */
+.surface-help-overlay{position:absolute;z-index:4;left:50%;top:49%;transform:translate(-50%,-50%);width:min(620px,89%);padding:24px 26px;background:#17232cf0;border:1px solid #617c89;border-radius:11px;color:#e8f2f7;box-shadow:0 16px 52px #0008;pointer-events:none;line-height:1.65;max-height:82%;overflow:auto}
+.surface-help-overlay strong{display:block;margin-bottom:10px;font-size:14px;color:#eff8fb}.surface-help-overlay p{font-size:12px;margin:9px 0}.surface-help-overlay code{font-size:11px;color:#8bd6ea;overflow-wrap:anywhere}
+.surface-help-overlay[hidden]{display:none!important}
+.surface-onboarding{padding:12px 16px;border-left:4px solid #3e8195;background:#eaf3f6;font-size:12px;line-height:1.7;margin:10px 0 2px}.surface-onboarding p{margin:5px 0 0}.surface-onboarding code{padding:1px 3px;background:#fff5;border-radius:3px}

@@ -15,7 +15,13 @@ function syncSurfaceUI(){
 }
 function resetSurfaceView(){if(!renderer)return;renderer.yaw=.5;renderer.pitch=.18;renderer.zoom=1.6;renderer.draw();}
 function showMode(){
- if($('viewerRoot').dataset.uxMode==='triple'){showTriptychGeometry();return;}
+ if($('viewerRoot').dataset.uxMode==='triple'){
+  const same=renderer?.meshes?.length&&renderer.meshes.every(m=>m.provenance?.kind==='same-study-manual');
+  if(same){showTriptychGeometry();return;}
+  // Explicit 'Superficies' action opens the independent viewer for external
+  // STL/SPL without presenting them as Leeds in the triple workspace.
+  $('twoDButton').click();
+ }
  // Exit previous volume mode so DICOM GPU controls cannot affect STL surfaces.
  if(!active)$('twoDButton').click();
  if(!renderer){try{renderer=new SurfaceRenderer($('surfaceCanvas'));}catch(e){status(e.message);return;}}

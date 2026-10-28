@@ -8,6 +8,10 @@ $files = @{
  '/app.js' = 'app.js'
  '/volumetric.js' = 'volumetric.js'
  '/segmentation.mjs' = 'segmentation.mjs'
+ '/surface-core.mjs' = 'surface-core.mjs'
+ '/surface-renderer.mjs' = 'surface-renderer.mjs'
+ '/surface-ui.mjs' = 'surface-ui.mjs'
+ '/spl-provenance.mjs' = 'spl-provenance.mjs'
  '/style.css' = 'style.css'
  '/datasets/RTKN0668_MR_DESS.zip' = 'datasets\RTKN0668_MR_DESS.zip'
 }

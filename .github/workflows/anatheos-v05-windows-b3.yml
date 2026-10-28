@@ -1,0 +1,112 @@
+name: ANATHEOS v0.5 B3 · portable Windows source + localhost smoke
+on:
+  push:
+    branches:
+      - anatheos/issue-8m-v05-windows-portable-slicer-protocol
+    paths:
+      - "demos/anatheos-local-v0.5/**"
+      - ".github/workflows/anatheos-v05-windows-b3.yml"
+  pull_request:
+    paths:
+      - "demos/anatheos-local-v0.5/**"
+      - ".github/workflows/anatheos-v05-windows-b3.yml"
+permissions:
+  contents: read
+jobs:
+  build-portable:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check JS, Python script syntax and preserved unit tests
+        working-directory: demos/anatheos-local-v0.5
+        run: |
+          set -euo pipefail
+          node --check surface-ui.mjs
+          node --check spl-provenance.mjs
+          node --check app.js
+          node --test test_segmentation.mjs test_volume_core.mjs test_surfaces.mjs test_spl_provenance.mjs
+          python3 -m py_compile validar_spl_en_slicer.py preflight_spl_real.py
+      - name: Build portable Windows ZIP with no clinical images or atlas data
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=demos/anatheos-local-v0.5
+          staging=ANATHEOS_3D_v0.5_Windows_Portable_B3
+          mkdir -p "build-b3/$staging"
+          files=(
+            index.html style.css app.js volumetric.js segmentation.mjs
+            surface-core.mjs surface-renderer.mjs surface-ui.mjs spl-provenance.mjs
+            servidor_local.ps1 INICIAR_ANATHEOS.cmd
+            DETENER_ANATHEOS.cmd detener_anatheos.ps1
+            REINICIAR_ANATHEOS.cmd DIAGNOSTICO_ANATHEOS.cmd diagnostico_anatheos.ps1
+            OBTENER_ATLAS_SPL.cmd obtener_atlas_spl.ps1
+            ATRIBUCION_ATLAS_SPL.txt ATTRIBUTION_CC_BY_4.0.txt
+            GUIA_WINDOWS_B3.md PROTOCOLO_VALIDACION_SLICER_B3.md
+            validar_spl_en_slicer.py README.md ATLAS_SPL_PREFLIGHT.md
+            PREFLIGHT_DESS_SIN_IDENTIFICADORES.json
+          )
+          for file in "${files[@]}"; do
+            test -f "$root/$file"
+            cp "$root/$file" "build-b3/$staging/$file"
+          done
+          if find build-b3 -type f | grep -Ei '\.(dcm|dicom|nii|nrrd|stl|obj|zip|png|jpg)$'; then
+            echo "Forbidden medical or image content detected";exit 1
+          fi
+          (
+            cd "build-b3/$staging"
+            find . -maxdepth 1 -type f ! -name ARCHIVOS_SHA256_B3.txt -print0 | sort -z | xargs -0 sha256sum > ARCHIVOS_SHA256_B3.txt
+          )
+          (cd build-b3 && zip -q -r ANATHEOS_3D_v0.5_Windows_Portable_B3.zip "$staging")
+          sha256sum build-b3/ANATHEOS_3D_v0.5_Windows_Portable_B3.zip
+          unzip -t build-b3/ANATHEOS_3D_v0.5_Windows_Portable_B3.zip | tail -1
+          echo 'PASS ZIP is source-only, all declared files present, integrity manifest included'
+      - name: Upload only portable source ZIP (no data)
+        uses: actions/upload-artifact@v4
+        with:
+          name: anatheos-v05-b3-windows-portable-source-no-study
+          path: build-b3/ANATHEOS_3D_v0.5_Windows_Portable_B3.zip
+          if-no-files-found: error
+          retention-days: 14
+  windows-smoke:
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate PowerShell 5.1 scripts and test localhost HTTP without external connections
+        shell: powershell
+        working-directory: demos/anatheos-local-v0.5
+        run: |
+          $ErrorActionPreference='Stop'
+          $root=(Get-Location).Path
+          foreach($file in @(Get-ChildItem -Filter '*.ps1')){
+            $tokens=$null;$problems=$null
+            [System.Management.Automation.Language.Parser]::ParseFile($file.FullName,[ref]$tokens,[ref]$problems)|Out-Null
+            if($problems -and $problems.Count){throw "Invalid PS syntax in $($file.Name): $($problems[0])"}
+          }
+          $p=Start-Process powershell.exe -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',('"' + (Join-Path $root 'servidor_local.ps1') + '"')) -PassThru -WindowStyle Hidden
+          try {
+            $ready=$false;$port=0
+            for($attempt=0;$attempt -lt 45;$attempt++){
+              foreach($candidate in 8765..8775){
+                try{
+                  $r=Invoke-WebRequest -Uri "http://127.0.0.1:$candidate/index.html" -UseBasicParsing -TimeoutSec 1
+                  if($r.StatusCode -eq 200 -and $r.Content -match 'ANATHEOS'){$ready=$true;$port=$candidate;break}
+                }catch{}
+              }
+              if($ready){break}
+              Start-Sleep -Milliseconds 300
+            }
+            if(-not $ready){throw 'Windows server did not respond on loopback'}
+            foreach($file in @('index.html','style.css','app.js','volumetric.js','segmentation.mjs','surface-core.mjs','surface-renderer.mjs','surface-ui.mjs','spl-provenance.mjs')){
+              $r=Invoke-WebRequest -Uri "http://127.0.0.1:$port/$file" -UseBasicParsing -TimeoutSec 10
+              if($r.StatusCode -ne 200 -or $r.RawContentLength -eq 0){throw "Failed HTTP module $file"}
+            }
+            $denied=$false
+            try{Invoke-WebRequest -Uri "http://127.0.0.1:$port/ATLAS_SPL/femur-95.stl" -UseBasicParsing -TimeoutSec 3|Out-Null}catch{if([int]$_.Exception.Response.StatusCode -eq 404){$denied=$true}}
+            if(-not $denied){throw 'Atlas private file unexpectedly served'}
+            Write-Host "PASS Windows PowerShell 5.1: 9 modules served, 1 prohibited atlas asset denied, bound to 127.0.0.1:$port"
+          }finally{Stop-Process -Id $p.Id -ErrorAction SilentlyContinue}

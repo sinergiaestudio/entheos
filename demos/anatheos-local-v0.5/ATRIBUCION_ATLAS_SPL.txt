@@ -1,0 +1,11 @@
+SPL Knee Atlas — uso académico local · Research-only / Non diagnostic
+Fuente: https://github.com/lorensen/SPLKneeAtlas (commit a033300264aec8625a56512be3865c10cdbcb61b)
+Pagina oficial: https://www.openanatomy.org/atlas-pages/atlas-spl-knee.html
+Autores/fuente: Jennifer Richolt, Marianna Jakab, Ron Kikinis;
+Surgical Planning Laboratory (SPL), Brigham and Women's Hospital / Harvard Medical School.
+Licencia aplicable al atlas: 3D Slicer License, Part B.
+Términos íntegros en: https://www.openanatomy.org/atlas-pages/slicer-license.html
+
+Los modelos se descargan por separado sin transformaciones y se mantienen
+en ATLAS_SPL (no se incluyen ni redistribuyen en este ZIP de código).
+ANATHEOS no declara diagnóstico ni validación clínica de esos modelos.

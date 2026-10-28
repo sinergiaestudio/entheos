@@ -5,7 +5,7 @@ const base='http://127.0.0.1:8774/';
 const synthetic=await readFile('/tmp/anatheos-uxn2-test.zip');
 const browser=await chromium.launch({headless:true,args:['--enable-webgl','--use-gl=angle','--use-angle=swiftshader','--no-sandbox']});
 try{
- const page=await browser.newPage({viewport:{width:1280,height:820}});
+ const page=await browser.newPage({viewport:{width:800,height:650}});
  const errors=[],external=[];
  page.on('pageerror',e=>errors.push(e.message));
  page.on('request',r=>{if(!r.url().startsWith(base))external.push(r.url())});
@@ -21,6 +21,8 @@ try{
  await page.waitForFunction(()=>document.querySelector('#volumeStatus')?.textContent.includes('Volumen 32') && !document.querySelector('#volumeCanvas').hidden,null,{timeout:60000});
  assert.equal(await page.locator('#uxRenderMaterials').isVisible(),true);
  assert.equal(await page.locator('#volumeStyle').inputValue(),'original');
+ await page.locator('#volumeQuality').evaluate(el=>{el.value='60';el.dispatchEvent(new Event('input',{bubbles:true}))});
+ assert.equal(await page.locator('#volumeQuality').inputValue(),'60');
  const fingerprint=()=>page.locator('#volumeCanvas').evaluate(c=>c.toDataURL('image/png'));
  const gray=await fingerprint();
  assert(gray.length>2000,'Expected nonempty volume image');

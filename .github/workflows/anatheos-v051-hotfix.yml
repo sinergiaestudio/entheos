@@ -96,3 +96,4 @@ jobs:
           & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File (Join-Path $temp 'verificar_integridad.ps1')
           if($LASTEXITCODE -ne 1){throw 'Tampered file was accepted'}
           Write-Host 'PASS Windows PowerShell 5.1 verifier: 20 valid files accepted; modified file rejected'
+          $global:LASTEXITCODE=0

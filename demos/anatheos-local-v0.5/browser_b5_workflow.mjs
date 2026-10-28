@@ -22,6 +22,7 @@ try {
  assert.equal(await page.locator('#surfacePanel').isVisible(),true);
  assert.equal(await page.locator('#surfaceHelpOverlay').isVisible(),true);
  assert.match(await page.locator('#b5SourceNote').innerText(),/STL\/OBJ externo/);
+ await page.locator('#surfaceManual summary').click();
  await page.locator('#surfaceSource').selectOption('spl-knee');
  await page.waitForFunction(()=>document.querySelector('#b5SourceNote')?.textContent.includes('OTRO especimen'));
  assert.match(await page.locator('#b5SourceNote').innerText(),/OTRO especimen/);

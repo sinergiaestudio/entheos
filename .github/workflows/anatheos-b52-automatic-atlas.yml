@@ -1,0 +1,128 @@
+name: ANATHEOS B5.2 · one-click verified local SPL atlas
+on:
+  push:
+    branches:
+      - anatheos/issue-8q-v06-b52-automatic-atlas
+  pull_request:
+    paths:
+      - "demos/anatheos-local-v0.5/**"
+      - ".github/workflows/anatheos-b52-automatic-atlas.yml"
+permissions:
+  contents: read
+jobs:
+  chromium-original-public-atlas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 22
+    env:
+      SPL_ATLAS_TMP_DIR: /tmp/anatheos-b52-spl
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Unit tests, JS syntax, preserve original DICOM engines
+        working-directory: demos/anatheos-local-v0.5
+        run: |
+          set -euo pipefail
+          for f in app.js volumetric.js segmentation.mjs surface-core.mjs surface-renderer.mjs surface-ui.mjs spl-provenance.mjs workflow-b5.mjs browser_b52_atlas.mjs;do node --check "$f";done
+          node --test test_segmentation.mjs test_volume_core.mjs test_surfaces.mjs test_spl_provenance.mjs
+      - name: Package complete source-only code — never distribute original atlas or DICOM
+        run: |
+          set -euo pipefail
+          root=demos/anatheos-local-v0.5
+          stage=ANATHEOS_3D_v0.6_B5_2_CODIGO
+          mkdir -p "build/$stage"
+          files=(
+            index.html style.css app.js volumetric.js segmentation.mjs
+            surface-core.mjs surface-renderer.mjs surface-ui.mjs spl-provenance.mjs workflow-b5.mjs
+            servidor_local.ps1 INICIAR_ANATHEOS.cmd
+            DETENER_ANATHEOS.cmd detener_anatheos.ps1
+            REINICIAR_ANATHEOS.cmd DIAGNOSTICO_ANATHEOS.cmd diagnostico_anatheos.ps1
+            OBTENER_ATLAS_SPL.cmd obtener_atlas_spl.ps1
+            ATRIBUCION_ATLAS_SPL.txt ATTRIBUTION_CC_BY_4.0.txt
+            GUIA_WINDOWS_B3.md PROTOCOLO_VALIDACION_SLICER_B3.md
+            validar_spl_en_slicer.py README.md ATLAS_SPL_PREFLIGHT.md
+            PREFLIGHT_DESS_SIN_IDENTIFICADORES.json
+            verificar_integridad.ps1 VERIFICAR_INTEGRIDAD.cmd 01_NOVEDADES_Y_SOLUCIONES_V051.txt
+          )
+          for file in "${files[@]}";do test -f "$root/$file";cp "$root/$file" "build/$stage/$file";done
+          if find build -type f | grep -Ei '\.(dcm|dicom|nrrd|nii|stl|obj|zip|png|jpg)$';then echo 'Data prohibited';exit 1;fi
+          (cd build && zip -qr ANATHEOS_3D_v0.6_B5_2_CODIGO.zip "$stage")
+          unzip -t build/ANATHEOS_3D_v0.6_B5_2_CODIGO.zip | tail -1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: anatheos-b52-source-only-no-imaging
+          path: build/ANATHEOS_3D_v0.6_B5_2_CODIGO.zip
+          retention-days: 14
+          if-no-files-found: error
+      - name: Obtain original public SPL STL ONLY in disposable CI folder
+        run: |
+          set -euo pipefail
+          mkdir -p "$SPL_ATLAS_TMP_DIR"
+          base=https://raw.githubusercontent.com/lorensen/SPLKneeAtlas/a033300264aec8625a56512be3865c10cdbcb61b/Models/STL
+          curl --fail --location --retry 3 --silent --show-error "$base/femur-95.stl" -o "$SPL_ATLAS_TMP_DIR/femur-95.stl"
+          curl --fail --location --retry 3 --silent --show-error "$base/tibia-96.stl" -o "$SPL_ATLAS_TMP_DIR/tibia-96.stl"
+          echo "f14b53539fe5dba8cc3488f172e651f729e35b9b1f49eb7f695586c61d39b277  $SPL_ATLAS_TMP_DIR/femur-95.stl" | sha256sum --check -
+          echo "4b74bcbfb8b344e157253471d97ab07426a72162586d7b5011ae57aeb2acc055  $SPL_ATLAS_TMP_DIR/tibia-96.stl" | sha256sum --check -
+      - name: Chromium test of automatic one-click atlas, and previous manual/B5 regression
+        run: |
+          set -euo pipefail
+          npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.56.1
+          ./node_modules/.bin/playwright install --only-shell chromium
+          (cd demos/anatheos-local-v0.5 && python3 -m http.server 8774 --bind 127.0.0.1) >/tmp/anatheos-b52.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          for i in $(seq 1 40); do if curl --silent --output /dev/null http://127.0.0.1:8774/;then break;fi;sleep 1;done
+          timeout 240s node demos/anatheos-local-v0.5/browser_b52_atlas.mjs
+      - name: Remove public reference atlas from disposable runner
+        if: always()
+        run: rm -rf "$SPL_ATLAS_TMP_DIR"
+  windows-loopback-atlas:
+    runs-on: windows-latest
+    timeout-minutes: 24
+    steps:
+      - uses: actions/checkout@v4
+      - name: Native Windows PowerShell 5.1 — disallow cross-origin POST then prepare authentic atlas
+        shell: powershell
+        working-directory: demos/anatheos-local-v0.5
+        run: |
+          $ErrorActionPreference='Stop'
+          $root=(Get-Location).Path
+          $tokens=$null;$problems=$null
+          [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $root 'servidor_local.ps1'),[ref]$tokens,[ref]$problems)|Out-Null
+          if($problems.Count){throw "Invalid Windows server script: $($problems[0])"}
+          $p=Start-Process powershell.exe -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',('"' + (Join-Path $root 'servidor_local.ps1') + '"')) -PassThru -WindowStyle Hidden
+          try {
+            $ready=$false;$port=0
+            for($i=0;$i -lt 50;$i++){
+             foreach($candidate in 8765..8775){
+              try {
+               $r=Invoke-WebRequest -Uri "http://127.0.0.1:$candidate/api/spl/status" -UseBasicParsing -TimeoutSec 2
+               if($r.StatusCode -eq 200 -and $r.Content -match '"ready":false'){$ready=$true;$port=$candidate;break}
+              }catch{}
+             }
+             if($ready){break}
+             Start-Sleep -Milliseconds 250
+            }
+            if(-not $ready){throw 'B5.2 server failed to expose safe status endpoint'}
+            $api="http://127.0.0.1:$port/api/spl/prepare"
+            $rejected=$false
+            try {
+             Invoke-WebRequest -Uri $api -UseBasicParsing -Method POST -ContentType application/json -Body '{}' -Headers @{Origin='https://untrusted.invalid'} -TimeoutSec 8 | Out-Null
+            }catch{
+             if($_.Exception.Response -and [int]$_.Exception.Response.StatusCode -eq 403){$rejected=$true}
+            }
+            if(-not $rejected){throw 'CSRF test: foreign Origin was not rejected'}
+            $result=Invoke-WebRequest -Uri $api -UseBasicParsing -Method POST -ContentType application/json -Body '{}' -Headers @{Origin="http://127.0.0.1:$port"} -TimeoutSec 360
+            if($result.StatusCode -ne 200 -or $result.Content -notmatch '"ok":true'){throw 'Verified one-click download unsuccessful'}
+            $status=Invoke-WebRequest -Uri "http://127.0.0.1:$port/api/spl/status" -UseBasicParsing -TimeoutSec 40
+            if($status.Content -notmatch '"ready":true'){throw 'Atlas status did not become ready'}
+            foreach($name in @('femur-95.stl','tibia-96.stl')){
+              $r=Invoke-WebRequest -Uri "http://127.0.0.1:$port/atlas/$name" -Method Head -UseBasicParsing -TimeoutSec 40
+              if($r.StatusCode -ne 200){throw "Original atlas asset not locally available: $name"}
+            }
+            Write-Host 'PASS B5.2 Windows: cross-site denied, explicit local POST retrieves originals, SHA checks, two STL routes and status'
+          }finally{
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            Remove-Item -LiteralPath (Join-Path $root 'ATLAS_SPL') -Recurse -Force -ErrorAction SilentlyContinue
+          }

@@ -29,6 +29,7 @@ try{
  assert.equal(await page.locator('#surfaceHelpOverlay').isVisible(),false);
  assert.equal(await page.locator('#surfaceAll').isEnabled(),true);
  assert.equal(await page.locator('#surfaceClear').isEnabled(),true);
+ await page.locator('#surfaceManual summary').click();
  await page.locator('#surfaceClear').click();
  assert.equal(await page.locator('#surfaceHelpOverlay').isVisible(),true);
  assert.equal(await page.locator('#surfaceAll').isEnabled(),false);

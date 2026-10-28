@@ -1,11 +1,11 @@
 import {loadSurface,MAX_SCENE_TRIANGLES} from './surface-core.mjs';
 import {SurfaceRenderer} from './surface-renderer.mjs';
-import {verifyOriginalSPLMesh} from './spl-provenance.mjs';
+import {verifyOriginalSPLMesh,SPL_MESH_MANIFEST} from './spl-provenance.mjs';
 const $=id=>document.getElementById(id);
 const colorFor=['#d6e9f5','#f3c77d','#e59ca1','#78c6c9','#b0a9e2'];
 let renderer=null,active=false,drag=null,modelCounter=0;
 function status(message){$('surfaceStatus').textContent=message;}
-const emptyHint='No hay mallas: ejecuta OBTENER_ATLAS_SPL.cmd fuera de la app, elige SPL Knee Atlas e importa femur-95.stl y tibia-96.stl desde ATLAS_SPL. La RM Leeds es otro especimen.';
+const emptyHint='Sin mallas: presiona Preparar y ver atlas SPL. Se descargan una sola vez las superficies publicas verificadas y se abren aqui. La RM Leeds es otro especimen.';
 function syncSurfaceUI(){
  const ready=Boolean(renderer?.meshes.length);
  $('surfaceAll').disabled=!ready;
@@ -70,6 +70,64 @@ async function loadMeshes(files){if(!files.length)return;if(!renderer){try{rende
  }
  if(loaded){renderer.selected=renderer.meshes.at(-1);uiRows();showMode();status(authenticated===loaded?`${authenticated} estructura(s) SPL comprobadas por SHA-256. Coordenadas RAS y cotas físicas coherentes con el mapa LPS (error máximo inferior a 0,71 mm); falta registro formal 3D Slicer. No superponer a Leeds.`:`${loaded} estructura(s) importadas sin procedencia anatómica comprobada. Sin registro espacial con DICOM.`);}
 }
+// Explicit user action, no background network downloads. Only fixed localhost API paths.
+const atlasButton=$('surfaceAutoSPL');
+const atlasStatus=$('surfaceAutoSPLStatus');
+const atlasNames=['femur-95.stl','tibia-96.stl'];
+let preparing=false;
+async function loadAtlasAutomatically(){
+ if(preparing)return;
+ if(renderer?.meshes.length){
+  atlasStatus.textContent='Primero usa Vaciar modelos si hay otra escena abierta: no mezclamos estudios ni reemplazamos trabajo sin permiso.';
+  $('surfaceManual').open=true;
+  return;
+ }
+ preparing=true;atlasButton.disabled=true;
+ atlasButton.textContent='Preparando atlas SPL…';
+ try{
+  atlasStatus.textContent='Descargando solo los archivos publicos del atlas, con comprobacion SHA-256 en tu computadora…';
+  const prepared=await fetch('/api/spl/prepare',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}',cache:'no-store'});
+  let result;
+  try{result=await prepared.json();}catch{throw Error('Tu servidor local no admite B5.2. Abre esta version con INICIAR_ANATHEOS.cmd y reinicia el servidor.');}
+  if(!prepared.ok||result?.ok!==true)throw Error(result?.message||'El atlas no pudo prepararse');
+  // Read both files and verify them BEFORE adding any mesh to the scene.
+  const files=[];
+  for(const name of atlasNames){
+   atlasStatus.textContent='Verificando '+name+' dentro de ANATHEOS…';
+   const response=await fetch('/atlas/'+name,{cache:'no-store'});
+   if(!response.ok)throw Error('Falta o no coincide el archivo original '+name);
+   const data=await response.arrayBuffer();
+   const expected=SPL_MESH_MANIFEST[name];
+   const verified=await verifyOriginalSPLMesh(name,data,expected.triangles);
+   if(!verified)throw Error('Integridad SHA-256 invalida: '+name);
+   files.push(new File([data],name,{type:'application/octet-stream'}));
+  }
+  $('surfaceSource').value='spl-knee';
+  $('surfaceSource').dispatchEvent(new Event('change',{bubbles:true}));
+  await loadMeshes(files);
+  if(renderer?.meshes.length!==2)throw Error('No se pudieron representar las dos superficies originales');
+  atlasButton.textContent='Atlas SPL listo · volver a mostrar';
+  atlasStatus.textContent='Fémur y tibia originales SPL verificados. Capas independientes; NO corresponden a los cortes de Leeds. Disponible sin Internet en proximas aperturas.';
+ }catch(error){
+  atlasStatus.textContent='No completado: '+error.message+'. Podes revisar la conexion inicial o abrir las opciones manuales.';
+  atlasButton.textContent='Reintentar preparar atlas SPL';
+  status('No se importaron modelos SPL: '+error.message);
+ }finally{preparing=false;atlasButton.disabled=false;}
+}
+atlasButton.addEventListener('click',loadAtlasAutomatically);
+async function checkAtlasCached(){
+ try{
+  const response=await fetch('/api/spl/status',{cache:'no-store'});
+  if(!response.ok)return;
+  const value=await response.json();
+  if(value.ready) {
+   atlasButton.textContent='Abrir atlas SPL guardado';
+   atlasStatus.textContent='Atlas autentico ya descargado y verificado en esta computadora. Abri con un clic; sin nueva descarga.';
+  }
+ }catch{ /* Old server or offline manual mode: button provides a useful error. */ }
+}
+void checkAtlasCached();
+
 $('surfaceFile').addEventListener('change',async e=>{await loadMeshes([...e.target.files]);e.target.value='';});
 $('surfaceOpen').addEventListener('click',()=>$('surfaceFile').click());
 $('surfaceButton').addEventListener('click',showMode);
@@ -89,6 +147,6 @@ $('surfaceSource').addEventListener('change',()=>{
   status('Primero vacia modelos para cambiar de especimen; no mezclar estudios distintos.');
   return;
  }
- if(!renderer?.meshes.length)status($('surfaceSource').value==='spl-knee'?'Atlas SPL seleccionado. Ejecuta OBTENER_ATLAS_SPL.cmd y luego Importar superficies.':'Utiliza Importar superficies para elegir archivos STL/OBJ de un mismo estudio.');
+ if(!renderer?.meshes.length)status($('surfaceSource').value==='spl-knee'?'Atlas SPL seleccionado. Podes usar Preparar y ver atlas SPL en la vista principal.':'Podes importar manualmente archivos STL/OBJ de un mismo estudio.');
 });
 uiRows();

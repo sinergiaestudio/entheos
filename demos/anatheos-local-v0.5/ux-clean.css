@@ -113,3 +113,11 @@ body.ux-streamlined :focus-visible{outline:2px solid #75c8d8!important;outline-o
 @media(prefers-reduced-motion:reduce){
  body.ux-streamlined .ux-clean-disclosure>summary{transition:none}
 }
+
+/* Expanded viewer must override the compact three-column grid, or 3D canvas
+ * shrinks to one-third in focus mode. Preserve native fullscreen aspect. */
+body.ux-streamlined.viewer-focus .layout{grid-template-columns:minmax(0,1fr)!important}
+body.ux-streamlined.viewer-focus .workspace{grid-column:1;grid-row:1;max-width:100%;padding:7px 12px 15px}
+body.ux-streamlined.viewer-focus .viewer{height:calc(100dvh - 150px);min-height:430px}
+body.ux-streamlined.viewer-focus .sidebar,body.ux-streamlined.viewer-focus .ux-layers{display:none!important}
+@media(max-width:650px){body.ux-streamlined.viewer-focus .viewer{height:calc(100dvh - 177px)}}

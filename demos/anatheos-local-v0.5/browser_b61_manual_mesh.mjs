@@ -18,9 +18,9 @@ try{
  await page.locator('#b5AdvancedToggle').click();
  await page.locator('#segEdit').check();
  const canvas=page.locator('#scanCanvas');
- const rect=await canvas.boundingBox();
- await page.mouse.move(rect.x+rect.width/2,rect.y+rect.height/2);
- await page.mouse.down();await page.mouse.up();
+ // Playwright scrolls the viewer back into view after the advanced editor checkbox.
+ // Direct absolute mouse coords would target offscreen pixels when workspace scrolls.
+ await canvas.click({position:{x:(await canvas.boundingBox()).width/2,y:(await canvas.boundingBox()).height/2}});
  await page.waitForFunction(()=>!document.querySelector('#segBuildSurface').disabled);
  await page.locator('#segEdit').uncheck();
  await page.locator('#segBuildSurface').click();
@@ -37,9 +37,7 @@ try{
  // Any DICOM change clears derived meshes instead of showing outdated anatomy.
  await page.locator('#twoDButton').click();
  await page.locator('#segEdit').check();
- const rect2=await canvas.boundingBox();
- await page.mouse.move(rect2.x+rect2.width*.6,rect2.y+rect2.height*.6);
- await page.mouse.down();await page.mouse.up();
+ await canvas.click({position:{x:(await canvas.boundingBox()).width*.6,y:(await canvas.boundingBox()).height*.6}});
  await page.waitForFunction(()=>document.querySelector('#surfaceLayers').dataset.origin==='external');
  assert.equal(await page.locator('#surfaceLayers .surface-row').count(),0);
  assert.deepEqual(errors,[]);

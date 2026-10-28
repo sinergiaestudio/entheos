@@ -1,11 +1,11 @@
 # Diagnostico sin red ni envio de informacion.
 $ErrorActionPreference='Continue'
 $root=Split-Path -Parent $MyInvocation.MyCommand.Path
-Write-Host 'ANATHEOS 3D v0.5 - Diagnostico local' -ForegroundColor Cyan
+Write-Host 'ANATHEOS 3D v0.8 B7.1 - Diagnostico integral del cargador' -ForegroundColor Cyan
 Write-Host "Ruta: $root"
 Write-Host "PowerShell: $($PSVersionTable.PSVersion)"
 Write-Host "Windows: $([Environment]::OSVersion.VersionString)"
-$required=@('index.html','style.css','app.js','volumetric.js','segmentation.mjs','surface-core.mjs','surface-renderer.mjs','surface-ui.mjs','spl-provenance.mjs','servidor_local.ps1')
+$required=@('index.html','style.css','app.js','volumetric.js','segmentation.mjs','surface-core.mjs','surface-renderer.mjs','surface-ui.mjs','spl-provenance.mjs','mask-to-surface.mjs','continuous-mask-surface.mjs','assisted-segmentation-3d.mjs','workflow-b5.mjs','ux-n1.mjs','ux-shell.css','datasets\RTKN0668_MR_DESS.zip','verificar_modulos_locales.ps1','servidor_local.ps1')
 $missing=@()
 foreach($file in $required){
  $p=Join-Path $root $file
@@ -32,6 +32,13 @@ foreach($port in 8765..8775){
  if($a.AsyncWaitHandle.WaitOne(150,$false) -and $c.Connected){Write-Host "[PUERTO OCUPADO] 127.0.0.1:$port";$c.Close()}
  else{$c.Close()}
  }catch{}
+}
+# Validate all local JS imports against PowerShell's exact static allowlist.
+try {
+ & (Join-Path $root 'verificar_modulos_locales.ps1') -Root $root
+} catch {
+ Write-Host "[ERROR] Dependencias: $($_.Exception.Message)" -ForegroundColor Red
+ $missing+= 'Dependencias JavaScript'
 }
 if($missing.Count){Write-Host "Faltan $($missing.Count) archivos necesarios. Extrae el ZIP completo." -ForegroundColor Red;exit 1}
 Write-Host 'Servidor local disponible sin aplicaciones ni APIs externas. No hay ninguna subida automatica de DICOM.'

@@ -193,3 +193,10 @@ body[data-b5-view="mixed"] #volumeControls:not([hidden]){display:flex!important}
 .b6-same-study button{width:max-content;max-width:100%;padding:10px 14px;background:#276e7c;border:1px solid #4c909d;color:white;font-weight:600;border-radius:8px}
 .b6-same-study button:disabled{background:#22353c;border-color:#405057;color:#91a5ad;cursor:not-allowed}
 #segMeshStatus{font-size:11px;color:#bdcdd5;line-height:1.6}
+
+/* B6.2: transparency over process controls, preserve compact dark UX-001. */
+.b6-same-study label{font-size:11px;color:#e5eef2;display:flex;flex-direction:column;gap:8px}
+.b6-same-study label output{color:#7dc6d4}
+.b6-same-study select{background:#1a2a31;color:#e9f4f6;padding:9px 10px;border:1px solid #3e6370;border-radius:7px}
+.b6-same-study input[type=range]{width:100%;accent-color:#57a5b2}
+.b6-same-study small{font-size:11px;color:#bacad0;line-height:1.6}

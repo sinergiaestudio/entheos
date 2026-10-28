@@ -1,6 +1,7 @@
 import { inspectVolumeGeometry, prepareVolumeTexture, VolumeRenderer } from './volumetric.js';
 import { createMask, paintDisk, growRegion2D, eraseRegion, countRegions, toNrrd, fromNrrd, REGION_COLORS } from './segmentation.mjs';
 import {makeMaskSurfaceSTLs} from './mask-to-surface.mjs';
+import {makeContinuousMaskSTLs} from './continuous-mask-surface.mjs';
 /* ANATHEOS Demo Local v0.1 — native uncompressed DICOM browser viewer.
  * Operates only on File/Blob bytes provided by the user or localhost package.
  * No remote API or data telemetry. Experimental; not medical/diagnostic.
@@ -479,6 +480,16 @@ $('segFile').onchange=async e=>{
   $('segStatus').textContent='Máscara NRRD recuperada; dimensiones y geometría verificadas.';
  }catch(err){$('segStatus').textContent='Máscara rechazada: '+(err.message||'archivo inválido');}
 };
+$('segMeshMethod').addEventListener('change',()=>{
+ const continuous=$('segMeshMethod').value==='continuous';
+ $('segMeshSoftness').disabled=!continuous;
+ $('segMeshMethodNote').textContent=continuous
+  ?'Isosuperficie de máscara del MISMO estudio; interpolación geométrica conservadora, SIN segmentación automática. Puede modificar detalles finos.'
+  :'B6.1: bordes rectangulares exactos de vóxeles; no interpola geometría.';
+});
+$('segMeshSoftness').addEventListener('input',()=>{
+ $('segMeshSoftnessValue').textContent=$('segMeshSoftness').value+'%';
+});
 $('segBuildSurface').addEventListener('click',async()=>{
  if(!state.current||!state.segMask||!state.segCount.slice(1).some(Boolean)){
   $('segMeshStatus').textContent='Sin regiones pintadas ni NRRD válida para el estudio actual.';return;
@@ -487,13 +498,16 @@ $('segBuildSurface').addEventListener('click',async()=>{
  $('segMeshStatus').textContent='Comprobando geometría DICOM y construyendo superficies físicas LPS…';
  await yieldUI();
  try{
-  const meshes=makeMaskSurfaceSTLs(state.segMask,state.current);
+  const method=$('segMeshMethod').value;
+  const meshes=method==='continuous'
+   ?makeContinuousMaskSTLs(state.segMask,state.current,{soften:Number($('segMeshSoftness').value)/100})
+   :makeMaskSurfaceSTLs(state.segMask,state.current);
   const id=(state.current.uid||'serie-sin-uid')+'|'+state.loadGeneration;
   const accepted=window.dispatchEvent(new CustomEvent('anatheos:show-same-study-surfaces',{
    detail:{meshes,studyId:id,segVersion:state.segVersion},cancelable:true
   }));
   if(!accepted)throw Error('El visor de superficies rechazó el cambio; revisá la escena existente.');
-  $('segMeshStatus').textContent=meshes.length+' regiones manuales derivadas de la MISMA serie; '+meshes.reduce((n,m)=>n+m.triangles,0).toLocaleString('es-AR')+' triángulos LPS mm. Sin anatomía identificada.';
+  $('segMeshStatus').textContent=meshes.length+' regiones de la MISMA serie · '+(method==='continuous'?'isosuperficie continua B6.2':'voxel B6.1')+' · '+meshes.reduce((n,m)=>n+m.triangles,0).toLocaleString('es-AR')+' triángulos LPS mm. ANATOMÍA SIN validar.';
  }catch(e){$('segMeshStatus').textContent='No se generó superficie: '+e.message;}
  finally{$('segBuildSurface').disabled=!state.current||!state.segCount.slice(1).some(Boolean);}
 });

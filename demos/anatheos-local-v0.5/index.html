@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'">
-<title>ANATHEOS 3D · B6.1 · superficies de regiones manuales</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="ux-shell.css"></head>
+<title>ANATHEOS 3D · B6.2 · superficies continuas del mismo estudio</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="ux-shell.css"></head>
 <body>
 <header class="topbar"><div class="brand"><span class="logo">A<span>3</span></span><div><strong>ANATHEOS <em>3D</em></strong><small>UX-N3 · MATERIALIDAD DEL VOLUMEN · EXPERIMENTAL</small></div></div><div class="topright"><span class="dot"></span><span>100 % local · sin nube</span><span class="pill">NO DIAGNÓSTICO</span></div></header>
 <div class="layout" id="uxN1Layout">
@@ -62,9 +62,19 @@
  <label><input type="checkbox" id="segVisible2" checked><i style="background:#64d6e4"></i>Región 2 · sin validar <output id="segCount2">0 vóxeles</output></label>
  <label><input type="checkbox" id="segVisible3" checked><i style="background:#f7c66b"></i>Región 3 · sin validar <output id="segCount3">0 vóxeles</output></label></div>
  <div class="segBottom"><button id="segClearLayer" disabled>Vaciar región seleccionada</button><button id="segClearAll" disabled>Vaciar todas las marcas</button><span id="segStatus" role="status">Cargá la RM para editar máscaras de manera local.</span></div><div class="b6-same-study">
- <strong>B6.1 · Superficies de mis máscaras (mismo estudio)</strong>
- <p>Convertí regiones realmente pintadas o importadas como NRRD alineado en superficies 3D. Conservan las coordenadas físicas DICOM LPS en mm. <b>No identifica automáticamente fémur, tibia ni tejidos.</b> El acabado geométrico inicial sigue los límites de los vóxeles.</p>
- <button id="segBuildSurface" type="button" disabled>Visualizar mis regiones en 3D</button>
+ <strong>B6.2 · Geometría continua de mis máscaras (mismo estudio)</strong>
+ <p>Transformá las regiones realmente marcadas o importadas mediante NRRD del MISMO estudio en una malla continua físicamente posicionada. <b>No identifica automáticamente huesos ni tejidos.</b> La continuidad interpola los límites de la máscara; no añade resolución adquirida ni sustituye una segmentación validada.</p>
+ <label for="segMeshMethod">Método geométrico
+  <select id="segMeshMethod">
+   <option value="continuous" selected>Continua · isosuperficie B6.2</option>
+   <option value="voxel">Bloques · vóxeles originales B6.1</option>
+  </select>
+ </label>
+ <label for="segMeshSoftness">Suavizado conservador: <output id="segMeshSoftnessValue">15%</output>
+  <input id="segMeshSoftness" type="range" min="0" max="30" step="5" value="15">
+ </label>
+ <small id="segMeshMethodNote">Cada estructura mantiene la cuadrícula LPS en milímetros. Suavizado leve: puede modificar la forma visual, por lo que debe cotejarse con el volumen y la máscara originales.</small>
+ <button id="segBuildSurface" type="button" disabled>Generar superficies del mismo estudio</button>
  <span id="segMeshStatus" role="status" aria-live="polite">Primero creá una máscara manual o importá una NRRD del mismo estudio.</span>
  </div></div>
  <p class="segCaution">El área dibujada es una máscara exploratoria, NO una estructura reconocida automáticamente. Las regiones se visualizan sobre el corte 2D y en el volumen 3D sin cambiar los DICOM originales. El archivo NRRD exportado se puede revisar como mapa de etiquetas en 3D Slicer.</p>

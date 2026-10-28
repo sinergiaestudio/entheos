@@ -29,6 +29,7 @@ try{
  assert.equal(await page.locator('#volumeStyle').inputValue(),'amber');
  await page.locator('#tripleButton').click();
  await page.waitForFunction(()=>document.querySelector('#viewerRoot')?.dataset.uxMode==='triple');
+ await page.waitForFunction(()=>document.querySelector('#triptychNoMask')?.hidden===false||document.querySelector('#surfaceCanvas')?.hidden===false,null,{timeout:15000});
  for(const id of ['scanCanvas','volumeCanvas','triptychNoMask'])assert.equal(await page.locator('#'+id).isVisible(),true,id);
  const desktop=await page.evaluate(()=>{
   const r=id=>{const b=document.getElementById(id).getBoundingClientRect();return {x:b.x,y:b.y,w:b.width,h:b.height}};

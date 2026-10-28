@@ -13,6 +13,8 @@ $files = @{
  '/surface-ui.mjs' = 'surface-ui.mjs'
  '/spl-provenance.mjs' = 'spl-provenance.mjs'
  '/workflow-b5.mjs' = 'workflow-b5.mjs'
+ '/ux-n1.mjs' = 'ux-n1.mjs'
+ '/ux-shell.css' = 'ux-shell.css'
  '/style.css' = 'style.css'
  '/datasets/RTKN0668_MR_DESS.zip' = 'datasets\RTKN0668_MR_DESS.zip'
 }

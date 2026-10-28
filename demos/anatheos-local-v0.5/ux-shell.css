@@ -146,3 +146,31 @@ body.viewer-focus .workspace{padding:9px 18px}
 .viewerTools{justify-content:flex-start;gap:6px}
 .viewerTools button{white-space:nowrap}
 @media(max-width:650px){.worktop{gap:10px}}
+
+/* UX-N2 | genuine two-panel mixed DICOM / voxel-volume mode, same series.
+   No atlas overlay and no second GPU texture allocation when switching 3D<->mixed. */
+.viewer[data-ux-mode="mixed"]{isolation:isolate}
+.viewer[data-ux-mode="mixed"] #scanCanvas,
+.viewer[data-ux-mode="mixed"] #volumeCanvas{position:absolute!important;top:0!important;bottom:0!important;height:100%!important;width:50%!important;display:block;inset:auto!important;top:0!important;bottom:auto!important}
+.viewer[data-ux-mode="mixed"] #scanCanvas{left:0!important;right:auto!important;z-index:1;background:#121b22;border-right:1px solid #425362}
+.viewer[data-ux-mode="mixed"] #volumeCanvas{left:50%!important;right:0!important;z-index:2;border-left:1px solid #425362}
+.viewer[data-ux-mode="mixed"] #uxMixedLabel2d,
+.viewer[data-ux-mode="mixed"] #uxMixedLabel3d{display:block!important}
+.viewer .ux-mixed-label[hidden]{display:none!important}
+.ux-mixed-label{display:none;position:absolute;top:14px;z-index:6;background:#101920d9;border:1px solid #3e5662;border-radius:6px;padding:6px 9px;color:#d1e5ee;font-size:10px;letter-spacing:.03em;pointer-events:none}
+#uxMixedLabel2d{left:14px}#uxMixedLabel3d{left:calc(50% + 14px)}
+.viewer[data-ux-mode="mixed"] .orientationNotice{top:52px;right:14px;max-width:calc(50% - 28px)}
+.viewer[data-ux-mode="mixed"] .viewerFooter{z-index:7}
+body[data-b5-view="mixed"] .sliceBar{display:flex!important}
+body[data-b5-view="mixed"] .controls{display:none!important}
+body[data-b5-view="mixed"] #volumeControls:not([hidden]){display:flex!important}
+@media(max-width:650px){
+ .viewer[data-ux-mode="mixed"] #scanCanvas,.viewer[data-ux-mode="mixed"] #volumeCanvas{
+ width:100%!important;height:50%!important;left:0!important;right:0!important
+ }
+ .viewer[data-ux-mode="mixed"] #scanCanvas{top:0!important;bottom:auto!important;border-right:0;border-bottom:1px solid #425362}
+ .viewer[data-ux-mode="mixed"] #volumeCanvas{top:50%!important;bottom:0!important;border-left:0;border-top:1px solid #425362}
+ #uxMixedLabel2d{left:12px;top:10px}
+ #uxMixedLabel3d{left:12px;top:calc(50% + 10px)}
+ .viewer[data-ux-mode="mixed"] .orientationNotice{top:calc(50% + 44px);right:10px;max-width:65%}
+}

@@ -131,7 +131,7 @@ void checkAtlasCached();
 $('surfaceFile').addEventListener('change',async e=>{await loadMeshes([...e.target.files]);e.target.value='';});
 $('surfaceOpen').addEventListener('click',()=>$('surfaceFile').click());
 $('surfaceButton').addEventListener('click',showMode);
-for(const id of ['twoDButton','threeDButton'])$(id).addEventListener('click',leaveMode);
+for(const id of ['twoDButton','threeDButton','mixedButton'])$(id).addEventListener('click',leaveMode);
 $('surfaceAll').addEventListener('click',()=>{if(!renderer)return;renderer.meshes.forEach(x=>x.visible=true);uiRows();renderer.draw();});
 $('surfaceClear').addEventListener('click',()=>{renderer?.clear();uiRows();status('Modelos retirados de memoria. '+emptyHint);});
 $('surfaceReset').addEventListener('click',resetSurfaceView);

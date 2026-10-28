@@ -90,7 +90,7 @@ const provenance=disclosure('uxProvenanceDetails','Información y procedencia','
 provenance.append(byId('uxDicomDescription'),layers.querySelector('.ux-not-yet'));
 const sideFooter=document.querySelector('.ux-side-footer');
 if(sideFooter)provenance.append(sideFooter);
-layers.append(provenance);
+document.querySelector('.ux-layer-scene').append(provenance);
 
 // Native details already implement accessible keyboard/Space/Enter and click.
 // Keep menus mutually exclusive without changing program state.

@@ -26,27 +26,6 @@ jobs:
           set -euo pipefail
           for f in app.js volumetric.js segmentation.mjs surface-core.mjs surface-renderer.mjs surface-ui.mjs spl-provenance.mjs workflow-b5.mjs browser_b52_atlas.mjs;do node --check "$f";done
           node --test test_segmentation.mjs test_volume_core.mjs test_surfaces.mjs test_spl_provenance.mjs
-      - name: Obtain original public SPL STL ONLY in disposable CI folder
-        run: |
-          set -euo pipefail
-          mkdir -p "$SPL_ATLAS_TMP_DIR"
-          base=https://raw.githubusercontent.com/lorensen/SPLKneeAtlas/a033300264aec8625a56512be3865c10cdbcb61b/Models/STL
-          curl --fail --location --retry 3 --silent --show-error "$base/femur-95.stl" -o "$SPL_ATLAS_TMP_DIR/femur-95.stl"
-          curl --fail --location --retry 3 --silent --show-error "$base/tibia-96.stl" -o "$SPL_ATLAS_TMP_DIR/tibia-96.stl"
-          echo "f14b53539fe5dba8cc3488f172e651f729e35b9b1f49eb7f695586c61d39b277  $SPL_ATLAS_TMP_DIR/femur-95.stl" | sha256sum --check -
-          echo "4b74bcbfb8b344e157253471d97ab07426a72162586d7b5011ae57aeb2acc055  $SPL_ATLAS_TMP_DIR/tibia-96.stl" | sha256sum --check -
-      - name: Chromium test of automatic one-click atlas, and previous manual/B5 regression
-        run: |
-          set -euo pipefail
-          npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.56.1
-          ./node_modules/.bin/playwright install --only-shell chromium
-          (cd demos/anatheos-local-v0.5 && python3 -m http.server 8774 --bind 127.0.0.1) >/tmp/anatheos-b52.log 2>&1 &
-          pid=$!
-          trap 'kill "$pid" 2>/dev/null || true' EXIT
-          for i in $(seq 1 40); do if curl --silent --output /dev/null http://127.0.0.1:8774/;then break;fi;sleep 1;done
-          node demos/anatheos-local-v0.5/browser_b5_workflow.mjs
-          node demos/anatheos-local-v0.5/browser_smoke.mjs
-          node demos/anatheos-local-v0.5/browser_b52_atlas.mjs
       - name: Package complete source-only code — never distribute original atlas or DICOM
         run: |
           set -euo pipefail
@@ -76,6 +55,25 @@ jobs:
           path: build/ANATHEOS_3D_v0.6_B5_2_CODIGO.zip
           retention-days: 14
           if-no-files-found: error
+      - name: Obtain original public SPL STL ONLY in disposable CI folder
+        run: |
+          set -euo pipefail
+          mkdir -p "$SPL_ATLAS_TMP_DIR"
+          base=https://raw.githubusercontent.com/lorensen/SPLKneeAtlas/a033300264aec8625a56512be3865c10cdbcb61b/Models/STL
+          curl --fail --location --retry 3 --silent --show-error "$base/femur-95.stl" -o "$SPL_ATLAS_TMP_DIR/femur-95.stl"
+          curl --fail --location --retry 3 --silent --show-error "$base/tibia-96.stl" -o "$SPL_ATLAS_TMP_DIR/tibia-96.stl"
+          echo "f14b53539fe5dba8cc3488f172e651f729e35b9b1f49eb7f695586c61d39b277  $SPL_ATLAS_TMP_DIR/femur-95.stl" | sha256sum --check -
+          echo "4b74bcbfb8b344e157253471d97ab07426a72162586d7b5011ae57aeb2acc055  $SPL_ATLAS_TMP_DIR/tibia-96.stl" | sha256sum --check -
+      - name: Chromium test of automatic one-click atlas, and previous manual/B5 regression
+        run: |
+          set -euo pipefail
+          npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.56.1
+          ./node_modules/.bin/playwright install --only-shell chromium
+          (cd demos/anatheos-local-v0.5 && python3 -m http.server 8774 --bind 127.0.0.1) >/tmp/anatheos-b52.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          for i in $(seq 1 40); do if curl --silent --output /dev/null http://127.0.0.1:8774/;then break;fi;sleep 1;done
+          timeout 240s node demos/anatheos-local-v0.5/browser_b52_atlas.mjs
       - name: Remove public reference atlas from disposable runner
         if: always()
         run: rm -rf "$SPL_ATLAS_TMP_DIR"

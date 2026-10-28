@@ -10,7 +10,7 @@ try{
  assert.equal(await page.locator('#surfaceHelpOverlay').isVisible(),false);
  await page.locator('#surfaceButton').click();
  assert.equal(await page.locator('#surfaceHelpOverlay').isVisible(),true);
- assert.match(await page.locator('#surfaceHelpOverlay').innerText(),/OBTENER_ATLAS_SPL\.cmd/);
+ assert.match(await page.locator('#surfaceHelpOverlay').innerText(),/Preparar y ver atlas SPL/);
  assert.equal(await page.locator('#surfaceAll').isEnabled(),false);
  assert.equal(await page.locator('#surfaceReset').isEnabled(),false);
  assert.equal(await page.locator('#surfaceClear').isEnabled(),false);

@@ -1,0 +1,104 @@
+name: ANATHEOS UX-N1 · three-column dark workstation
+on:
+  push:
+    branches:
+      - anatheos/ux-n1-dark-three-column-workstation
+  pull_request:
+    paths:
+      - "demos/anatheos-local-v0.5/**"
+      - ".github/workflows/anatheos-uxn1-workstation.yml"
+permissions:
+  contents: read
+jobs:
+  browser-ux-and-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Static checks and original functional unit tests
+        working-directory: demos/anatheos-local-v0.5
+        run: |
+          set -euo pipefail
+          for f in app.js volumetric.js segmentation.mjs surface-ui.mjs workflow-b5.mjs ux-n1.mjs browser_ux_n1.mjs;do node --check "$f";done
+          node --test test_segmentation.mjs test_volume_core.mjs test_surfaces.mjs test_spl_provenance.mjs
+          test -f ../../docs/anatheos/UX_NORTE_OFICIAL_2026-10-28.md
+          python3 -c 'import json;json.load(open("../../docs/anatheos/UX_NORTE_TOKENS_2026-10-28.json"))'
+      - name: Desktop and mobile Chromium UX and state regression
+        run: |
+          set -euo pipefail
+          npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.56.1
+          ./node_modules/.bin/playwright install --only-shell chromium
+          (cd demos/anatheos-local-v0.5 && python3 -m http.server 8774 --bind 127.0.0.1) >/tmp/ux-n1-http.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          for i in $(seq 1 30);do if curl -s -o /dev/null http://127.0.0.1:8774/;then break;fi;sleep 1;done
+          node demos/anatheos-local-v0.5/browser_ux_n1.mjs
+          node demos/anatheos-local-v0.5/browser_b5_workflow.mjs
+      - name: Safe source-only archive — no study files
+        run: |
+          set -euo pipefail
+          src=demos/anatheos-local-v0.5
+          dst=build/ANATHEOS_3D_UX_N1_WINDOWS_CODIGO
+          mkdir -p "$dst"
+          files=(index.html style.css ux-shell.css ux-n1.mjs app.js volumetric.js segmentation.mjs
+            surface-core.mjs surface-renderer.mjs surface-ui.mjs spl-provenance.mjs workflow-b5.mjs
+            servidor_local.ps1 INICIAR_ANATHEOS.cmd DETENER_ANATHEOS.cmd detener_anatheos.ps1
+            REINICIAR_ANATHEOS.cmd DIAGNOSTICO_ANATHEOS.cmd diagnostico_anatheos.ps1
+            OBTENER_ATLAS_SPL.cmd obtener_atlas_spl.ps1
+            ATRIBUCION_ATLAS_SPL.txt ATTRIBUTION_CC_BY_4.0.txt
+            GUIA_WINDOWS_B3.md PROTOCOLO_VALIDACION_SLICER_B3.md validar_spl_en_slicer.py
+            README.md ATLAS_SPL_PREFLIGHT.md PREFLIGHT_DESS_SIN_IDENTIFICADORES.json
+            verificar_integridad.ps1 VERIFICAR_INTEGRIDAD.cmd 01_NOVEDADES_Y_SOLUCIONES_V051.txt)
+          for file in "${files[@]}";do test -f "$src/$file";cp "$src/$file" "$dst/$file";done
+          if find build -type f | grep -Ei '\.(dcm|dicom|nrrd|nii|stl|obj|png|jpg|zip)$';then echo 'Forbidden data';exit 1;fi
+          (cd build && zip -qr ANATHEOS_3D_UX_N1_WINDOWS_CODIGO.zip ANATHEOS_3D_UX_N1_WINDOWS_CODIGO)
+          unzip -t build/ANATHEOS_3D_UX_N1_WINDOWS_CODIGO.zip | tail -1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: anatheos-uxn1-code-only-no-medical-data
+          path: build/ANATHEOS_3D_UX_N1_WINDOWS_CODIGO.zip
+          retention-days: 14
+          if-no-files-found: error
+      - name: Upload no-study screenshot only
+        uses: actions/upload-artifact@v4
+        with:
+          name: anatheos-uxn1-empty-ui-preview-no-study
+          path: /tmp/anatheos-uxn1-empty-shell.png
+          retention-days: 14
+          if-no-files-found: error
+  windows-localhost:
+    runs-on: windows-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: PowerShell 5.1 serves UX assets only over localhost
+        shell: powershell
+        working-directory: demos/anatheos-local-v0.5
+        run: |
+          $ErrorActionPreference='Stop'
+          $root=(Get-Location).Path
+          $tokens=$null;$errors=$null
+          [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $root 'servidor_local.ps1'),[ref]$tokens,[ref]$errors)|Out-Null
+          if($errors.Count){throw "Server syntax: $($errors[0])"}
+          $p=Start-Process powershell.exe -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',('"' + (Join-Path $root 'servidor_local.ps1') + '"')) -PassThru -WindowStyle Hidden
+          try{
+           $ok=$false
+           for($retry=0;$retry -lt 45;$retry++){
+            foreach($port in 8765..8775){
+             try{
+              $r=Invoke-WebRequest -Uri "http://127.0.0.1:$port/ux-shell.css" -UseBasicParsing -TimeoutSec 1
+              if($r.StatusCode -eq 200 -and $r.Content -match 'UX-N1'){
+                $js=Invoke-WebRequest -Uri "http://127.0.0.1:$port/ux-n1.mjs" -UseBasicParsing -TimeoutSec 2
+                if($js.StatusCode -eq 200 -and $js.Content -match 'refreshLayers'){$ok=$true;break}
+              }
+             }catch{}
+            }
+            if($ok){break}
+            Start-Sleep -Milliseconds 300
+           }
+           if(-not $ok){throw 'Local UX stylesheet/module not available'}
+           Write-Host 'PASS Windows 5.1: UX-N1 stylesheet, JS module and unchanged local server'
+          }finally{Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue}

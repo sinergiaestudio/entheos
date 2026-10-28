@@ -151,7 +151,7 @@ body.viewer-focus .workspace{padding:9px 18px}
    No atlas overlay and no second GPU texture allocation when switching 3D<->mixed. */
 .viewer[data-ux-mode="mixed"]{isolation:isolate}
 .viewer[data-ux-mode="mixed"] #scanCanvas,
-.viewer[data-ux-mode="mixed"] #volumeCanvas{position:absolute!important;top:0!important;bottom:0!important;height:100%!important;width:50%!important;display:block;inset:auto!important}
+.viewer[data-ux-mode="mixed"] #volumeCanvas{position:absolute!important;top:0!important;bottom:0!important;height:100%!important;width:50%!important;display:block;inset:auto!important;top:0!important;bottom:auto!important}
 .viewer[data-ux-mode="mixed"] #scanCanvas{left:0!important;right:auto!important;z-index:1;background:#121b22;border-right:1px solid #425362}
 .viewer[data-ux-mode="mixed"] #volumeCanvas{left:50%!important;right:0!important;z-index:2;border-left:1px solid #425362}
 .viewer[data-ux-mode="mixed"] #uxMixedLabel2d,

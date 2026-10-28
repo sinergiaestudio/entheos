@@ -29,6 +29,10 @@ try{
  assert.equal(await page.locator('#uxLayerExternal').isVisible(),false);
  const widths=await page.evaluate(()=>[document.querySelector('#scanCanvas'),document.querySelector('#volumeCanvas')].map(c=>({css:getComputedStyle(c).width,rect:c.getBoundingClientRect().width,pixels:c.width,height:c.height})));
  assert(widths.every(w=>w.rect>100&&w.pixels>=32&&w.height>=32),JSON.stringify(widths));
+ const positions=await page.evaluate(()=>{const a=document.querySelector('#scanCanvas').getBoundingClientRect(),b=document.querySelector('#volumeCanvas').getBoundingClientRect(),v=document.querySelector('#viewerRoot').getBoundingClientRect();return {a:{x:a.x,y:a.y,w:a.width,h:a.height},b:{x:b.x,y:b.y,w:b.width,h:b.height},v:{x:v.x,y:v.y,w:v.width,h:v.height}}});
+ assert(Math.abs(positions.a.y-positions.b.y)<2,JSON.stringify(positions));
+ assert(Math.abs(positions.a.x-positions.v.x)<3,JSON.stringify(positions));
+ assert(Math.abs(positions.b.x-(positions.v.x+positions.a.w))<3,JSON.stringify(positions));
  await page.locator('#next').click();
  await page.waitForFunction(old=>document.querySelector('#sliceCurrent')?.textContent!==old,original);
  assert.equal(await page.locator('#volumeCanvas').isVisible(),true);

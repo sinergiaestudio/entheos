@@ -317,7 +317,9 @@ function switchModeButtons(){
  $('viewerInfo').textContent=triple?'Corte editable, volumen de intensidades y superficies del mismo DICOM':mixed?'Izquierda: cortes DICOM · derecha: rotar volumen · rueda: zoom':is3d?'Arrastrar: rotar · rueda: acercar':'Ctrl + rueda: zoom · arrastrar: mover · rueda: cortes';
  $('orientationNote').textContent=is3d?'DICOM original · orientación radiológica pendiente de validar':'Orientación indicada por DICOM · lateralidad no validada en Slicer';
  $('volumeStatus').textContent=is3d?'Volumen activo · representación no diagnóstica':'';
- $('viewerRoot').dataset.uxMode=triple?'triple':mixed?'mixed':is3d?'volume':'slice';window.dispatchEvent(new Event(triple?'anatheos:triptych-activated':'anatheos:triptych-left'));
+ const mm=currentFrame()?.projection,caption=currentFrame()?'Corte '+(state.index+1)+(Number.isFinite(mm)?' · '+mm.toFixed(2)+' mm':''):'—';
+  for(const id of ['triptychSlice2d','triptychSliceVolume','triptychSliceMesh'])$(id).textContent=caption;
+  $('viewerRoot').dataset.uxMode=triple?'triple':mixed?'mixed':is3d?'volume':'slice';window.dispatchEvent(new Event(triple?'anatheos:triptych-activated':'anatheos:triptych-left'));
 }
 function stopVolume(){
  state.volumeToken++;
@@ -620,3 +622,46 @@ $('segBuildSurface').addEventListener('click',async()=>{
 // Detach annotations and renderer when an unrelated series is loaded.
 const clearOldStatus=clean;
 // The owning clean() above clears mask references before new DICOM records are read.
+
+/* B7.2: explicit two-click 2D measurement and per-label provisional soft tissue.
+ * The 3 existing numeric labels stay untouched, including NRRD compatibility.
+ * Tissue descriptors are exploratory in-memory UI metadata, never anatomy AI.
+ */
+function selectTriptychTool(tool){
+ state.annotationMode=(tool==='measure'||tool==='point')?tool:'none';
+ state.measureStart=null;
+ if(tool==='paint'){
+  if(!$('segEdit').checked){$('segEdit').checked=true;$('segEdit').dispatchEvent(new Event('change',{bubbles:true}));}
+ }else if($('segEdit').checked){
+  $('segEdit').checked=false;$('segEdit').dispatchEvent(new Event('change',{bubbles:true}));
+ }
+ for(const [id,kind] of [['triptychMeasure','measure'],['triptychPoint','point']])
+  $(id).setAttribute('aria-pressed',String(state.annotationMode===kind));
+ $('triptychToolStatus').textContent=tool==='paint'?'Pincel manual DICOM activo. El STL se vuelve a calcular al terminar el trazo.'
+ :tool==='measure'?'Elegí dos puntos sobre el MISMO corte: distancia plana según PixelSpacing DICOM.'
+ :tool==='point'?'Marcá un punto de interés sobre el corte 2D original.'
+ :'Mover el corte o navegar con la rueda; Ctrl + rueda para ampliar.';
+ render();
+}
+$('triptychPaint').onclick=()=>selectTriptychTool('paint');
+$('triptychMeasure').onclick=()=>selectTriptychTool('measure');
+$('triptychPoint').onclick=()=>selectTriptychTool('point');
+$('triptychMove').onclick=()=>selectTriptychTool('move');
+$('triptychClearNotes').onclick=()=>{
+ state.annotations=[];state.measureStart=null;render();
+ $('triptychToolStatus').textContent='Marcas 2D eliminadas, sin modificar la máscara ni las imágenes DICOM.';
+};
+const tissueLabels={oseo:'Óseo',cartilago:'Cartílago',menisco:'Menisco',ligamento:'Ligamento',
+ tendon:'Tendón',musculo:'Músculo',grasa:'Tejido adiposo',liquido:'Líquido articular',vaso:'Vasos',nervio:'Nervios',otro:'Otro'};
+function updateProvisionalTissue(){
+ const selected=Number($('segSelected').value)-1,tag=state.tissueTypes[selected]||'';
+ $('triptychTissueCategory').value=tag;
+ $('triptychTissueStatus').textContent=tag?'Región '+(selected+1)+': hipótesis manual «'+tissueLabels[tag]+'». Etiqueta NO validada.'
+ :'Región '+(selected+1)+' sin identificación anatómica; el nombre no cambia vóxeles ni STL.';
+}
+$('segSelected').addEventListener('change',updateProvisionalTissue);
+$('triptychTissueCategory').addEventListener('change',event=>{
+ state.tissueTypes[Number($('segSelected').value)-1]=event.target.value;
+ updateProvisionalTissue();
+});
+updateProvisionalTissue();

@@ -32,7 +32,7 @@ foreach($f in $js){
  }
 }
 $required=@('index.html','app.js','volumetric.js','segmentation.mjs','surface-ui.mjs',
- 'workflow-b5.mjs','ux-n1.mjs','mask-to-surface.mjs',
+ 'workflow-b5.mjs','ux-n1.mjs','ux-clean.mjs','ux-clean.css','mask-to-surface.mjs',
  'continuous-mask-surface.mjs','assisted-segmentation-3d.mjs')
 foreach($rel in $required){
  $expected="'/$rel'"
@@ -43,4 +43,4 @@ if($missing.Count -gt 0){
  foreach($issue in $missing){Write-Host "[FALLO] $issue" -ForegroundColor Red}
  throw 'La app no puede inicializarse en Windows. No distribuir.'
 }
-Write-Host "[OK] Dependencias JavaScript y rutas permitidas del servidor Windows: $($imports.Count) importaciones, 10 rutas criticas." -ForegroundColor Green
+Write-Host "[OK] Dependencias JavaScript y rutas permitidas del servidor Windows: $($imports.Count) importaciones, 12 rutas criticas." -ForegroundColor Green

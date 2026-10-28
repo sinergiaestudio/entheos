@@ -19,8 +19,11 @@ try{
  assert.equal(await page.locator('#uxRenderMaterials').isVisible(),false);
  await page.locator('#threeDButton').click();
  await page.waitForFunction(()=>document.querySelector('#volumeStatus')?.textContent.includes('Volumen 32') && !document.querySelector('#volumeCanvas').hidden,null,{timeout:60000});
+ assert.equal(await page.locator('#uxRenderMaterials').isVisible(),false);
+ await page.locator('#uxAppearanceDetails summary').click();
  assert.equal(await page.locator('#uxRenderMaterials').isVisible(),true);
  assert.equal(await page.locator('#volumeStyle').inputValue(),'original');
+ await page.locator('#b5AdvancedToggle').click();
  await page.locator('#volumeQuality').evaluate(el=>{el.value='60';el.dispatchEvent(new Event('input',{bubbles:true}))});
  assert.equal(await page.locator('#volumeQuality').inputValue(),'60');
  const fingerprint=()=>page.locator('#volumeCanvas').evaluate(c=>c.toDataURL('image/png'));
@@ -41,7 +44,6 @@ try{
  assert.equal(await page.locator('#volumeLighting').inputValue(),'0');
  const noLight=await fingerprint();
  assert.notEqual(amber,noLight,'Light strength must affect pixels');
- await page.locator('#b5AdvancedToggle').click();
  await page.locator('#volumeStyle').selectOption('original');
  assert.equal(await page.locator('#uxVolumeStyle').inputValue(),'original');
  const restored=await fingerprint();

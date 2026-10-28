@@ -35,6 +35,7 @@ try{
  assert.equal(await page.locator('#uxLayerExternal').isVisible(),true);
  assert.equal(await page.locator('#uxLayerDicom').isVisible(),false);
  assert.equal(await page.locator('#surfacePanel').isVisible(),true);
+ await page.locator('#uxProvenanceDetails summary').click();
  assert.match(await page.locator('#uxSourceExplanation').innerText(),/otro espécimen/i);
  assert.equal(await page.locator('#surfaceLayers .surface-row').count(),0);
  const tri='solid synthetic\nfacet normal 0 0 1\nouter loop\nvertex 0 0 0\nvertex 1 0 0\nvertex 0 1 0\nendloop\nendfacet\nendsolid synthetic\n';

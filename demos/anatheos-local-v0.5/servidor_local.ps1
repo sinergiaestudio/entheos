@@ -15,6 +15,7 @@ $files = @{
  '/workflow-b5.mjs' = 'workflow-b5.mjs'
  '/ux-n1.mjs' = 'ux-n1.mjs'
  '/mask-to-surface.mjs' = 'mask-to-surface.mjs'
+ '/assisted-segmentation-3d.mjs' = 'assisted-segmentation-3d.mjs'
  '/ux-shell.css' = 'ux-shell.css'
  '/style.css' = 'style.css'
  '/datasets/RTKN0668_MR_DESS.zip' = 'datasets\RTKN0668_MR_DESS.zip'

@@ -23,6 +23,8 @@ try{
  assert.equal(await page.locator('#scanCanvas').isVisible(),true);
  assert.equal(await page.locator('#volumeCanvas').isVisible(),true);
  assert.equal(await page.locator('#threeDButton').getAttribute('aria-pressed'),'false');
+ assert.equal(await page.locator('#uxMixedLabel2d').isVisible(),true);
+ assert.equal(await page.locator('#uxMixedLabel3d').isVisible(),true);
  assert.match(await page.locator('#uxLayerContext').innerText(),/2D \+ 3D del mismo estudio/);
  assert.equal(await page.locator('#uxLayerExternal').isVisible(),false);
  const widths=await page.evaluate(()=>[document.querySelector('#scanCanvas'),document.querySelector('#volumeCanvas')].map(c=>({css:getComputedStyle(c).width,rect:c.getBoundingClientRect().width,pixels:c.width,height:c.height})));

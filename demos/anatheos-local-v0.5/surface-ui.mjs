@@ -5,7 +5,7 @@ const $=id=>document.getElementById(id);
 const colorFor=['#d6e9f5','#f3c77d','#e59ca1','#78c6c9','#b0a9e2'];
 let renderer=null,active=false,drag=null,modelCounter=0;
 function status(message){$('surfaceStatus').textContent=message;}
-const emptyHint='Sin mallas: presiona Preparar y ver atlas SPL. Se descargan una sola vez las superficies publicas verificadas y se abren aqui. La RM Leeds es otro especimen.';
+const emptyHint='Sin modelos cargados. Para el estudio actual, dibujá regiones en Controles avanzados y pulsá Visualizar mis regiones en 3D; para otro espécimen usá Preparar y ver atlas SPL.';
 function syncSurfaceUI(){
  const ready=Boolean(renderer?.meshes.length);
  $('surfaceAll').disabled=!ready;
@@ -27,7 +27,13 @@ function showMode(){
  $('surfaceButton').setAttribute('aria-pressed','true');
  $('twoDButton').setAttribute('aria-pressed','false');
  $('threeDButton').setAttribute('aria-pressed','false');
- $('orientationNote').textContent=(renderer.meshes.length&&renderer.meshes.every(m=>m.provenance?.hashVerified)?'SPL Knee Atlas · SHA-256 autentico · RAS / mm · NO registrado en Slicer':'Superficies independientes · NO pertenecen a la RM Leeds');
+ $('mixedButton').setAttribute('aria-pressed','false');
+ const sameStudy=renderer.meshes.length>0&&renderer.meshes.every(m=>m.provenance?.kind==='same-study-manual');
+ $('orientationNote').textContent=sameStudy
+  ?'MISMA SERIE DICOM · máscaras manuales · coordenadas físicas LPS mm · SIN anatomía validada'
+  :renderer.meshes.length&&renderer.meshes.every(m=>m.provenance?.hashVerified)
+  ?'SPL Knee Atlas · SHA-256 auténtico · RAS / mm · OTRO espécimen'
+  :'Superficies externas · no verificadas respecto de la RM actual';
  $('frameLabel').textContent='SUPERFICIES 3D · STL/OBJ · SIN DIAGNOSTICO';
  $('viewerInfo').textContent=renderer.meshes.length?'Arrastrar: rotar · Rueda: zoom':'Sin modelos importados';
  syncSurfaceUI();
@@ -43,7 +49,7 @@ function leaveMode(){
  // app.js has already restored 2D or 3D DICOM UI; do not overwrite it.
  if($('studyTitle').textContent==='Sin estudio cargado')$('emptyViewer').style.display='flex';
 }
-function uiRows(){const root=$('surfaceLayers');root.replaceChildren();if(!renderer?.meshes.length){root.textContent='Sin modelos STL/OBJ cargados. Los controles se habilitan despues de importar los archivos.';syncSurfaceUI();return;}
+function uiRows(){const root=$('surfaceLayers');root.dataset.origin=renderer?.meshes?.[0]?.provenance?.kind==='same-study-manual'?'same-study-manual':'external';root.replaceChildren();if(!renderer?.meshes.length){root.textContent='Sin modelos STL/OBJ cargados. Los controles se habilitan despues de importar los archivos.';syncSurfaceUI();return;}
  for(const [n,m] of renderer.meshes.entries()){
   const row=document.createElement('div');row.className='surface-row';const label=document.createElement('button');label.type='button';label.className='surface-select';label.textContent=m.name+` · ${m.triangles.toLocaleString('es-AR')} triángulos`;label.setAttribute('aria-pressed',m===renderer.selected?'true':'false');label.onclick=()=>{renderer.selected=m;uiRows();renderer.draw();};
   const visible=document.createElement('input');visible.type='checkbox';visible.checked=m.visible;visible.title='Mostrar u ocultar '+m.name;visible.onchange=()=>{m.visible=visible.checked;renderer.draw();};
@@ -70,6 +76,46 @@ async function loadMeshes(files){if(!files.length)return;if(!renderer){try{rende
  }
  if(loaded){renderer.selected=renderer.meshes.at(-1);uiRows();showMode();status(authenticated===loaded?`${authenticated} estructura(s) SPL comprobadas por SHA-256. Coordenadas RAS y cotas físicas coherentes con el mapa LPS (error máximo inferior a 0,71 mm); falta registro formal 3D Slicer. No superponer a Leeds.`:`${loaded} estructura(s) importadas sin procedencia anatómica comprobada. Sin registro espacial con DICOM.`);}
 }
+// B6.1: safe in-memory handoff. Reject mixing with SPL or an unrelated series.
+window.addEventListener('anatheos:show-same-study-surfaces',event=>{
+ try{
+  const {meshes,studyId,segVersion}=event.detail||{};
+  if(!Array.isArray(meshes)||!meshes.length||!studyId||!Number.isInteger(segVersion))throw Error('Modelo sin procedencia completa.');
+  if(!renderer)renderer=new SurfaceRenderer($('surfaceCanvas'));
+  if(renderer.meshes.length&&!renderer.meshes.every(m=>m.sourceId==='dicom-derived'&&m.studyId===studyId)){
+   throw Error('Hay modelos de otro origen. Vacialos antes de visualizar las regiones de este estudio.');
+  }
+  const prepared=meshes.map(item=>{
+   if(item.derivedFrom!=='current-study-manual-labelmap'||item.coordinateSystem!=='LPS mm'||!(item.buffer instanceof ArrayBuffer))throw Error('Malla no vinculada a máscara física LPS.');
+   const model=loadSurface('mask-'+item.label+'.stl',item.buffer);
+   if(model.triangles!==item.triangles)throw Error('Triángulos inconsistentes de máscara.');
+   model.name=item.name;model.originalName='Región '+item.label+' (sin validar)';
+   model.sourceId='dicom-derived';model.studyId=studyId;model.segVersion=segVersion;
+   model.coordinateSystem='LPS mm';model.provenance={kind:'same-study-manual',studyId,coordinateSystem:'LPS mm',validatedAnatomy:false,label:item.label,voxels:item.voxels};
+   return model;
+  });
+  if(prepared.reduce((sum,m)=>sum+m.triangles,0)>MAX_SCENE_TRIANGLES)throw Error('Escena excede el límite de triángulos.');
+  if(renderer.meshes.length)renderer.clear();
+  for(const mesh of prepared){
+   const added=renderer.add(mesh);
+   added.color=['#fb6c82','#64d6e4','#f7c66b'][mesh.provenance.label-1];
+  }
+  renderer.selected=renderer.meshes[0];
+  uiRows();showMode();
+  status('B6.1: '+prepared.length+' regiones derivadas de las máscaras MANUALES del mismo estudio DICOM. LPS mm; límites cúbicos de vóxel. Sin identificación anatómica ni registro Slicer.');
+ }catch(error){
+  status('B6.1: '+error.message);
+  event.preventDefault();
+ }
+});
+function discardStaleSameStudy(){
+ if(renderer?.meshes?.some(m=>m.sourceId==='dicom-derived')){
+  renderer.clear();uiRows();status('Modelos de máscara descartados: la serie o los vóxeles marcados cambiaron. Regenerá las superficies.');
+ }
+}
+window.addEventListener('anatheos:study-reset',discardStaleSameStudy);
+window.addEventListener('anatheos:mask-changed',discardStaleSameStudy);
+
 // Explicit user action, no background network downloads. Only fixed localhost API paths.
 const atlasButton=$('surfaceAutoSPL');
 const atlasStatus=$('surfaceAutoSPLStatus');

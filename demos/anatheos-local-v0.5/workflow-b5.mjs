@@ -11,6 +11,7 @@ const status=message=>{$('b5WorkflowStatus').textContent=message;};
 
 function currentView(){
  if($('surfaceButton').getAttribute('aria-pressed')==='true')return 'surface';
+ if($('mixedButton').getAttribute('aria-pressed')==='true')return 'mixed';
  if($('threeDButton').getAttribute('aria-pressed')==='true')return 'volume';
  return 'slice';
 }
@@ -32,7 +33,7 @@ function syncPresentation(){
    ? 'Origen DICOM: '+(leeds?'serie Leeds DESS original':'archivos locales del usuario')+'. Volumen 3D = mismos voxeles; las capas manuales no son anatomia reconocida.'
    : 'Sin archivos. Podes abrir tu ZIP/carpeta o utilizar la RM de investigacion incluida.';
  }
- if(loaded){status(view==='surface'?'Vista de superficies externas: no superponer con RM.':view==='volume'?'Reconstruccion volumetrica del mismo estudio DICOM.':'Serie DICOM original lista para explorar.');}
+ if(loaded){status(view==='surface'?'Vista de superficies externas: no superponer con RM.':view==='mixed'?'Vista 2D y volumen 3D del MISMO estudio DICOM, sincronizados por serie.':view==='volume'?'Reconstruccion volumetrica del mismo estudio DICOM.':'Serie DICOM original lista para explorar.');}
 }
 
 $('b5AdvancedToggle').addEventListener('click',()=>{
@@ -45,14 +46,14 @@ $('b5OpenStudy').addEventListener('click',()=>{
  manualChoice=true;
  $('zipInput').click();
 });
-for(const id of ['loadIncluded','zipButton','folderButton','surfaceButton','clearButton','twoDButton','threeDButton']){
+for(const id of ['loadIncluded','zipButton','folderButton','surfaceButton','clearButton','twoDButton','threeDButton','mixedButton']){
  $(id).addEventListener('click',()=>{if(!autoClick)manualChoice=true;},true);
 }
 for(const id of ['zipInput','folderInput'])$(id).addEventListener('change',e=>{
  if(e.target.files?.length)manualChoice=true;
 },true);
 const mo=new MutationObserver(syncPresentation);
-for(const id of ['studyTitle','studySubtitle','surfaceButton','threeDButton','twoDButton','surfaceSource']){
+for(const id of ['studyTitle','studySubtitle','surfaceButton','threeDButton','twoDButton','mixedButton','surfaceSource']){
  mo.observe($(id),{subtree:true,childList:true,attributes:id.endsWith('Button'),attributeFilter:id.endsWith('Button')?['aria-pressed']:undefined});
 }
 function syncLoad(){

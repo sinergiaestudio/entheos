@@ -6,7 +6,7 @@ import { createMask, paintDisk, growRegion2D, eraseRegion, countRegions, toNrrd,
  * Cornerstone3D compatibility is tracked in separate G2a browser experiments.
  */
 const $=id=>document.getElementById(id);
-const state={mode:'2d',volumeRenderer:null,volumeToken:0,series:[],current:null,index:0,wlCenter:350,wlWidth:850,brightness:0,contrast:100,zoom:1,panX:0,panY:0,loadGeneration:0,source:'',imageKey:'',lastPixels:null,segMask:null,segCount:[0,0,0,0],segVersion:0,segVisibility:7,segOverlayKey:'',segEdit:false};
+const state={mode:'2d',mixed:false,volumeRenderer:null,volumeToken:0,series:[],current:null,index:0,wlCenter:350,wlWidth:850,brightness:0,contrast:100,zoom:1,panX:0,panY:0,loadGeneration:0,source:'',imageKey:'',lastPixels:null,segMask:null,segCount:[0,0,0,0],segVersion:0,segVisibility:7,segOverlayKey:'',segEdit:false};
 const LONG=new Set(['OB','OD','OF','OL','OV','OW','SQ','UC','UR','UT','UN']);
 const NUMTAG=new Set([0x00280002,0x00280010,0x00280011,0x00280100,0x00280101,0x00280102,0x00280103,0x00280006]);
 const TAGS=new Map([[0x00020010,'syntax'],[0x00080060,'modality'],[0x0008103e,'description'],[0x00080016,'sopClass'],[0x0020000e,'seriesUid'],[0x00200013,'instance'],[0x00200032,'ipp'],[0x00200037,'iop'],[0x00280002,'samples'],[0x00280004,'photo'],[0x00280008,'frames'],[0x00280010,'rows'],[0x00280011,'columns'],[0x00280030,'spacing'],[0x00280100,'bitsAllocated'],[0x00280101,'bitsStored'],[0x00280102,'highBit'],[0x00280103,'signed'],[0x00281052,'intercept'],[0x00281053,'slope'],[0x00281050,'dicomCenter'],[0x00281051,'dicomWidth'],[0x7fe00010,'pixels']]);
@@ -95,7 +95,7 @@ async function unpackMember(buffer,entry){
 function vecCross(a,b){return[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
 function dot(a,b){return a.reduce((sum,v,i)=>sum+v*b[i],0);}
 function orientCheck(a,b){return a.iop.every((v,k)=>Math.abs(v-b.iop[k])<0.0003);}
-function clean(){stopVolume();state.mode='2d';switchModeButtons();state.segMask=null;state.segVersion++;state.segCount=[0,0,0,0];state.segOverlayKey='';state.segEdit=false;$('segEdit').checked=false;state.current=null;state.series=[];state.index=0;state.imageKey='';state.lastPixels=null;state.source='';state.panX=0;state.panY=0;state.zoom=1;updateControls();render();}
+function clean(){stopVolume();state.mode='2d';state.mixed=false;switchModeButtons();state.segMask=null;state.segVersion++;state.segCount=[0,0,0,0];state.segOverlayKey='';state.segEdit=false;$('segEdit').checked=false;state.current=null;state.series=[];state.index=0;state.imageKey='';state.lastPixels=null;state.source='';state.panX=0;state.panY=0;state.zoom=1;updateControls();render();}
 function cancelCurrent(){state.loadGeneration++;$('loading').hidden=true;}
 function showLoad(detail,progress=0){$('loading').hidden=false;$('loadingDetail').textContent=detail;$('loadingProgress').style.width=progress+'%';}
 function toast(msg){const el=$('toast');el.textContent=msg;el.classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('visible'),4200);}
@@ -177,6 +177,7 @@ function clamp(n,low,high){return Math.max(low,Math.min(high,n));}
 function currentFrame(){return state.current?.items[state.index];}
 function updateControls(){const active=currentFrame(),has=!!active;
  $('threeDButton').disabled=!has;
+ $('mixedButton').disabled=!has;
 
  $('emptyViewer').style.display=has?'none':'flex';$('viewBadge').hidden=!has;
  $('studyTitle').textContent=has?state.current.description:'Sin estudio cargado';$('studySubtitle').textContent=has?`${state.current.items.length} instancias · ${active.modality} · ${state.source}`:'Seleccioná una secuencia para comenzar.';
@@ -204,7 +205,7 @@ function makePixels(frame){const {rows,columns,values,slope,intercept}=frame,out
  for(let i=0;i<values.length;i++){const val=values[i]*slope+intercept;let p=clamp((val-lo)/width,0,1);p=clamp((p-.5)*gain+.5+offset,0,1);let gray=Math.round((frame.photo==='MONOCHROME1'?1-p:p)*255);const k=i*4;dst[k]=dst[k+1]=dst[k+2]=gray;dst[k+3]=255;}return output;
 }
 const canvas=$('scanCanvas'),ctx=canvas.getContext('2d',{alpha:false}),offscreen=document.createElement('canvas'),offctx=offscreen.getContext('2d',{alpha:false}),segOverlayCanvas=document.createElement('canvas'),segOverlayCtx=segOverlayCanvas.getContext('2d');
-function render(){if(state.mode==='3d'){state.volumeRenderer?.draw();return;}const box=canvas.getBoundingClientRect(),ratio=Math.min(devicePixelRatio||1,2),w=Math.max(10,Math.round(box.width*ratio)),h=Math.max(10,Math.round(box.height*ratio));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
+function render(){if(state.mode==='3d'&&!state.mixed){state.volumeRenderer?.draw();return;}const box=canvas.getBoundingClientRect(),ratio=Math.min(devicePixelRatio||1,2),w=Math.max(10,Math.round(box.width*ratio)),h=Math.max(10,Math.round(box.height*ratio));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
  ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#181b1e';ctx.fillRect(0,0,w,h);
  const frame=currentFrame();if(!frame)return;
  const key=[state.current.uid,state.index,state.wlCenter,state.wlWidth,state.brightness,state.contrast].join('|');
@@ -226,6 +227,7 @@ function render(){if(state.mode==='3d'){state.volumeRenderer?.draw();return;}con
   ctx.drawImage(segOverlayCanvas,-frame.columns/2,-frame.rows/2);
  }
  ctx.restore();
+ if(state.mode==='3d'&&state.mixed)state.volumeRenderer?.draw();
 }
 function chooseSlice(index){if(!state.current)return;state.index=clamp(Math.round(index),0,state.current.items.length-1);state.imageKey='';updateControls();render();}
 function resetView(){state.panX=state.panY=0;state.zoom=1;render();}
@@ -245,30 +247,36 @@ updateControls();render();
 
 /* ANATHEOS v0.2 true volumetric rendering from the uploaded DICOM pixels. */
 function switchModeButtons(){
- const is3d=state.mode==='3d';
- $('threeDButton').setAttribute('aria-pressed',String(is3d));
+ const is3d=state.mode==='3d',mixed=is3d&&state.mixed;
+ $('threeDButton').setAttribute('aria-pressed',String(is3d&&!mixed));
+ $('mixedButton').setAttribute('aria-pressed',String(mixed));
  $('twoDButton').setAttribute('aria-pressed',String(!is3d));
- $('scanCanvas').hidden=is3d;$('volumeCanvas').hidden=!is3d;
+ $('scanCanvas').hidden=is3d&&!mixed;
+ $('volumeCanvas').hidden=!is3d;
  $('volumeControls').hidden=!is3d;
  $('viewerOverlayActions').hidden=!is3d;
- $('sliceRange').disabled=is3d||!currentFrame();
- $('viewBadge').textContent=is3d?'VOLUMEN REAL · GPU':'ORIGINAL · DICOM';
- $('viewerInfo').textContent=is3d?'Arrastrar: rotar · rueda: acercar':'Ctrl + rueda: zoom · arrastrar: mover · rueda: cortes';
- $('orientationNote').textContent=is3d?'Volumen 3D de vóxeles reales · orientación radiológica pendiente de validar':'Orientación indicada por DICOM · lateralidad no validada en Slicer';
+ $('sliceRange').disabled=(is3d&&!mixed)||!currentFrame();
+ $('viewBadge').textContent=mixed?'MIXTO · DICOM 2D + VOLUMEN REAL':is3d?'VOLUMEN REAL · GPU':'ORIGINAL · DICOM';
+ $('viewerInfo').textContent=mixed?'Izquierda: cortes DICOM · derecha: rotar volumen · rueda: zoom':is3d?'Arrastrar: rotar · rueda: acercar':'Ctrl + rueda: zoom · arrastrar: mover · rueda: cortes';
+ $('orientationNote').textContent=is3d?'DICOM original · orientación radiológica pendiente de validar':'Orientación indicada por DICOM · lateralidad no validada en Slicer';
  $('volumeStatus').textContent=is3d?'Volumen activo · representación no diagnóstica':'';
+ $('viewerRoot').dataset.uxMode=mixed?'mixed':is3d?'volume':'slice';
 }
 function stopVolume(){
  state.volumeToken++;
  if(state.volumeRenderer){state.volumeRenderer.dispose();state.volumeRenderer=null;}
  $('volumeCanvas').hidden=true;
 }
-async function enableVolume(){
+async function enableVolume(asMixed=false){
  if(!state.current){toast('Cargá primero una serie DICOM.');return;}
- if(state.mode==='3d')return;
+ if(state.mode==='3d'){
+  state.mixed=asMixed;switchModeButtons();requestAnimationFrame(()=>render());
+  return;
+ }
  const token=++state.volumeToken;
  try{
   const g=inspectVolumeGeometry(state.current);
-  state.mode='3d';switchModeButtons();
+  state.mode='3d';state.mixed=asMixed;switchModeButtons();
   showLoad('Preparando el volumen real de '+g.z+' cortes · '+g.x+' × '+g.y+' píxeles…',0);
   const prepared=await prepareVolumeTexture(state.current,(done,total)=>showLoad('Construyendo textura volumétrica '+done+' / '+total,Math.round(100*done/total)),()=>token!==state.volumeToken);
   if(token!==state.volumeToken)return;
@@ -279,15 +287,16 @@ async function enableVolume(){
   state.volumeRenderer.clip=Number($('volumeClip').value)/100;
   state.volumeRenderer.palette=$('volumePalette').value==='gray'?0:1;
   if(state.segMask&&state.segCount.slice(1).some(Boolean))state.volumeRenderer.setSegmentation(state.segMask,state.segVisibility);
-  state.volumeRenderer.draw();
+  if(state.mixed)render();else state.volumeRenderer.draw();
   $('volumeStatus').textContent=`Volumen ${g.x} × ${g.y} × ${g.z} · ${g.spanMm.map(v=>v.toFixed(1)).join(' × ')} mm · ${(prepared.textureBytes/1048576).toFixed(1)} MiB de textura R8 · ${state.volumeRenderer.backend}`;
   toast('Volumen DESS construido a partir de los vóxeles reales · giralo arrastrando.');
  }catch(err){if(token!==state.volumeToken)return;const msg=err instanceof Error?err.message:'Error WebGL2';
-  stopVolume();state.mode='2d';switchModeButtons();render();warningsDisplay([msg],[]);toast('No se pudo activar 3D: '+msg);
+  stopVolume();state.mode='2d';state.mixed=false;switchModeButtons();render();warningsDisplay([msg],[]);toast('No se pudo activar 3D: '+msg);
  }finally{if(token===state.volumeToken)$('loading').hidden=true;else $('loading').hidden=true;}
 }
-$('threeDButton').onclick=()=>void enableVolume();
-$('twoDButton').onclick=()=>{stopVolume();state.mode='2d';switchModeButtons();updateControls();render();};
+$('threeDButton').onclick=()=>void enableVolume(false);
+$('mixedButton').onclick=()=>void enableVolume(true);
+$('twoDButton').onclick=()=>{stopVolume();state.mode='2d';state.mixed=false;switchModeButtons();updateControls();render();};
 for(const id of ['volumeOpacity','volumeThreshold','volumeQuality'])$(''+id).addEventListener('input',()=>{
  const r=state.volumeRenderer;if(!r)return;
  r.opacity=Number($('volumeOpacity').value)/100;

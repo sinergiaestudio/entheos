@@ -1,4 +1,4 @@
-# ANATHEOS 3D · v0.5 · Superficies anatómicas 3D (Etapa B, primer bloque)
+# ANATHEOS 3D · v0.5 · Superficies anatómicas 3D + paquete Windows portátil B3
 
 **Sólo investigación local · NO diagnóstico · NO desplegado · sin integración Entheos productiva.**
 
@@ -24,18 +24,19 @@ Los modelos de la colección del Surgical Planning Laboratory incluyen **femur-9
 - [Escena MRML](https://github.com/lorensen/SPLKneeAtlas/blob/master/Atlas/SPLKneeAtlas.mrml.in)
 - [Atlas original Open Anatomy](https://www.openanatomy.org/atlas-pages/atlas-spl-knee.html)
 
-**Los archivos de imágenes médicas, etiquetas y mallas del atlas NO se redistribuyen dentro de esta rama pública ni se incorporan en la CI.** Se descargan independientemente en el equipo del investigador y se importan con el botón «Importar superficies». El visor utiliza sólo el contenido local aportado por el usuario. El nombre del archivo o la selección de procedencia **no certifican** su origen por sí solos.
+**Los archivos de imágenes médicas, etiquetas y mallas NO se distribuyen en esta rama pública ni en el paquete portátil.** Las pruebas CI B2 descargan temporalmente datos públicos del atlas y los eliminan antes de cerrar el ejecutor. En Windows, ejecutar `OBTENER_ATLAS_SPL.cmd` para descargar el atlas original a la carpeta privada `ATLAS_SPL`. Al elegir «SPL Knee Atlas», el visor verifica tamaño, triángulos y SHA-256 de las mallas originales antes de reconocerlas. No se superponen con estudios de Leeds.
 
 ## Preflight técnico específico
 
 Consultar [`ATLAS_SPL_PREFLIGHT.md`](ATLAS_SPL_PREFLIGHT.md): inspección real de NRRD LPS 512×512×119, fémur/tibia etiquetados, y etiqueta 3 no asignada.
 
-## Ejecutar en Windows
+## Ejecutar en Windows · Paquete portátil B3
 
-1. Descargar el ZIP del código de esta rama, extraer sólo la subcarpeta `demos/anatheos-local-v0.5` a una carpeta de trabajo, y ejecutar `INICIAR_ANATHEOS.cmd` (servidor PowerShell de loopback del visor original).
-2. Para el visor DICOM original, usar una serie DICOM compatible en un ZIP local o carpeta, como en v0.4. Para objetos, **no es necesario cargar DICOM**.
-3. Descargar por separado los STL femur y tibia del mismo atlas mediante los enlaces anteriores, elegir fuente `SPL Knee Atlas` y seleccionar ambos archivos en «Importar superficies». Los controles aparecerán en el panel «Superficies 3D».
-4. No asociar estos modelos con Leeds ni con un estudio de un tercero. Las posiciones STL carecen de especificación de unidades y sistema de referencia dentro del formato.
+1. Descargar y extraer el ZIP **ANATHEOS_3D_v0.5_Windows_Portable_B3.zip** en Documentos, sin sobrescribir la v0.4 estable.
+2. Ejecutar `DIAGNOSTICO_ANATHEOS.cmd` y `INICIAR_ANATHEOS.cmd`: el servidor PowerShell 5.1 se limita a localhost (`127.0.0.1:8765..8775`). No depende de nube.
+3. Para usar las **mallas SPL reales**, ejecutar primero `OBTENER_ATLAS_SPL.cmd` (requiere Internet solamente para descargar y verificar el atlas público original). Elegir origen «SPL Knee Atlas» e importar los archivos `ATLAS_SPL/femur-95.stl` y `tibia-96.stl`.
+4. Para detener o reiniciar usar `DETENER_ANATHEOS.cmd` o `REINICIAR_ANATHEOS.cmd`.
+5. Leer `GUIA_WINDOWS_B3.md` y `PROTOCOLO_VALIDACION_SLICER_B3.md` para el control geométrico independiente. El guion de Slicer está preparado, pero **no se probó todavía en un Slicer de escritorio**.
 
 ## Reproducir pruebas sin instalar software adicional
 
@@ -51,7 +52,7 @@ node --check surface-ui.mjs
 node --test test_segmentation.mjs test_volume_core.mjs test_surfaces.mjs
 ```
 
-10 pruebas unitarias/sintéticas en total. Sin binarios médicos en CI. Los tests de render sobre imágenes/mallas anatómicas reales en Windows y la validación de geometría mediante 3D Slicer están **pendientes**; hasta entonces no se declarará Etapa B completada anatómicamente.
+12 pruebas Node en CI, además de renders WebGL2 aprobados con mallas sintéticas y con las superficies auténticas del SPL Knee Atlas. La prueba del servidor Windows PowerShell 5.1 también aprobó. La comparación independiente en 3D Slicer y las pruebas manuales del usuario en su propia PC siguen pendientes: no se declara validación diagnóstica.
 
 ## Licencias y procedencia
 

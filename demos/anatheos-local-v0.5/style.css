@@ -87,3 +87,21 @@ body.viewer-focus .worktop{padding:3px 1px}
 .surface-help-overlay strong{display:block;margin-bottom:10px;font-size:14px;color:#eff8fb}.surface-help-overlay p{font-size:12px;margin:9px 0}.surface-help-overlay code{font-size:11px;color:#8bd6ea;overflow-wrap:anywhere}
 .surface-help-overlay[hidden]{display:none!important}
 .surface-onboarding{padding:12px 16px;border-left:4px solid #3e8195;background:#eaf3f6;font-size:12px;line-height:1.7;margin:10px 0 2px}.surface-onboarding p{margin:5px 0 0}.surface-onboarding code{padding:1px 3px;background:#fff5;border-radius:3px}
+
+/* B5 first increment: uncluttered study entry and contextual workspace.
+   Keep existing volume renderer and segmentation logic intact. */
+.b5-workflow{margin:0 0 12px;padding:13px 16px;background:#f4f9fa;border:1px solid #d5e4e8;border-radius:11px;display:grid;grid-template-columns:minmax(210px,1fr) auto;column-gap:14px;row-gap:4px;align-items:center}
+.b5-workflow-main{display:flex;flex-direction:column;gap:2px;min-width:0}
+.b5-stage-label{font-size:10px;letter-spacing:.08em;font-weight:750;color:#558394}
+#b5StudyType{font-size:14px;color:#1d4050;overflow-wrap:anywhere}
+#b5WorkflowStatus{font-size:11px;color:#536d78}
+.b5-workflow-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.b5-workflow-actions button{border-radius:7px;padding:9px 12px;font-size:12px;cursor:pointer}
+.b5-workflow-actions #b5AdvancedToggle[aria-pressed="true"]{background:#daeaf0;color:#1b4e63;border-color:#6190a4}
+.b5-source-note{grid-column:1 / -1;font-size:11px;color:#647982;border-top:1px solid #dce8eb;padding-top:7px;margin-top:3px}
+body:not([data-b5-view="surface"]) #surfacePanel{display:none!important}
+body:not(.b5-advanced) #segmentationPanel,body:not(.b5-advanced) .meta{display:none!important}
+body[data-b5-view="surface"] .sliceBar,body[data-b5-view="surface"] .controls,body[data-b5-view="surface"] #segmentationPanel,body[data-b5-view="surface"] #volumeControls{display:none!important}
+body[data-b5-view="volume"] .sliceBar,body[data-b5-view="volume"] .controls{display:none!important}
+body[data-b5-view="slice"] #volumeControls{display:none!important}
+@media(max-width:760px){.b5-workflow{grid-template-columns:1fr}.b5-workflow-actions{margin-top:6px}.b5-workflow-actions button{flex:1}}

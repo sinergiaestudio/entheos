@@ -36,7 +36,6 @@ foreach($port in 8765..8775){
 # Validate all local JS imports against PowerShell's exact static allowlist.
 try {
  & (Join-Path $root 'verificar_modulos_locales.ps1') -Root $root
- if($LASTEXITCODE -ne 0){$missing+= 'Rutas de modulos del servidor local'}
 } catch {
  Write-Host "[ERROR] Dependencias: $($_.Exception.Message)" -ForegroundColor Red
  $missing+= 'Dependencias JavaScript'

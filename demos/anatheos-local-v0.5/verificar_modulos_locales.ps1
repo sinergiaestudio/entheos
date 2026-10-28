@@ -7,7 +7,11 @@ $server=Join-Path $Root 'servidor_local.ps1'
 if(-not (Test-Path -LiteralPath $server)){throw 'No existe servidor_local.ps1'}
 $ps=Get-Content -LiteralPath $server -Raw -Encoding UTF8
 $imports=New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
-$js=Get-ChildItem -LiteralPath $Root -File | Where-Object {$_.Extension -eq '.js' -or $_.Extension -eq '.mjs'}
+# Check application production modules only, never independent test scripts.
+$js=Get-ChildItem -LiteralPath $Root -File | Where-Object {
+ ($_.Extension -eq '.js' -or $_.Extension -eq '.mjs') -and
+ -not ($_.Name -match '^(test_|browser_)')
+}
 $missing=New-Object 'System.Collections.Generic.List[string]'
 foreach($f in $js){
  $source=Get-Content -LiteralPath $f.FullName -Raw -Encoding UTF8

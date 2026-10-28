@@ -23,6 +23,7 @@ try {
  assert.equal(await page.locator('#surfaceHelpOverlay').isVisible(),true);
  assert.match(await page.locator('#b5SourceNote').innerText(),/STL\/OBJ externo/);
  await page.locator('#surfaceSource').selectOption('spl-knee');
+ await page.waitForFunction(()=>document.querySelector('#b5SourceNote')?.textContent.includes('OTRO especimen'));
  assert.match(await page.locator('#b5SourceNote').innerText(),/OTRO especimen/);
  await page.locator('#surfaceSource').selectOption('other-unverified');
  await page.locator('#twoDButton').click();

@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "kind": "ANATHEOS 3D UX design tokens (candidate, not pixel measurements)",
+  "baseline": "UX-001",
+  "approved_at": "2026-10-28",
+  "reference_png": {
+    "private_drive_filename": "ANATHEOS_3D_UX_NORTE_REFERENCIA_APROBADA_2026-10-28.png",
+    "sha256": "d10c142fe8cbdeed10f25c40c6701c0566f444ec93965a16b97e925f46a5dd10",
+    "width_px": 1085,
+    "height_px": 525,
+    "status": "user-approved concept reference, not anatomical output"
+  },
+  "layout": {
+    "areas": [
+      "study",
+      "central-viewport",
+      "layers"
+    ],
+    "desktop_ratios": [
+      1,
+      2.4,
+      1
+    ],
+    "viewport_priority": "dominant",
+    "mobile_fallback": "single viewport with drawer panels",
+    "minimum_target_viewport_width_px": 600
+  },
+  "colors": {
+    "background": "#080A0C",
+    "panel": "#0E1216",
+    "viewport": "#15232F",
+    "divider": "#242C31",
+    "text_primary": "#EBEEF0",
+    "text_muted": "#A6B0B7",
+    "accent": "#57A5B2",
+    "bone": "#CDAF87",
+    "bone_secondary": "#E8BE83",
+    "cartilage": "#5EB6B5",
+    "meniscus": "#ADA2D4"
+  },
+  "type": {
+    "font_stack": "system-ui, Segoe UI, Arial, sans-serif",
+    "weights": {
+      "title": 700,
+      "panel_heading": 600,
+      "body": 400,
+      "metadata": 400
+    },
+    "hierarchy": "compact, consistent, accessible contrast"
+  },
+  "views": {
+    "required_modes": [
+      "2d",
+      "3d",
+      "mixed"
+    ],
+    "required_controls": [
+      "rotate",
+      "zoom",
+      "reset",
+      "opacity",
+      "visibility",
+      "isolate"
+    ],
+    "volume_visualization": "original DICOM voxel intensity display",
+    "surface_visualization": "meshes only if backed by authentic same-study segmentation or labeled external reference",
+    "render_amber_preset": "optional visual transfer function; no anatomical inference"
+  },
+  "layer_provenance": {
+    "must_include": [
+      "study_reference",
+      "series_reference",
+      "source_type",
+      "coordinate_system",
+      "validation_state"
+    ],
+    "allowed_sources": [
+      "original_volume",
+      "same_study_segmentation",
+      "manual_edit",
+      "external_atlas",
+      "unavailable"
+    ],
+    "prohibit_unverified_anatomy_claims": true,
+    "prohibit_overlay_of_different_specimens": true
+  },
+  "policies": {
+    "private_medical_assets_only": true,
+    "no_paid_subscriptions_or_APIs": true,
+    "no_production_merge_without_permission": true,
+    "not_diagnostic": true,
+    "visual_reference_must_be_consulted_each_phase": true
+  },
+  "implementation_stages": [
+    "UX-N1-layout",
+    "UX-N2-navigation",
+    "UX-N3-render-presets",
+    "UX-N4-verified-anatomical-layers",
+    "UX-N5-acceptance"
+  ]
+}

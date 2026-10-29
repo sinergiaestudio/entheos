@@ -84,9 +84,11 @@ def main():
              "spacing":ct[0]["spacing"],"step":step}
         masks,body=candidate.candidate_layers(hu,geo)
         candidate.quality_check(masks,body,hu,geo)
-        scores={name:overlap(masks[source],refs[name]) for name,source in
-          [("Left_Lung","air_candidate_left"),("Right_Lung","air_candidate_right"),
-           ("Heart_search_only","central_soft_tissue_search_region")]}
+        scores={
+          "Left_Lung":overlap(masks["air_candidate_left"],refs["Left_Lung"]),
+          "Right_Lung":overlap(masks["air_candidate_right"],refs["Right_Lung"]),
+          "Heart_search_only":overlap(masks["central_soft_tissue_search_region"],refs["Heart"])
+        }
         if any(scores[n] is None for n in ("Left_Lung","Right_Lung")):
             raise RuntimeError("Missing expert/estimated lung masks")
         record={"site_group":site,"case_number":i,"shape_zyx":list(hu.shape),

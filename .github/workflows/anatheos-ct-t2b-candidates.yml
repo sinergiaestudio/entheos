@@ -1,0 +1,20 @@
+name: ANATHEOS CT-T2B · capas exploratorias cardiopulmonares (solo QA)
+on:
+  push:
+    branches:
+      - anatheos/ct-t2b-tissue-candidates-2026-10-29
+  pull_request:
+    branches:
+      - anatheos/ct-t1-thorax-heart-lungs-qa-2026-10-29
+permissions:
+  contents: read
+jobs:
+  exploratory-tissue-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install free scientific libraries
+        run: python3 -m pip install --disable-pip-version-check --quiet numpy==2.2.6 scipy==1.16.3 pydicom==3.0.1
+      - name: Validate synthetic invariants and real CT-T1 candidate masks (no artifacts)
+        run: python3 research/anatheos-t2b/thorax_tissue_candidates.py

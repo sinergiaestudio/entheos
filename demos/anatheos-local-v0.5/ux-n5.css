@@ -135,3 +135,10 @@ body.ux-streamlined :focus-visible{outline-color:#84cbd8!important}
 @media(prefers-reduced-motion:reduce){
  body.ux-streamlined *,body.ux-streamlined *::before,body.ux-streamlined *::after{transition-duration:0s!important}
 }
+
+/* UX-N6: on narrow 2-column viewports, let the grid grow to fit the viewer.
+ * Prevent the layer inspector from overlapping the active DICOM canvas. */
+@media(max-width:920px){
+ body.ux-streamlined:not(.viewer-focus) .layout{height:auto;min-height:calc(100dvh - 54px);grid-template-rows:auto auto}
+ body.ux-streamlined:not(.viewer-focus) .workspace{min-height:0}
+}

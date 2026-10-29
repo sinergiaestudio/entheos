@@ -1,3 +1,4 @@
+import {thoraxReference} from './thorax-reference.mjs';
 import { inspectVolumeGeometry, prepareVolumeTexture, VolumeRenderer } from './volumetric.js';
 import { createMask, paintDisk, growRegion2D, eraseRegion, countRegions, toNrrd, fromNrrd, REGION_COLORS } from './segmentation.mjs';
 import {makeMaskSurfaceSTLs} from './mask-to-surface.mjs';
@@ -151,7 +152,7 @@ async function unpackMember(buffer,entry){
 function vecCross(a,b){return[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
 function dot(a,b){return a.reduce((sum,v,i)=>sum+v*b[i],0);}
 function orientCheck(a,b){return a.iop.every((v,k)=>Math.abs(v-b.iop[k])<0.0003);}
-function clean(){state.annotationMode='none';state.measureStart=null;state.annotations=[];state.tissueTypes=['','',''];state.b7Picking=false;state.b7Seed=null;state.b7Draft=null;state.b7DraftVersion++;$('b7SeedStatus').textContent='Sin semilla seleccionada.';$('b7Accept').disabled=true;$('b7Discard').disabled=true;$('b7Discard').disabled=true;window.dispatchEvent(new Event('anatheos:study-reset'));stopVolume();state.mode='2d';state.mixed=false;switchModeButtons();state.segMask=null;state.segVersion++;state.segCount=[0,0,0,0];state.segOverlayKey='';state.segEdit=false;$('segEdit').checked=false;state.current=null;state.series=[];state.index=0;state.imageKey='';state.lastPixels=null;state.source='';state.panX=0;state.panY=0;state.zoom=1;updateControls();render();}
+function clean(){thoraxReference.reset();state.annotationMode='none';state.measureStart=null;state.annotations=[];state.tissueTypes=['','',''];state.b7Picking=false;state.b7Seed=null;state.b7Draft=null;state.b7DraftVersion++;$('b7SeedStatus').textContent='Sin semilla seleccionada.';$('b7Accept').disabled=true;$('b7Discard').disabled=true;$('b7Discard').disabled=true;window.dispatchEvent(new Event('anatheos:study-reset'));stopVolume();state.mode='2d';state.mixed=false;switchModeButtons();state.segMask=null;state.segVersion++;state.segCount=[0,0,0,0];state.segOverlayKey='';state.segEdit=false;$('segEdit').checked=false;state.current=null;state.series=[];state.index=0;state.imageKey='';state.lastPixels=null;state.source='';state.panX=0;state.panY=0;state.zoom=1;updateControls();render();}
 function cancelCurrent(){state.loadGeneration++;$('loading').hidden=true;}
 function showLoad(detail,progress=0){$('loading').hidden=false;$('loadingDetail').textContent=detail;$('loadingProgress').style.width=progress+'%';}
 function toast(msg){const el=$('toast');el.textContent=msg;el.classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('visible'),4200);}
@@ -211,7 +212,7 @@ function commitRecords(files,source,errors,notes,gen){
  state.zoom=1;state.panX=0;state.panY=0;state.imageKey='';state.lastPixels=null;
  notes.unshift(`Importación local · ${files.length} instancias decodificadas en memoria · ${grouped.size} serie(s).`);
  notes.push('Posiciones ordenadas según el vector normal de ImageOrientationPatient; comprobar orientación y escala en Slicer.');
- warningsDisplay(errors,notes);updateControls();render();$('loading').hidden=true;
+ warningsDisplay(errors,notes);thoraxReference.bind(state.current,render);updateControls();render();$('loading').hidden=true;
  toast(`Serie cargada: ${state.current.items.length} cortes reales · sin transmisión externa`);
 }
 async function loadFiles(fileList){
@@ -302,6 +303,7 @@ function render(){if(state.mode==='3d'&&!state.mixed){state.volumeRenderer?.draw
   }
   ctx.drawImage(segOverlayCanvas,-frame.columns/2,-frame.rows/2);
  }
+ thoraxReference.paint(ctx,frame,state.index);
  ctx.restore();
  // Annotation overlay in screen pixels, calibrated on source DICOM plane.
  const toScreen=([x,y])=>[w/2+state.panX*ratio+(x-frame.columns/2)*scale,h/2+state.panY*ratio+(y-frame.rows/2)*scale];
@@ -745,5 +747,7 @@ $('segSelected').addEventListener('change',updateProvisionalTissue);
 $('triptychTissueCategory').addEventListener('change',event=>{
  state.tissueTypes[Number($('segSelected').value)-1]=event.target.value;
  updateProvisionalTissue();
+
+thoraxReference.initialize();
 });
 updateProvisionalTissue();

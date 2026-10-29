@@ -153,6 +153,7 @@ jobs:
                       try:
                           page = browser.new_page(viewport={"width":1366,"height":768})
                           page.goto("http://127.0.0.1:" + str(server.server_address[1]) + "/index.html",wait_until="domcontentloaded",timeout=30000)
+                          page.wait_for_timeout(800)
                           page.locator("#zipInput").set_input_files({"name":"RM002_PUBLIC_SERIES.zip","mimeType":"application/zip","buffer":body})
                           import time
                           from PIL import Image
@@ -161,6 +162,16 @@ jobs:
                                   break
                               time.sleep(0.35)
                           else:
+                              warnings=page.locator("#warnings").inner_text(timeout=5000)
+                              diag={"slice_label":page.locator("#sliceTotal").inner_text(timeout=5000).strip(),
+                                    "series_cards":page.locator("#seriesList .seriesCard").count(),
+                                    "loading_hidden":page.locator("#loading").is_hidden(),
+                                    "unknown_dicom_error":("No se encontraron instancias DICOM" in warnings),
+                                    "zip_format_error":("ZIP" in warnings),
+                                    "orientation_error":("orientación" in warnings),
+                                    "transfer_syntax_error":("Transfer Syntax" in warnings),
+                                    "has_warnings":bool(warnings.strip())}
+                              print("ANATHEOS_RM002_BROWSER_DIAG_SANITIZED="+json.dumps(diag,sort_keys=True))
                               raise RuntimeError("the real brain series did not load as 64 slices in ANATHEOS")
                           scan=Image.open(io.BytesIO(page.locator("#scanCanvas").screenshot(timeout=15000))).convert("RGB")
                           pixels=set(scan.resize((128,128)).getdata())

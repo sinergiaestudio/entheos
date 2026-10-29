@@ -1,0 +1,40 @@
+name: ANATHEOS T2-B3 · Native real thorax five-layer import (ephemeral)
+on:
+  push:
+    branches:
+      - anatheos/ct-t2b3-five-organ-overlay-2026-10-29
+  pull_request:
+    branches:
+      - anatheos/ct-t2b2-independent-multicase-2026-10-29
+permissions:
+  contents: read
+jobs:
+  native-ct-reference-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install free imaging and headless browser dependencies
+        run: |
+          python3 -m pip install --disable-pip-version-check --quiet pydicom==3.0.1 numpy==2.2.6 scikit-image==0.25.2 scipy==1.16.3 pillow==11.3.0 playwright==1.56.0
+          python3 -m playwright install chromium
+      - name: Download public same-study CT and RTSTRUCT, convert and verify native viewer
+        shell: bash
+        run: |
+          set -euo pipefail
+          TMP_CASE="$RUNNER_TEMP/anatheos_t2b3_temporary"
+          mkdir -p "$TMP_CASE"
+          trap 'rm -rf "$TMP_CASE"' EXIT
+          TMP_CASE="$TMP_CASE" python3 - <<'PY'
+          import os,pathlib,urllib.request,hashlib
+          output=pathlib.Path(os.environ["TMP_CASE"])/"public_LCTSC.zip"
+          url="https://zenodo.org/records/4747795/files/LCTSC_DICOM_TestData.zip?download=1"
+          request=urllib.request.Request(url,headers={"User-Agent":"ANATHEOS-T2B3-free-noncommercial-QA/1.0"})
+          with urllib.request.urlopen(request,timeout=80) as response:binary=response.read(45*1024*1024+1)
+          if len(binary)>45*1024*1024 or hashlib.md5(binary).hexdigest()!="e472ce41106eb881264f2acb2f2bb1ca":
+              raise RuntimeError("Official LCTSC ZIP integrity check failed")
+          output.write_bytes(binary)
+          print("ANATHEOS_T2B3_SOURCE_VERIFIED=PASS",flush=True)
+          PY
+          python3 research/anatheos-t2b2/multilayer_viewer/preparar_lctsc.py --zip "$TMP_CASE/public_LCTSC.zip" --output "$TMP_CASE/pair"
+          python3 research/anatheos-t2b3/qa_real_viewer.py --zip "$TMP_CASE/public_LCTSC.zip" --ct "$TMP_CASE/pair/CT_HU_LPS.nrrd" --mask "$TMP_CASE/pair/LCTSC_RT_5_ORGANOS_LPS.nrrd"

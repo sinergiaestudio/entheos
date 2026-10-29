@@ -6,6 +6,7 @@ $files = @{
  '/' = 'index.html'
  '/index.html' = 'index.html'
  '/app.js' = 'app.js'
+ '/thorax-reference.mjs' = 'thorax-reference.mjs'
  '/volumetric.js' = 'volumetric.js'
  '/segmentation.mjs' = 'segmentation.mjs'
  '/surface-core.mjs' = 'surface-core.mjs'

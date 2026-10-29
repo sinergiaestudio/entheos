@@ -67,7 +67,8 @@ function confirmExactDICOM(ct,series){
  return checked;
 }
 export const thoraxReference={
- series:null,redraw:null,ct:null,mask:null,canvas:null,ctx:null,lastKey:'',opacity:.55,visible:31,serial:0,
+ series:null,redraw:null,ct:null,mask:null,canvas:null,ctx:null,lastKey:'',opacity:.55,visible:31,serial:0,verified:false,isolate3d:false,onVolumeChange:null,
+ notify(){this.redraw?.();this.onVolumeChange?.();},
  initialize(){
   const root=document.getElementById('segmentationPanel');if(!root)return;
   const section=document.createElement('section');section.setAttribute('aria-label','Referencia torácica externa');
@@ -82,15 +83,18 @@ export const thoraxReference={
   controls.append(uploadCT,uploadMask);const layers=document.createElement('div');layers.className='segLayers';
   for(let i=0;i<5;i++){
    const label=document.createElement('label');const box=document.createElement('input');box.type='checkbox';box.checked=true;box.id=`thoraxRefLayer${i+1}`;
-   box.addEventListener('change',()=>{this.visible=box.checked?this.visible|(1<<i):this.visible&~(1<<i);this.lastKey='';this.redraw?.()});
+   box.addEventListener('change',()=>{this.visible=box.checked?this.visible|(1<<i):this.visible&~(1<<i);this.lastKey='';this.notify()});
    const text=document.createElement('span');text.textContent=' '+names[i]+' · referencia externa';label.append(box,text);layers.append(label);
   }
   const opacity=document.createElement('input');opacity.type='range';opacity.id='thoraxRefOpacity';opacity.min=0;opacity.max=100;opacity.value=55;
-  opacity.addEventListener('input',()=>{this.opacity=Number(opacity.value)/100;this.lastKey='';this.redraw?.()});
+  opacity.addEventListener('input',()=>{this.opacity=Number(opacity.value)/100;this.lastKey='';this.notify()});
   const opacityLabel=document.createElement('label');opacityLabel.textContent='Opacidad de la referencia externa';opacityLabel.append(opacity);
-  const clear=document.createElement('button');clear.type='button';clear.id='thoraxRefClear';clear.textContent='Retirar referencia';
+  const isolate=document.createElement('input');isolate.type='checkbox';isolate.id='thoraxRef3DIsolate';
+   isolate.addEventListener('change',()=>{this.isolate3d=isolate.checked;this.notify()});
+   const isolateLabel=document.createElement('label');isolateLabel.append(isolate,document.createTextNode(' Aislar órganos externos en 3D (sin volumen de fondo)'));
+   const clear=document.createElement('button');clear.type='button';clear.id='thoraxRefClear';clear.textContent='Retirar referencia';
   clear.addEventListener('click',()=>this.reset());
-  section.append(top,explain,controls,layers,opacityLabel,clear,status);root.append(section);
+  section.append(top,explain,controls,layers,opacityLabel,isolateLabel,clear,status);root.append(section);
   const ingest=async(which,file)=>{
    const token=this.serial;
    try{
@@ -101,21 +105,23 @@ export const thoraxReference={
     if(which==='ct')this.ct=parsed;else this.mask=parsed;
     this.lastKey='';this.canvas=null;
     if(this.ct&&this.mask){
+     this.verified=false;
      const dicomGrid=physicalGrid(this.series);
      assertSameGrid(this.ct,this.mask);assertSameGrid(this.ct,dicomGrid);
      const checked=confirmExactDICOM(this.ct,this.series);
+     this.verified=true;
      status.textContent=`Referencia vinculada: ${checked.toLocaleString('es-AR')} vóxeles de CT cotejados y cinco capas conservadas. No diagnóstica.`;
-     this.redraw?.();
+     this.notify();
     }else{status.textContent=`${which==='ct'?'CT HU':'Máscara'} cargada; falta su pareja NRRD para verificar el mismo estudio.`;}
-   }catch(e){this.ct=null;this.mask=null;this.lastKey='';this.canvas=null;status.textContent='RECHAZADO · '+e.message;this.redraw?.();}
+   }catch(e){this.ct=null;this.mask=null;this.verified=false;this.lastKey='';this.canvas=null;status.textContent='RECHAZADO · '+e.message;this.notify();}
   };
   uploadCT.addEventListener('change',e=>{const file=e.target.files?.[0];e.target.value='';ingest('ct',file);});
   uploadMask.addEventListener('change',e=>{const file=e.target.files?.[0];e.target.value='';ingest('mask',file);});
  },
- bind(series,redraw){this.series=series;this.redraw=redraw;this.ct=null;this.mask=null;this.lastKey='';this.canvas=null;this.serial++;const el=document.getElementById('thoraxRefStatus');if(el)el.textContent='Nueva serie DICOM: cargá únicamente NRRD originales de ESTE estudio.';},
- reset(){this.bind(null,this.redraw);for(const id of ['thoraxRefCT','thoraxRefMask']){const x=document.getElementById(id);if(x)x.value='';}this.redraw?.();},
+ bind(series,redraw){this.series=series;this.redraw=redraw;this.ct=null;this.mask=null;this.verified=false;this.lastKey='';this.canvas=null;this.serial++;const el=document.getElementById('thoraxRefStatus');if(el)el.textContent='Nueva serie DICOM: cargá únicamente NRRD originales de ESTE estudio.';},
+ reset(){this.bind(null,this.redraw);for(const id of ['thoraxRefCT','thoraxRefMask']){const x=document.getElementById(id);if(x)x.value='';}this.notify();},
  paint(ctx,frame,z){
-  if(!this.ct||!this.mask||!this.series||!this.visible||this.opacity===0)return;
+  if(!this.verified||!this.ct||!this.mask||!this.series||!this.visible||this.opacity===0)return;
   const [x,y]=this.ct.dims,base=z*x*y;const key=[z,this.visible,this.opacity].join(':');
   if(this.lastKey!==key){
    if(!this.canvas){this.canvas=document.createElement('canvas');this.ctx=this.canvas.getContext('2d');}

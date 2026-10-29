@@ -157,20 +157,28 @@ jobs:
                           page.locator("#zipInput").set_input_files({"name":"RM002_PUBLIC_SERIES.zip","mimeType":"application/zip","buffer":body})
                           import time
                           from PIL import Image
-                          for _ in range(180):
-                              if page.locator("#sliceTotal").inner_text(timeout=5000).strip() == "/ 64" and page.locator("#loading").is_hidden():
+                          for attempt in range(105):
+                              label=page.locator("#sliceTotal").inner_text(timeout=5000).strip()
+                              hidden=page.locator("#loading").is_hidden()
+                              if label == "/ 64" and hidden:
                                   break
-                              time.sleep(0.35)
-                          else:
+                              if hidden and attempt > 9 and page.locator("#seriesList .seriesCard").count()==0:
+                                  break
+                              time.sleep(0.3)
+                          if label != "/ 64":
                               warnings=page.locator("#warnings").inner_text(timeout=5000)
-                              diag={"slice_label":page.locator("#sliceTotal").inner_text(timeout=5000).strip(),
+                              diag={"slice_label":label,
                                     "series_cards":page.locator("#seriesList .seriesCard").count(),
                                     "loading_hidden":page.locator("#loading").is_hidden(),
                                     "unknown_dicom_error":("No se encontraron instancias DICOM" in warnings),
+                                    "undefined_sequence":("longitud indefinida" in warnings),
+                                    "no_dicom_preamble":("cabecera DICOM" in warnings),
+                                    "missing_pixel_data":("No se encontró Pixel Data" in warnings),
+                                    "field_length_error":("Campo DICOM" in warnings),
                                     "zip_format_error":("ZIP" in warnings),
-                                    "orientation_error":("orientación" in warnings),
-                                    "transfer_syntax_error":("Transfer Syntax" in warnings),
-                                    "has_warnings":bool(warnings.strip())}
+                                    "missing_geometry":("Faltan IPP" in warnings),
+                                    "unsupported_pixel_layout":("Profundidad de bits" in warnings),
+                                    "syntax_error":("Transfer Syntax" in warnings)}
                               print("ANATHEOS_RM002_BROWSER_DIAG_SANITIZED="+json.dumps(diag,sort_keys=True))
                               raise RuntimeError("the real brain series did not load as 64 slices in ANATHEOS")
                           scan=Image.open(io.BytesIO(page.locator("#scanCanvas").screenshot(timeout=15000))).convert("RGB")

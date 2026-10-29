@@ -407,6 +407,7 @@ async function enableVolume(asMixed=false){
   state.volumeRenderer.style=({original:0,relief:1,amber:2})[$('volumeStyle').value]??0;
   state.volumeRenderer.lighting=Number($('volumeLighting').value)/100;
   if(state.segMask&&state.segCount.slice(1).some(Boolean))state.volumeRenderer.setSegmentation(state.segMask,state.segVisibility);
+  syncThoraxVolume3D();
   if(state.mixed)render();else state.volumeRenderer.draw();
    scheduleTriptychGeometry();
   $('volumeStatus').textContent=`Volumen ${g.x} × ${g.y} × ${g.z} · ${g.spanMm.map(v=>v.toFixed(1)).join(' × ')} mm · ${(prepared.textureBytes/1048576).toFixed(1)} MiB de textura R8 · ${state.volumeRenderer.backend}`;
@@ -744,6 +745,13 @@ function updateProvisionalTissue(){
  :'Región '+(selected+1)+' sin identificación anatómica; el nombre no cambia vóxeles ni STL.';
 }
 $('segSelected').addEventListener('change',updateProvisionalTissue);
+function syncThoraxVolume3D(){
+ const renderer=state.volumeRenderer;if(!renderer)return;
+ const ref=thoraxReference;
+ const verified=ref.verified&&ref.series===state.current&&ref.ct&&ref.mask;
+ renderer.setThoraxReference5(verified?ref.mask:null,ref.visible,ref.opacity,ref.isolate3d);
+}
+thoraxReference.onVolumeChange=syncThoraxVolume3D;
 $('triptychTissueCategory').addEventListener('change',event=>{
  state.tissueTypes[Number($('segSelected').value)-1]=event.target.value;
  updateProvisionalTissue();

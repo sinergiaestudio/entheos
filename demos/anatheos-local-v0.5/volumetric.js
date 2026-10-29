@@ -77,6 +77,11 @@ uniform sampler3D uLabels;
 uniform int uHasLabels;
 uniform int uLabelShow;
 uniform float uLabelOpacity;
+uniform sampler3D uThorax5;
+uniform int uHasThorax5;
+uniform int uThorax5Show;
+uniform float uThorax5Opacity;
+uniform int uThorax5Isolate;
 uniform vec3 uHalf;
 uniform vec3 uView;
 uniform vec3 uRight;
@@ -138,7 +143,23 @@ void main(){
     float shade=mix(1.,.50+.72*diffuse,uLighting*edge);
     luminance*=shade;
   }
-  if(uHasLabels==1){
+  int thoraxBits=0;
+  if(uHasThorax5==1){
+   thoraxBits=int(floor(texture(uThorax5,coords).r*255.0+.5)) & uThorax5Show;
+  }
+  if(uThorax5Isolate==1 && thoraxBits==0)continue;
+  if(thoraxBits!=0){
+   vec3 all=vec3(0.);int count=0;
+   // Per-reference bit, not exclusive tissue classification. Preserve overlap.
+   for(int k=0;k<5;k++)if((thoraxBits&(1<<k))!=0){
+    count++;
+    all+=k==0?vec3(.318,.792,.671):k==1?vec3(.906,.667,.341):
+         k==2?vec3(.863,.40,.525):k==3?vec3(.514,.588,.922):vec3(.827,.773,.471);
+   }
+   tissue=mix(tissue,all/float(count),.96);
+   luminance=1.;a=max(a,.15*uThorax5Opacity);
+  }
+  if(uHasLabels==1 && uThorax5Isolate==0){
    int label=int(floor(texture(uLabels,coords).r*255.0+.5));
    if(label>=1&&label<=3&&((uLabelShow&(1<<(label-1)))!=0)){
     vec3 region=label==1?vec3(.985,.42,.51):label==2?vec3(.392,.839,.894):vec3(.969,.776,.42);
@@ -160,6 +181,8 @@ export class VolumeRenderer {
   this.canvas=canvas;this.prepared=prepared;this.yaw=.55;this.pitch=.32;this.zoom=1.55;this.preview=false;
   this.threshold=.07;this.opacity=1.5;this.steps=220;this.low=0;this.high=1;this.clip=1;this.palette=0;this.style=0;this.lighting=.65;
   this.mask=null;this.maskTexture=null;this.labelVisibility=7;this.labelOpacity=.75;
+  this.thorax5=null;this.thorax5Texture=null;this.thorax5Visibility=31;
+  this.thorax5Opacity=.55;this.thorax5Isolate=false;
   const gl=canvas.getContext('webgl2',{alpha:false,antialias:false,preserveDrawingBuffer:true,powerPreference:'high-performance'});
   this.gl=gl;
   this.backend=gl?'WebGL2 (GPU)':'CPU (respaldo local)';
@@ -185,7 +208,7 @@ export class VolumeRenderer {
   gl.texParameteri(gl.TEXTURE_3D,gl.TEXTURE_WRAP_R,gl.CLAMP_TO_EDGE);
   gl.texImage3D(gl.TEXTURE_3D,0,gl.R8,geo.x,geo.y,geo.z,0,gl.RED,gl.UNSIGNED_BYTE,output);
   ensure(gl.getError()===gl.NO_ERROR,'No se pudo transferir el volumen a la GPU.');
-  this.locations={};for(const name of ['uLabels','uHasLabels','uLabelShow','uLabelOpacity','uVolume','uHalf','uView','uRight','uUp','uAspect','uZoom','uThreshold','uOpacity','uWindowLow','uWindowHigh','uSteps' ,'uClip','uPalette','uStyle','uTexel','uLighting'])this.locations[name]=gl.getUniformLocation(this.program,name);
+  this.locations={};for(const name of ['uLabels','uHasLabels','uLabelShow','uLabelOpacity','uThorax5','uHasThorax5','uThorax5Show','uThorax5Opacity','uThorax5Isolate','uVolume','uHalf','uView','uRight','uUp','uAspect','uZoom','uThreshold','uOpacity','uWindowLow','uWindowHigh','uSteps' ,'uClip','uPalette','uStyle','uTexel','uLighting'])this.locations[name]=gl.getUniformLocation(this.program,name);
   const m=Math.max(...geo.spanMm);this.half=geo.spanMm.map(v=>.5*v/m);
   this.draw();
  }
@@ -210,6 +233,36 @@ export class VolumeRenderer {
   }
   this.draw();
  }
+ setThoraxReference5(reference=null,visibility=31,opacity=.55,isolate=false){
+  const geo=this.prepared.geo;
+  if(reference){
+   if(!Array.isArray(reference.dims)||reference.dims[0]!==geo.x||reference.dims[1]!==geo.y||reference.dims[2]!==geo.z ||
+      !(reference.values instanceof Uint8Array)||reference.values.length!==geo.x*geo.y*geo.z){
+    throw Error('Referencia anatómica 3D con dimensiones o bits incompatibles');
+   }
+  }
+  const refresh=reference!==this.thorax5;
+  this.thorax5=reference;
+  this.thorax5Visibility=(Number(visibility)|0)&31;
+  this.thorax5Opacity=Math.max(0,Math.min(1,Number(opacity)||0));
+  this.thorax5Isolate=!!(isolate&&reference);
+  if(this.gl && refresh){
+   const gl=this.gl;
+   if(this.thorax5Texture){gl.deleteTexture(this.thorax5Texture);this.thorax5Texture=null;}
+   if(reference){
+    const t=gl.createTexture();if(!t)throw Error('No se pudo crear textura de referencia torácica');
+    this.thorax5Texture=t;gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_3D,t);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT,1);
+    gl.texParameteri(gl.TEXTURE_3D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_3D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+    for(const axis of [gl.TEXTURE_WRAP_S,gl.TEXTURE_WRAP_T,gl.TEXTURE_WRAP_R])
+     gl.texParameteri(gl.TEXTURE_3D,axis,gl.CLAMP_TO_EDGE);
+    gl.texImage3D(gl.TEXTURE_3D,0,gl.R8,geo.x,geo.y,geo.z,0,gl.RED,gl.UNSIGNED_BYTE,reference.values);
+    ensure(gl.getError()===gl.NO_ERROR,'La GPU rechazó la máscara torácica multiórgano');
+   }
+  }
+  this.draw();
+ }
  draw(){const gl=this.gl;if(!gl){this.drawSoftware();return;}if(gl.isContextLost())return;
   const rect=this.canvas.getBoundingClientRect(),scale=Math.min(devicePixelRatio||1,1.25)*(this.preview?.58:1);
   const w=Math.max(100,Math.min(1360,Math.round(rect.width*scale))),h=Math.max(100,Math.min(900,Math.round(rect.height*scale)));
@@ -223,6 +276,12 @@ export class VolumeRenderer {
   gl.uniform1f(u.uLabelOpacity,this.labelOpacity);
   gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_3D,this.maskTexture);
   gl.uniform1i(u.uLabels,1);
+  gl.uniform1i(u.uHasThorax5,this.thorax5Texture?1:0);
+  gl.uniform1i(u.uThorax5Show,this.thorax5Visibility);
+  gl.uniform1f(u.uThorax5Opacity,this.thorax5Opacity);
+  gl.uniform1i(u.uThorax5Isolate,this.thorax5Isolate?1:0);
+  gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_3D,this.thorax5Texture);
+  gl.uniform1i(u.uThorax5,2);
   gl.uniform1i(u.uVolume,0);gl.uniform3fv(u.uHalf,this.half);gl.uniform3fv(u.uView,v);gl.uniform3fv(u.uRight,right);gl.uniform3fv(u.uUp,up);
   gl.uniform1f(u.uAspect,w/h);gl.uniform1f(u.uZoom,this.zoom);gl.uniform1f(u.uThreshold,this.threshold);gl.uniform1f(u.uOpacity,this.opacity);
   gl.uniform1f(u.uWindowLow,this.low);gl.uniform1f(u.uWindowHigh,this.high);gl.uniform1i(u.uSteps,this.style===0?this.steps:Math.min(140,this.steps));
@@ -296,8 +355,20 @@ export class VolumeRenderer {
         const diffuse=Math.max(0,(-gx*.44-gy*.69-gz*.57)/(d*Math.hypot(.44,.69,.57)));
         luminance*=1+(Math.max(0,Math.min(1,this.lighting*edge)))*((.50+.72*diffuse)-1);
       }
-      if(this.mask){
-       const id=this.mask.data[(iz*ny+iy)*nx+ix];
+      const posVoxel=(iz*ny+iy)*nx+ix;
+      const refBits=this.thorax5?(this.thorax5.values[posVoxel]&this.thorax5Visibility):0;
+      if(this.thorax5Isolate && refBits===0)continue;
+      if(refBits){
+       const palette=[[.318,.792,.671],[.906,.667,.341],[.863,.40,.525],[.514,.588,.922],[.827,.773,.471]];
+       let cnt=0,pr=0,pg=0,pb=0;
+       for(let c=0;c<5;c++)if(refBits&(1<<c)){
+        cnt++;pr+=palette[c][0];pg+=palette[c][1];pb+=palette[c][2];
+       }
+       red=.04*red+.96*pr/cnt;green=.04*green+.96*pg/cnt;blue=.04*blue+.96*pb/cnt;
+       alpha=Math.max(alpha,.15*this.thorax5Opacity);luminance=1;
+      }
+      if(this.mask && !this.thorax5Isolate){
+       const id=this.mask.data[posVoxel];
        if(id>=1&&id<=3&&(this.labelVisibility&(1<<(id-1)))){
         const c=id===1?[.985,.42,.51]:id===2?[.392,.839,.894]:[.969,.776,.42];
         red=.08*red+.92*c[0];green=.08*green+.92*c[1];blue=.08*blue+.92*c[2];
@@ -320,5 +391,5 @@ export class VolumeRenderer {
   }
   context.putImageData(result,0,0);
  }
- dispose(){if(this.gl){if(this.maskTexture)this.gl.deleteTexture(this.maskTexture);this.gl.deleteTexture(this.texture);this.gl.deleteBuffer(this.buffer);this.gl.deleteProgram(this.program);this.gl=null;}this.prepared=null;}
+ dispose(){if(this.gl){if(this.thorax5Texture)this.gl.deleteTexture(this.thorax5Texture);if(this.maskTexture)this.gl.deleteTexture(this.maskTexture);this.gl.deleteTexture(this.texture);this.gl.deleteBuffer(this.buffer);this.gl.deleteProgram(this.program);this.gl=null;}this.prepared=null;}
 }

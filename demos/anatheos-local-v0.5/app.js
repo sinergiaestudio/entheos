@@ -157,7 +157,7 @@ function commitRecords(files,source,errors,notes,gen){
  state.wlWidth=Math.max(10,sampled[Math.floor(sampled.length*.98)]-sampled[Math.floor(sampled.length*.02)]);
  state.zoom=1;state.panX=0;state.panY=0;state.imageKey='';state.lastPixels=null;
  notes.unshift(`Importación local · ${files.length} instancias decodificadas en memoria · ${grouped.size} serie(s).`);
- if(files.length===144&&state.current.items.length===144)notes.push('DESS RTKN0668: 144 posiciones geométricas únicas, normal del stack calculada desde ImageOrientationPatient.');
+ notes.push('Posiciones ordenadas según el vector normal de ImageOrientationPatient; comprobar orientación y escala en Slicer.');
  warningsDisplay(errors,notes);updateControls();render();$('loading').hidden=true;
  toast(`Serie cargada: ${state.current.items.length} cortes reales · sin transmisión externa`);
 }
@@ -355,7 +355,7 @@ async function enableVolume(asMixed=false){
   if(state.mixed)render();else state.volumeRenderer.draw();
    scheduleTriptychGeometry();
   $('volumeStatus').textContent=`Volumen ${g.x} × ${g.y} × ${g.z} · ${g.spanMm.map(v=>v.toFixed(1)).join(' × ')} mm · ${(prepared.textureBytes/1048576).toFixed(1)} MiB de textura R8 · ${state.volumeRenderer.backend}`;
-  toast('Volumen DESS construido a partir de los vóxeles reales · giralo arrastrando.');
+  toast('Volumen de la serie activa construido a partir de sus vóxeles reales · giralo arrastrando.');
  }catch(err){if(token!==state.volumeToken)return;const msg=err instanceof Error?err.message:'Error WebGL2';
   stopVolume();state.mode='2d';state.mixed=false;switchModeButtons();render();warningsDisplay([msg],[]);toast('No se pudo activar 3D: '+msg);
  }finally{if(token===state.volumeToken)$('loading').hidden=true;else $('loading').hidden=true;}

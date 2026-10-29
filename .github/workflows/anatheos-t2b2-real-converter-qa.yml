@@ -1,0 +1,59 @@
+name: ANATHEOS T2-B2 · real LCTSC to NRRD five-layer conversion (ephemeral)
+on:
+  push:
+    branches:
+      - anatheos/ct-t2b2-independent-multicase-2026-10-29
+  pull_request:
+    branches:
+      - anatheos/ct-t2b1-lctsc-paired-reference-2026-10-29
+permissions:
+  contents: read
+jobs:
+  real-nrrd-converter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install free rasterizer
+        run: python3 -m pip install --disable-pip-version-check --quiet numpy==2.2.6 pydicom==3.0.1 scipy==1.16.3 scikit-image==0.25.2
+      - name: Convert actual LCTSC DICOM and RTSTRUCT to matching NRRD in runner temporary folder
+        shell: bash
+        run: |
+          set -euo pipefail
+          TEMP_CASE="$RUNNER_TEMP/anatheos_lctsc_temp"
+          trap 'rm -rf "$TEMP_CASE"' EXIT
+          python3 research/anatheos-t2b2/multilayer_viewer/preparar_lctsc.py --download-public --output "$TEMP_CASE"
+          TEST_DIR="$TEMP_CASE" python3 - <<'PY'
+          import json, os, pathlib, numpy as np
+          folder=pathlib.Path(os.environ["TEST_DIR"])
+          meta=json.loads((folder/"MANIFIESTO_LOCAL.json").read_text())
+          ct=folder/"CT_HU_LPS.nrrd"
+          mask=folder/"LCTSC_RT_5_ORGANOS_LPS.nrrd"
+          def header(path):
+              with path.open("rb") as f:
+                  raw=f.read(4096)
+              data=raw.split(b"\n\n",1)[0].decode("ascii")
+              return {s.split(": ",1)[0]:s.split(": ",1)[1]
+                      for s in data.split("\n") if ": " in s}
+          hct,hmask=header(ct),header(mask)
+          for key in ("sizes","space","space origin","space directions","dimension","encoding"):
+              if hct[key]!=hmask[key]:raise RuntimeError("NRRD same-case geometry mismatch")
+          if hct["space"]!="left-posterior-superior" or hct["encoding"]!="raw":
+              raise RuntimeError("NRRD orientation/encoding invalid")
+          if hct["type"]!="short" or hmask["type"]!="uchar":
+              raise RuntimeError("Unexpected NRRD data type")
+          labels=meta["voxel_counts"]
+          if len(labels)!=5 or any(n<100 for n in labels.values()):
+              raise RuntimeError("Missing real expert label")
+          print("ANATHEOS_T2B2_REAL_NRRD_QA="+json.dumps({
+            "gate":"PASS_REAL_SAME_CASE_CT_AND_FIVE_LABELS",
+            "shape":meta["ct_shape_zyx"],
+            "reference_labels":labels,
+            "rasterized_contours":meta["contours_rasterized"],
+            "directions_identical":True,
+            "origin_identical":True,
+            "ct_bytes":ct.stat().st_size,
+            "mask_bytes":mask.stat().st_size,
+            "no_original_medical_data_persisted":True
+          },sort_keys=True),flush=True)
+          PY

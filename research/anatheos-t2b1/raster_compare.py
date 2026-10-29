@@ -19,11 +19,16 @@ NAMES=("Left_Lung","Right_Lung","Heart","Esophagus","Spinal_Cord")
 def normalized_label(raw):
     return CANON.get(str(raw).lower().replace(" ","").replace("_",""),"")
 
-def load_pair():
-    req=urllib.request.Request(URL,headers={"User-Agent":"ANATHEOS-3D-T2B1-same-case-QA/1.0"})
-    with urllib.request.urlopen(req,timeout=90) as response:blob=response.read(MAX_BYTES+1)
-    if len(blob)>MAX_BYTES or hashlib.md5(blob).hexdigest()!=MD5:
-        raise RuntimeError("ZIP length or official Zenodo checksum failed")
+def load_pair(blob_override=None):
+    if blob_override is None:
+        req=urllib.request.Request(URL,headers={"User-Agent":"ANATHEOS-3D-T2B1-same-case-QA/1.0"})
+        with urllib.request.urlopen(req,timeout=90) as response:blob=response.read(MAX_BYTES+1)
+        if len(blob)>MAX_BYTES or hashlib.md5(blob).hexdigest()!=MD5:
+            raise RuntimeError("ZIP length or official Zenodo checksum failed")
+    else:
+        # Only public DICOM cases downloaded transiently by the multi-case benchmark.
+        if len(blob_override)>160*1024*1024:raise RuntimeError("Multicase ZIP exceeds memory limit")
+        blob=blob_override
     z=zipfile.ZipFile(io.BytesIO(blob))
     if z.testzip() is not None:raise RuntimeError("ZIP CRC failed")
     members=[m for m in z.infolist() if not m.is_dir()]

@@ -1,0 +1,20 @@
+name: ANATHEOS T2-B2 · independent rasterizer, Dice and HD95 (research)
+on:
+  push:
+    branches:
+      - anatheos/ct-t2b2-independent-multicase-2026-10-29
+  pull_request:
+    branches:
+      - anatheos/ct-t2b1-lctsc-paired-reference-2026-10-29
+permissions:
+  contents: read
+jobs:
+  independent-segmentation-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install free scientific libraries
+        run: python3 -m pip install --disable-pip-version-check --quiet numpy==2.2.6 scipy==1.16.3 pydicom==3.0.1 scikit-image==0.25.2 opencv-python-headless==4.11.0.86
+      - name: Independent RTSTRUCT rasterization and 3D overlap/surface metrics (RAM only)
+        run: python3 research/anatheos-t2b2/independent_raster_qa.py

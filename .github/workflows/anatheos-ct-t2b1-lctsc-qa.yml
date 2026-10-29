@@ -1,0 +1,20 @@
+name: ANATHEOS T2-B1 · LCTSC paired CT/RTSTRUCT reference (no medical artifacts)
+on:
+  push:
+    branches:
+      - anatheos/ct-t2b1-lctsc-paired-reference-2026-10-29
+  pull_request:
+    branches:
+      - anatheos/ct-t2b-tissue-candidates-2026-10-29
+permissions:
+  contents: read
+jobs:
+  lctsc-paired-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install open DICOM library
+        run: python3 -m pip install --quiet --disable-pip-version-check pydicom==3.0.1
+      - name: Check CT and same-study RTSTRUCT contours without retaining images
+        run: python3 research/anatheos-t2b1/inspect_lctsc.py

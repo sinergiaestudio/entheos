@@ -1,0 +1,20 @@
+name: ANATHEOS T2-B1 · expert thorax RTSTRUCT raster and Dice (research)
+on:
+  push:
+    branches:
+      - anatheos/ct-t2b1-lctsc-paired-reference-2026-10-29
+  pull_request:
+    branches:
+      - anatheos/ct-t2b-tissue-candidates-2026-10-29
+permissions:
+  contents: read
+jobs:
+  contour-quantitative-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install free CT imaging libraries
+        run: python3 -m pip install --disable-pip-version-check --quiet numpy==2.2.6 scipy==1.16.3 pydicom==3.0.1 scikit-image==0.25.2
+      - name: Evaluate candidate masks versus same-case expert contours in RAM only
+        run: python3 research/anatheos-t2b1/raster_compare.py

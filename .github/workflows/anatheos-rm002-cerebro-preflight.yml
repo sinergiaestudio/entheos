@@ -14,8 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Instalar lector DICOM libre para la verificacion efimera
-        run: python3 -m pip install --disable-pip-version-check --quiet pydicom==3.0.1
+      - uses: actions/checkout@v4
+      - name: Instalar lectores libres y Chromium descartable
+        run: |
+          python3 -m pip install --disable-pip-version-check --quiet pydicom==3.0.1 playwright==1.56.0
+          python3 -m playwright install chromium
       - name: Descarga publica temporaria y preflight anatomico anonimizado
         shell: bash
         run: |
@@ -130,6 +133,54 @@ jobs:
                       for field in ["test_gate","instances","rows","columns","transfer_syntax",
                                     "pixel_spacing_mm","stack_spacing_median_mm","zip_sha256"]:
                           f.write("| " + field + " | " + str(report[field]) + " |\n")
+          
+              # Browser import uses the original in-memory ZIP on an ephemeral localhost origin.
+              # No screenshots, DICOM bytes, names or clinical values are retained or logged.
+              import functools, http.server, threading
+              from playwright.sync_api import sync_playwright
+              class QuietHandler(http.server.SimpleHTTPRequestHandler):
+                  def log_message(self,*args): pass
+              source_dir = pathlib.Path.cwd() / "demos" / "anatheos-local-v0.5"
+              if not (source_dir / "index.html").exists():
+                  raise RuntimeError("ANATHEOS app files not present in checkout")
+              handler = functools.partial(QuietHandler,directory=str(source_dir))
+              server = http.server.ThreadingHTTPServer(("127.0.0.1",0),handler)
+              server_thread = threading.Thread(target=server.serve_forever,daemon=True)
+              server_thread.start()
+              try:
+                  with sync_playwright() as p:
+                      browser = p.chromium.launch(headless=True,args=["--no-sandbox","--disable-gpu","--use-gl=swiftshader"])
+                      try:
+                          page = browser.new_page(viewport={"width":1366,"height":768})
+                          page.goto("http://127.0.0.1:" + str(server.server_address[1]) + "/index.html",wait_until="domcontentloaded",timeout=30000)
+                          page.locator("#zipInput").set_input_files({"name":"RM002_PUBLIC_SERIES.zip","mimeType":"application/zip","buffer":body})
+                          page.wait_for_function("document.getElementById('sliceTotal')?.textContent.trim() === '/ 64' && document.getElementById('loading')?.hidden",timeout=90000)
+                          checked=page.evaluate("""() => {
+                              const c=document.getElementById('scanCanvas');
+                              const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;
+                              const colors=new Set();for(let i=0;i<d.length;i+=4*37)colors.add(d[i]+','+d[i+1]+','+d[i+2]);
+                              return {width:c.width,height:c.height,distinctColors:colors.size,
+                                      count:document.getElementById('sliceTotal').textContent.trim(),
+                                      series:document.querySelectorAll('#seriesList .seriesCard').length};
+                          }""")
+                          if checked["distinctColors"]<8 or checked["series"]!=1:
+                              raise RuntimeError("brain 2D canvas blank or unexpected series count")
+                          page.locator("#threeDButton").click(force=True)
+                          page.wait_for_function("document.getElementById('volumeStatus')?.textContent.includes('Volumen 208 × 256 × 64')",timeout=90000)
+                          vol=page.locator("#volumeStatus").inner_text(timeout=5000)
+                          if "Volumen" not in vol:
+                              raise RuntimeError("3D volume status absent")
+                          print("ANATHEOS_RM002_BROWSER_SANITIZED_RESULT="+json.dumps({
+                              "test_gate":"PASS_DICOM_REAL_BRAIN_2D_3D_BROWSER",
+                              "slice_count":64,"source":"real public DICOM UPENN-GBM",
+                              "canvas_nonuniform":checked["distinctColors"]>=8,
+                              "canvas_dimensions":[checked["width"],checked["height"]],
+                              "volume_rendered":True,"no_screenshots_saved":True
+                          },sort_keys=True))
+                      finally:
+                          browser.close()
+              finally:
+                  server.shutdown()
           finally:
               target.unlink(missing_ok=True)
           PY

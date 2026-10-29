@@ -24,7 +24,7 @@ def write_nrrd(path, data, dirs, origin, is_mask=False):
     head=(f'NRRD0005\n# ANATHEOS same-case experimental mask; not diagnostic\n'
           f'type: {typ}\ndimension: 3\nsizes: {x} {y} {z}\nspace: left-posterior-superior\n'
           f'space directions: {vec(dirs[0])} {vec(dirs[1])} {vec(dirs[2])}\n'
-          f'space origin: {vec(origin)}\nencoding: raw\nendian: little\n\n')
+          f'space origin: {vec(origin)}\n'+('anatheos-layer-format: bitmask-v1\n' if is_mask else '')+'encoding: raw\nendian: little\n\n')
     with open(path,'wb') as f:
         f.write(head.encode('ascii'))
         f.write(data.tobytes(order='C'))
@@ -107,13 +107,11 @@ def convert_masks(ct,rt,vol):
             x=diff@frame['ori'][:3]/frame['spacing'][1]
             y=diff@frame['ori'][3:]/frame['spacing'][0]
             rr,cc=polygon(y,x,shape=vol.shape[1:])
-            # Parity preserves nested rings. Expert labels should not overlap.
-            mask=(result[k,rr,cc]==label)
-            if np.any((result[k,rr,cc]!=0)&(result[k,rr,cc]!=label)):
-                raise ValueError('Dos órganos de referencia se superponen en la misma celda')
-            result[k,rr,cc]=np.where(mask,0,label)
+            # Independent per-organ parity (XOR); preserve legitimate multi-organ overlap.
+            bit=np.uint8(1 << (label-1))
+            result[k,rr,cc] ^= bit
             count+=1
-    if count<50 or any(np.count_nonzero(result==lab)<200 for lab in COLORS):
+    if count<50 or any(np.count_nonzero((result&(1<<(lab-1)))!=0)<200 for lab in COLORS):
         raise ValueError('Faltan máscaras de referencia completas')
     return result,count
 
@@ -137,7 +135,9 @@ def main():
     write_nrrd(target/'LCTSC_RT_5_ORGANOS_LPS.nrrd',mask,dirs,origin,True)
     info={'fuente':'LCTSC / TCIA, CC BY 3.0, DOI 10.7937/K9/TCIA.2017.3R3FVZ08',
           'sha256_zip':hashlib.sha256(blob).hexdigest(), 'ct_shape_zyx':list(volume.shape),
-          'contours_rasterized':contours,'labels':COLORS,'voxel_counts':{str(k):int((mask==k).sum()) for k in COLORS},
+          'contours_rasterized':contours,'labels':COLORS,'voxel_counts':{str(k):int(np.count_nonzero(mask & (1<<(k-1)))) for k in COLORS},
+          'overlapping_voxels':int(np.count_nonzero((mask & (mask-np.uint8(1))) != 0)),
+          'mask_encoding':'anatheos-bitmask-v1; bits 1,2,4,8,16',
           'origin_LPS_mm':[float(v) for v in origin],'directions_LPS_mm':dirs.tolist(),
           'interpretacion':'Contornos RT expertos del mismo caso; NO predicción ni diagnóstico'}
     (target/'MANIFIESTO_LOCAL.json').write_text(json.dumps(info,ensure_ascii=False,indent=2),encoding='utf8')

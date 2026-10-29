@@ -747,7 +747,8 @@ $('segSelected').addEventListener('change',updateProvisionalTissue);
 $('triptychTissueCategory').addEventListener('change',event=>{
  state.tissueTypes[Number($('segSelected').value)-1]=event.target.value;
  updateProvisionalTissue();
-
-thoraxReference.initialize();
 });
 updateProvisionalTissue();
+
+// Initialize the independent five-organ reference panel at module load.
+thoraxReference.initialize();

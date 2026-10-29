@@ -18,54 +18,6 @@ const UTF8=new TextDecoder('utf-8');
 function stringVal(bytes){return UTF8.decode(bytes).replace(/[\x00 ]+$/g,'').trim();}
 function numericList(s){return (s||'').split('\\').map(Number).filter(Number.isFinite);}
 function hasDicm(buffer){return buffer.byteLength>=132&&String.fromCharCode(...new Uint8Array(buffer,128,4))==='DICM';}
-// DICOM Part 10: safely skip SQ/items with undefined length, respecting delimitation
-// items (FFFE,E00D) and sequences (FFFE,E0DD). No value or patient metadata read.
-function skipUndefinedDicom(view,u8,offset,syntax,until,depth=0){
- if(depth>16)throw Error('Anidación DICOM excesiva');
- const end=view.byteLength;let count=0;
- while(offset+8<=end){
-  if(++count>100000)throw Error('Demasiados elementos DICOM anidados');
-  const group=view.getUint16(offset,true),element=view.getUint16(offset+2,true);offset+=4;
-  if(group===0xfffe){
-   const len=view.getUint32(offset,true);offset+=4;
-   if(element===until){
-    if(len!==0)throw Error('Delimitador DICOM inválido');
-    return offset;
-   }
-   if(element!==0xe000)throw Error('Delimitador DICOM fuera de lugar');
-   if(len===0xffffffff)offset=skipUndefinedDicom(view,u8,offset,syntax,0xe00d,depth+1);
-   else{
-    if(len>end-offset)throw Error('Elemento DICOM fuera de límites');
-    offset+=len;
-   }
-   continue;
-  }
-  const explicit=group===2||syntax!=='1.2.840.10008.1.2';
-  let len,vr='';
-  if(explicit){
-   if(offset+4>end)throw Error('Campo DICOM incompleto');
-   vr=String.fromCharCode(u8[offset],u8[offset+1]);offset+=2;
-   if(LONG.has(vr)){
-    if(offset+6>end)throw Error('Campo DICOM incompleto');
-    offset+=2;len=view.getUint32(offset,true);offset+=4;
-   }else{
-    len=view.getUint16(offset,true);offset+=2;
-   }
-  }else{
-   if(offset+4>end)throw Error('Campo DICOM incompleto');
-   len=view.getUint32(offset,true);offset+=4;
-  }
-  if(len===0xffffffff){
-   if(group===0x7fe0&&element===0x0010)throw Error('Pixel Data encapsulada no compatible');
-   if(explicit&&vr!=='SQ')throw Error('Longitud indefinida fuera de secuencia SQ');
-   offset=skipUndefinedDicom(view,u8,offset,syntax,0xe0dd,depth+1);
-  }else{
-   if(len>end-offset)throw Error('Campo DICOM fuera de límites');
-   offset+=len;
-  }
- }
- throw Error('Falta delimitación de secuencia DICOM');
-}
 function readDicom(buffer,name){
  const view=new DataView(buffer),u8=new Uint8Array(buffer);
  if(!hasDicm(buffer))throw Error('No contiene cabecera DICOM Part 10 (DICM)');
@@ -78,12 +30,7 @@ function readDicom(buffer,name){
    if(LONG.has(vr)){if(offset+6>buffer.byteLength)throw Error('Campo DICOM incompleto');offset+=2;length=view.getUint32(offset,true);offset+=4;}
    else{length=view.getUint16(offset,true);offset+=2;}
   }else{length=view.getUint32(offset,true);offset+=4;}
-  if(length===0xffffffff){
-   if(tag===0x7fe00010)throw Error('Transfer Syntax encapsulada o comprimida: no compatible con este visor local');
-   if(explicit&&vr!=='SQ')throw Error('Longitud indefinida fuera de secuencia SQ');
-   offset=skipUndefinedDicom(view,u8,offset,syntax,0xe0dd);
-   continue;
-  }
+  if(length===0xffffffff){if(tag===0x7fe00010)throw Error('Transfer Syntax encapsulada o comprimida: no compatible con este visor local');throw Error('Secuencia DICOM de longitud indefinida: versión local no compatible');}
   if(offset+length>buffer.byteLength)throw Error('Campo DICOM incompleto o longitud fuera del archivo');
   const key=TAGS.get(tag);
   if(tag===0x7fe00010){pixelOffset=offset;pixelLength=length;break;}
@@ -211,7 +158,7 @@ function commitRecords(files,source,errors,notes,gen){
  state.wlWidth=Math.max(10,sampled[Math.floor(sampled.length*.98)]-sampled[Math.floor(sampled.length*.02)]);
  state.zoom=1;state.panX=0;state.panY=0;state.imageKey='';state.lastPixels=null;
  notes.unshift(`Importación local · ${files.length} instancias decodificadas en memoria · ${grouped.size} serie(s).`);
- notes.push('Posiciones ordenadas según el vector normal de ImageOrientationPatient; comprobar orientación y escala en Slicer.');
+ if(files.length===144&&state.current.items.length===144)notes.push('DESS RTKN0668: 144 posiciones geométricas únicas, normal del stack calculada desde ImageOrientationPatient.');
  warningsDisplay(errors,notes);thoraxReference.bind(state.current,render);updateControls();render();$('loading').hidden=true;
  toast(`Serie cargada: ${state.current.items.length} cortes reales · sin transmisión externa`);
 }
@@ -407,10 +354,11 @@ async function enableVolume(asMixed=false){
   state.volumeRenderer.style=({original:0,relief:1,amber:2})[$('volumeStyle').value]??0;
   state.volumeRenderer.lighting=Number($('volumeLighting').value)/100;
   if(state.segMask&&state.segCount.slice(1).some(Boolean))state.volumeRenderer.setSegmentation(state.segMask,state.segVisibility);
+  syncThoraxVolume3D();
   if(state.mixed)render();else state.volumeRenderer.draw();
    scheduleTriptychGeometry();
   $('volumeStatus').textContent=`Volumen ${g.x} × ${g.y} × ${g.z} · ${g.spanMm.map(v=>v.toFixed(1)).join(' × ')} mm · ${(prepared.textureBytes/1048576).toFixed(1)} MiB de textura R8 · ${state.volumeRenderer.backend}`;
-  toast('Volumen de la serie activa construido a partir de sus vóxeles reales · giralo arrastrando.');
+  toast('Volumen DESS construido a partir de los vóxeles reales · giralo arrastrando.');
  }catch(err){if(token!==state.volumeToken)return;const msg=err instanceof Error?err.message:'Error WebGL2';
   stopVolume();state.mode='2d';state.mixed=false;switchModeButtons();render();warningsDisplay([msg],[]);toast('No se pudo activar 3D: '+msg);
  }finally{if(token===state.volumeToken)$('loading').hidden=true;else $('loading').hidden=true;}
@@ -744,11 +692,18 @@ function updateProvisionalTissue(){
  :'Región '+(selected+1)+' sin identificación anatómica; el nombre no cambia vóxeles ni STL.';
 }
 $('segSelected').addEventListener('change',updateProvisionalTissue);
-$('triptychTissueCategory').addEventListener('change',event=>{
+function syncThoraxVolume3D(){
+ const r=state.volumeRenderer;if(!r)return;
+ const ref=thoraxReference;
+ const safe=ref.verified&&ref.series===state.current&&ref.ct&&ref.mask;
+ r.setThoraxReference5(safe?ref.mask:null,ref.visible,ref.opacity,ref.isolate3d);
+}
+thoraxReference.onVolumeChange=syncThoraxVolume3D;
+$('triptychTissueCategory').addEventListener('change' ,event=>{
  state.tissueTypes[Number($('segSelected').value)-1]=event.target.value;
  updateProvisionalTissue();
 });
 updateProvisionalTissue();
 
-// Initialize the independent five-organ reference panel at module load.
+// T2-B3: independent five-organ RTSTRUCT reference overlay; no alteration of manual labels.
 thoraxReference.initialize();

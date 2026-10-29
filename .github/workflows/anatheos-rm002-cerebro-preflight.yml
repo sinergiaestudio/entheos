@@ -3,6 +3,9 @@ on:
   push:
     branches:
       - anatheos/rm002-brain-public-preflight-2026-10-29
+  pull_request:
+    branches:
+      - anatheos/ux-n6-multiseries-qa-hotfix-2026-10-29
   workflow_dispatch:
 permissions:
   contents: read

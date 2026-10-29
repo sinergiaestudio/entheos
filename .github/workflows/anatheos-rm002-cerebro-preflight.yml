@@ -1,0 +1,125 @@
+name: ANATHEOS RM-002 · cerebro DICOM real preflight (sin artefactos clinicos)
+on:
+  push:
+    branches:
+      - anatheos/rm002-brain-public-preflight-2026-10-29
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  brain-public-dicom:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Instalar lector DICOM libre para la verificacion efimera
+        run: python3 -m pip install --disable-pip-version-check --quiet pydicom==3.0.1
+      - name: Descarga publica temporaria y preflight anatomico anonimizado
+        shell: bash
+        run: |
+          import hashlib, io, json, math, os, pathlib, statistics, sys, urllib.request, zipfile
+          from collections import Counter
+          import pydicom
+          
+          URL = "https://saga-it.com/dicom/samples/files/mr-brain-upenn-gbm/series.zip"
+          MAX_ZIP = 20 * 1024 * 1024
+          MAX_UNPACKED = 250 * 1024 * 1024
+          target = pathlib.Path(os.environ["RUNNER_TEMP"]) / "anatheos_rm002_upenn_gbm_t2_ephemeral.zip"
+          # Public CC BY 4.0 source. No original DICOM, patient IDs or UIDs in GitHub artifacts/logs.
+          req = urllib.request.Request(URL, headers={"User-Agent": "ANATHEOS-3D-noncommercial-preflight/1.0"})
+          try:
+              with urllib.request.urlopen(req, timeout=45) as response:
+                  if response.status != 200:
+                      raise RuntimeError("source HTTP " + str(response.status))
+                  body = response.read(MAX_ZIP + 1)
+              if len(body) > MAX_ZIP:
+                  raise RuntimeError("unexpected sample size above 20 MiB")
+              if body[:2] != b"PK":
+                  raise RuntimeError("source is not ZIP")
+              target.write_bytes(body)
+              sha = hashlib.sha256(body).hexdigest()
+              with zipfile.ZipFile(io.BytesIO(body)) as z:
+                  if z.testzip() is not None:
+                      raise RuntimeError("ZIP CRC validation failed")
+                  members = [f for f in z.infolist() if not f.is_dir()]
+                  if len(members) < 2 or len(members) > 300:
+                      raise RuntimeError("unexpected instance count")
+                  if sum(f.file_size for f in members) > MAX_UNPACKED:
+                      raise RuntimeError("unpacked size limit")
+                  slices = []
+                  for info in members:
+                      raw = z.read(info)
+                      if len(raw) < 132 or raw[128:132] != b"DICM":
+                          raise RuntimeError("non-Part10 DICOM member")
+                      ds = pydicom.dcmread(io.BytesIO(raw))
+                      orient = [float(x) for x in ds.ImageOrientationPatient]
+                      pos = [float(x) for x in ds.ImagePositionPatient]
+                      spacing = [float(x) for x in ds.PixelSpacing]
+                      rows, cols = int(ds.Rows), int(ds.Columns)
+                      bits, samples = int(ds.BitsAllocated), int(ds.SamplesPerPixel)
+                      frames = int(getattr(ds, "NumberOfFrames", 1))
+                      syntax = str(ds.file_meta.TransferSyntaxUID)
+                      photo = str(ds.PhotometricInterpretation)
+                      pix = bytes(ds.PixelData)
+                      if not (rows > 0 and cols > 0 and samples == 1 and bits == 16 and frames == 1):
+                          raise RuntimeError("unsupported pixel layout")
+                      if len(pix) < rows * cols * 2:
+                          raise RuntimeError("truncated DICOM pixel data")
+                      if syntax not in {"1.2.840.10008.1.2", "1.2.840.10008.1.2.1"}:
+                          raise RuntimeError("unsupported transfer syntax")
+                      if photo not in {"MONOCHROME1", "MONOCHROME2"}:
+                          raise RuntimeError("unsupported photometric interpretation")
+                      if str(getattr(ds, "Modality", "")) != "MR":
+                          raise RuntimeError("unexpected modality")
+                      if len(orient) != 6 or len(pos) != 3 or len(spacing) != 2 or min(spacing) <= 0:
+                          raise RuntimeError("invalid spatial header")
+                      series_key = hashlib.sha256(str(ds.SeriesInstanceUID).encode()).hexdigest()[:12]
+                      slices.append(dict(series_key=series_key, rows=rows, columns=cols, bits=bits, 
+                          syntax=syntax, photo=photo, orient=orient, pos=pos, spacing=spacing,
+                          pixel_first_128_sha256=hashlib.sha256(pix[:128]).hexdigest()[:16]))
+              if len(set(s["series_key"] for s in slices)) != 1:
+                  raise RuntimeError("sample ZIP mixes different SeriesInstanceUID values")
+              if len(set((s["rows"],s["columns"],s["syntax"],s["photo"]) for s in slices)) != 1:
+                  raise RuntimeError("inconsistent per-slice metadata")
+              first = slices[0]
+              a, b = first["orient"][:3], first["orient"][3:]
+              dot = sum(x*y for x,y in zip(a,b))
+              norm_a = math.sqrt(sum(x*x for x in a))
+              norm_b = math.sqrt(sum(x*x for x in b))
+              n = [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]
+              nn = math.sqrt(sum(x*x for x in n))
+              if nn < .99 or abs(dot) > .002 or not (.99 < norm_a < 1.01 and .99 < norm_b < 1.01):
+                  raise RuntimeError("invalid or nonorthogonal orientation")
+              for s in slices:
+                  if max(abs(x-y) for x,y in zip(s["orient"],first["orient"])) > 0.0003:
+                      raise RuntimeError("orientation mismatch")
+                  if max(abs(x-y) for x,y in zip(s["spacing"],first["spacing"])) > 0.002:
+                      raise RuntimeError("pixel spacing mismatch")
+              projected = sorted(sum(q*r for q,r in zip(s["pos"],n))/nn for s in slices)
+              diffs = [v-u for u,v in zip(projected,projected[1:])]
+              median = statistics.median(diffs)
+              if median <= .00001 or any(abs(x-median) > .05 for x in diffs):
+                  raise RuntimeError("duplicate/irregular slice coordinates")
+              sample_unique = len(set(s["pixel_first_128_sha256"] for s in slices))
+              report = {
+                 "case":"RM-002", "source":"public Saga IT mirror of TCIA UPENN-GBM; CC BY 4.0",
+                 "check":"DICOM preflight only, not browser render or anatomy",
+                 "zip_sha256":sha, "zip_bytes":len(body), "instances":len(slices),
+                 "rows":first["rows"], "columns":first["columns"],
+                 "transfer_syntax":first["syntax"], "photometric":first["photo"],
+                 "pixel_spacing_mm":first["spacing"],
+                 "stack_spacing_median_mm":round(median,6),
+                 "pixel_fingerprint_uniques":sample_unique,
+                 "test_gate":"PASS_FOR_SINGLE_SERIES_BROWSER_IMPORT",
+                 "all_images_ephemeral":True, "contains_patient_identifiers":False
+              }
+              print("ANATHEOS_RM002_SANITIZED_RESULT=" + json.dumps(report,sort_keys=True))
+              summary = os.getenv("GITHUB_STEP_SUMMARY")
+              if summary:
+                  with open(summary,"a",encoding="utf8") as f:
+                      f.write("### RM-002 UPENN-GBM T2 DICOM (no medical data retained)\n\n")
+                      f.write("| Gate | Result |\n|---|---|\n")
+                      for field in ["test_gate","instances","rows","columns","transfer_syntax",
+                                    "pixel_spacing_mm","stack_spacing_median_mm","zip_sha256"]:
+                          f.write("| " + field + " | " + str(report[field]) + " |\n")
+          finally:
+              target.unlink(missing_ok=True)

@@ -1,0 +1,18 @@
+name: ANATHEOS T2-B2 · public multi-case access probe (metadata only)
+on:
+  push:
+    branches:
+      - anatheos/ct-t2b2-independent-multicase-2026-10-29
+  pull_request:
+    branches:
+      - anatheos/ct-t2b1-lctsc-paired-reference-2026-10-29
+permissions:
+  contents: read
+jobs:
+  multicase-source-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Audit public datasets without downloading DICOM
+        run: python3 research/anatheos-t2b2/remote_case_probe.py

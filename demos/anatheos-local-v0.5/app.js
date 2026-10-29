@@ -17,6 +17,54 @@ const UTF8=new TextDecoder('utf-8');
 function stringVal(bytes){return UTF8.decode(bytes).replace(/[\x00 ]+$/g,'').trim();}
 function numericList(s){return (s||'').split('\\').map(Number).filter(Number.isFinite);}
 function hasDicm(buffer){return buffer.byteLength>=132&&String.fromCharCode(...new Uint8Array(buffer,128,4))==='DICM';}
+// DICOM Part 10: safely skip SQ/items with undefined length, respecting delimitation
+// items (FFFE,E00D) and sequences (FFFE,E0DD). No value or patient metadata read.
+function skipUndefinedDicom(view,u8,offset,syntax,until,depth=0){
+ if(depth>16)throw Error('Anidación DICOM excesiva');
+ const end=view.byteLength;let count=0;
+ while(offset+8<=end){
+  if(++count>100000)throw Error('Demasiados elementos DICOM anidados');
+  const group=view.getUint16(offset,true),element=view.getUint16(offset+2,true);offset+=4;
+  if(group===0xfffe){
+   const len=view.getUint32(offset,true);offset+=4;
+   if(element===until){
+    if(len!==0)throw Error('Delimitador DICOM inválido');
+    return offset;
+   }
+   if(element!==0xe000)throw Error('Delimitador DICOM fuera de lugar');
+   if(len===0xffffffff)offset=skipUndefinedDicom(view,u8,offset,syntax,0xe00d,depth+1);
+   else{
+    if(len>end-offset)throw Error('Elemento DICOM fuera de límites');
+    offset+=len;
+   }
+   continue;
+  }
+  const explicit=group===2||syntax!=='1.2.840.10008.1.2';
+  let len,vr='';
+  if(explicit){
+   if(offset+4>end)throw Error('Campo DICOM incompleto');
+   vr=String.fromCharCode(u8[offset],u8[offset+1]);offset+=2;
+   if(LONG.has(vr)){
+    if(offset+6>end)throw Error('Campo DICOM incompleto');
+    offset+=2;len=view.getUint32(offset,true);offset+=4;
+   }else{
+    len=view.getUint16(offset,true);offset+=2;
+   }
+  }else{
+   if(offset+4>end)throw Error('Campo DICOM incompleto');
+   len=view.getUint32(offset,true);offset+=4;
+  }
+  if(len===0xffffffff){
+   if(group===0x7fe0&&element===0x0010)throw Error('Pixel Data encapsulada no compatible');
+   if(explicit&&vr!=='SQ')throw Error('Longitud indefinida fuera de secuencia SQ');
+   offset=skipUndefinedDicom(view,u8,offset,syntax,0xe0dd,depth+1);
+  }else{
+   if(len>end-offset)throw Error('Campo DICOM fuera de límites');
+   offset+=len;
+  }
+ }
+ throw Error('Falta delimitación de secuencia DICOM');
+}
 function readDicom(buffer,name){
  const view=new DataView(buffer),u8=new Uint8Array(buffer);
  if(!hasDicm(buffer))throw Error('No contiene cabecera DICOM Part 10 (DICM)');
@@ -29,7 +77,12 @@ function readDicom(buffer,name){
    if(LONG.has(vr)){if(offset+6>buffer.byteLength)throw Error('Campo DICOM incompleto');offset+=2;length=view.getUint32(offset,true);offset+=4;}
    else{length=view.getUint16(offset,true);offset+=2;}
   }else{length=view.getUint32(offset,true);offset+=4;}
-  if(length===0xffffffff){if(tag===0x7fe00010)throw Error('Transfer Syntax encapsulada o comprimida: no compatible con este visor local');throw Error('Secuencia DICOM de longitud indefinida: versión local no compatible');}
+  if(length===0xffffffff){
+   if(tag===0x7fe00010)throw Error('Transfer Syntax encapsulada o comprimida: no compatible con este visor local');
+   if(explicit&&vr!=='SQ')throw Error('Longitud indefinida fuera de secuencia SQ');
+   offset=skipUndefinedDicom(view,u8,offset,syntax,0xe0dd);
+   continue;
+  }
   if(offset+length>buffer.byteLength)throw Error('Campo DICOM incompleto o longitud fuera del archivo');
   const key=TAGS.get(tag);
   if(tag===0x7fe00010){pixelOffset=offset;pixelLength=length;break;}

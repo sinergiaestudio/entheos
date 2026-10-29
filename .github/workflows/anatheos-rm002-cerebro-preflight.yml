@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Instalar lectores libres y Chromium descartable
         run: |
-          python3 -m pip install --disable-pip-version-check --quiet pydicom==3.0.1 playwright==1.56.0
+          python3 -m pip install --disable-pip-version-check --quiet pydicom==3.0.1 playwright==1.56.0 pillow==11.3.0
           python3 -m playwright install chromium
       - name: Descarga publica temporaria y preflight anatomico anonimizado
         shell: bash
@@ -154,22 +154,31 @@ jobs:
                           page = browser.new_page(viewport={"width":1366,"height":768})
                           page.goto("http://127.0.0.1:" + str(server.server_address[1]) + "/index.html",wait_until="domcontentloaded",timeout=30000)
                           page.locator("#zipInput").set_input_files({"name":"RM002_PUBLIC_SERIES.zip","mimeType":"application/zip","buffer":body})
-                          page.wait_for_function("document.getElementById('sliceTotal')?.textContent.trim() === '/ 64' && document.getElementById('loading')?.hidden",timeout=90000)
-                          checked=page.evaluate("""() => {
-                              const c=document.getElementById('scanCanvas');
-                              const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;
-                              const colors=new Set();for(let i=0;i<d.length;i+=4*37)colors.add(d[i]+','+d[i+1]+','+d[i+2]);
-                              return {width:c.width,height:c.height,distinctColors:colors.size,
-                                      count:document.getElementById('sliceTotal').textContent.trim(),
-                                      series:document.querySelectorAll('#seriesList .seriesCard').length};
-                          }""")
-                          if checked["distinctColors"]<8 or checked["series"]!=1:
+                          import time
+                          from PIL import Image
+                          for _ in range(180):
+                              if page.locator("#sliceTotal").inner_text(timeout=5000).strip() == "/ 64" and page.locator("#loading").is_hidden():
+                                  break
+                              time.sleep(0.35)
+                          else:
+                              raise RuntimeError("the real brain series did not load as 64 slices in ANATHEOS")
+                          scan=Image.open(io.BytesIO(page.locator("#scanCanvas").screenshot(timeout=15000))).convert("RGB")
+                          pixels=set(scan.resize((128,128)).getdata())
+                          checked={"width":scan.width,"height":scan.height,
+                              "distinctColors":len(pixels),"series":page.locator("#seriesList .seriesCard").count()}
+                          if checked["distinctColors"] < 8 or checked["series"] != 1:
                               raise RuntimeError("brain 2D canvas blank or unexpected series count")
                           page.locator("#threeDButton").click(force=True)
-                          page.wait_for_function("document.getElementById('volumeStatus')?.textContent.includes('Volumen 208 × 256 × 64')",timeout=90000)
-                          vol=page.locator("#volumeStatus").inner_text(timeout=5000)
-                          if "Volumen" not in vol:
-                              raise RuntimeError("3D volume status absent")
+                          for _ in range(180):
+                              vol=page.locator("#volumeStatus").inner_text(timeout=5000)
+                              if "Volumen 208 × 256 × 64" in vol:
+                                  break
+                              time.sleep(0.4)
+                          else:
+                              raise RuntimeError("the 3D renderer did not complete the real brain volume")
+                          image3d=Image.open(io.BytesIO(page.locator("#volumeCanvas").screenshot(timeout=15000))).convert("RGB")
+                          if len(set(image3d.resize((128,128)).getdata())) < 8:
+                              raise RuntimeError("real brain 3D canvas is blank")
                           print("ANATHEOS_RM002_BROWSER_SANITIZED_RESULT="+json.dumps({
                               "test_gate":"PASS_DICOM_REAL_BRAIN_2D_3D_BROWSER",
                               "slice_count":64,"source":"real public DICOM UPENN-GBM",

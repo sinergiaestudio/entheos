@@ -19,6 +19,7 @@ jobs:
       - name: Descarga publica temporaria y preflight anatomico anonimizado
         shell: bash
         run: |
+          python3 - <<'PY'
           import hashlib, io, json, math, os, pathlib, statistics, sys, urllib.request, zipfile
           from collections import Counter
           import pydicom
@@ -126,3 +127,4 @@ jobs:
                           f.write("| " + field + " | " + str(report[field]) + " |\n")
           finally:
               target.unlink(missing_ok=True)
+          PY

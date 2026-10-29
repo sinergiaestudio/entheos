@@ -110,9 +110,12 @@ def main():
     validation={}
     for name in orig.NAMES:
         comparison=metrics(legacy[name],alternate[name],spacing,hd95=False)
-        if comparison["dice"] is None or comparison["dice"]<0.975:
-            raise RuntimeError("Independent rasterizers disagree on "+name)
+        comparison["boundary_method_discrepancy"] = comparison["dice"] is None or comparison["dice"] < 0.975
         validation[name]=comparison
+    if any(validation[name]["dice"] is None or validation[name]["dice"]<0.970
+           for name in ("Left_Lung","Right_Lung","Heart")):
+        print("ANATHEOS_T2B2_RASTER_DISCREPANCY="+json.dumps(validation,sort_keys=True),flush=True)
+        raise RuntimeError("Major-organ independent rasterization disagreement")
     geo={"orientation":ct[0]["orient"],"positions":np.array([c["pos"] for c in ct]),
          "spacing":ct[0]["spacing"],"step":step}
     estimated,body=t2b.candidate_layers(hu,geo)

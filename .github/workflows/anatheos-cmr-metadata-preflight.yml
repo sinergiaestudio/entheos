@@ -1,0 +1,22 @@
+name: ANATHEOS CMR · privacy-safe cardiac DICOM metadata preflight
+on:
+  push:
+    branches:
+      - anatheos/cmr24-metadata-privacy-preflight-2026-10-29
+  pull_request:
+    branches:
+      - anatheos/ct-t2c1-five-organ-3d-2026-10-29
+permissions:
+  contents: read
+jobs:
+  synthetic-cardiac-dicom:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install free metadata-only DICOM reader
+        run: python3 -m pip install --quiet --disable-pip-version-check pydicom==3.0.1
+      - name: Check offline family classifier and privacy invariants
+        run: python3 research/anatheos-cmr/preflight/inventariar_rm_cardiaca.py --auto-prueba
+      - name: Validate synthetic MR Part10/ZIP cine, PSIR and multiframe
+        run: python3 research/anatheos-cmr/preflight/tests/test_pydicom_roundtrip.py

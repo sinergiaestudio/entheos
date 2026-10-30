@@ -1,0 +1,21 @@
+name: ANATHEOS CMR-R1 synthetic JPEG2000
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'research/anatheos-cmr/ingesta/**'
+      - '.github/workflows/anatheos-cmr-r1-j2k-synthetic.yml'
+jobs:
+  codec-selftest:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install free local decoder dependencies
+        run: python -m pip install 'pydicom>=3,<4' 'Pillow>=10,<13' 'numpy>=1.26,<3'
+      - name: Run synthetic lossless + multiframe rejection test
+        run: python research/anatheos-cmr/ingesta/jpeg2000_lossless.py

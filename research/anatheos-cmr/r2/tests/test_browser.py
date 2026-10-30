@@ -22,7 +22,7 @@ with tempfile.TemporaryDirectory() as tmp:
   thread=threading.Thread(target=srv.serve_forever,daemon=True);thread.start()
   try:
     with sync_playwright() as p:
-      browser=p.chromium.launch(headless=True,executable_path='/usr/bin/chromium',args=['--disable-gpu','--no-sandbox'])
+      browser=p.chromium.launch(headless=True,executable_path='/usr/bin/chromium' if pathlib.Path('/usr/bin/chromium').exists() else None,args=['--disable-gpu','--no-sandbox'])
       page=browser.new_page(viewport={'width':1440,'height':900})
       errors=[];page.on('pageerror',lambda ex:errors.append(str(ex)))
       # Chromium in this environment blocks all localhost navigation via policy.

@@ -1,0 +1,13 @@
+:root{color-scheme:dark;font-family:system-ui,'Segoe UI',Arial,sans-serif;background:#070f19;color:#edf6ff;line-height:1.5}
+*{box-sizing:border-box}body{margin:0}header{padding:16px 24px;background:#101c29;border-bottom:1px solid #354c60;display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap}
+h1{font-size:19px;margin:0}header small{display:block;color:#bed0df;font-size:12px}.flag{font-size:11px;color:#f5d7a9;letter-spacing:.04em}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(290px,375px);gap:16px;max-width:1920px;padding:16px;margin:auto}
+.preview{min-height:70vh;border-radius:12px;background:#000;border:1px solid #375063;position:relative;display:flex;justify-content:center;align-items:center;overflow:hidden}
+canvas{max-height:75vh;max-width:100%;object-fit:contain;display:none}.empty{color:#d5e2ec;max-width:36rem;text-align:center;padding:24px}
+.notice{position:absolute;bottom:0;left:0;right:0;padding:11px 15px;background:#111b2be8;font-size:12px;color:#c9d9e8}
+.controls{background:#111f2c;border:1px solid #3a5269;border-radius:12px;padding:17px;display:flex;flex-direction:column;gap:14px;min-width:0}
+label{font-size:14px;color:#edf6ff;font-weight:600}select,button{color:#fff;background:#233e55;border:1px solid #6f92ab;border-radius:7px;padding:10px;font-size:14px;min-height:43px}
+select{width:100%}button{cursor:pointer}button:disabled{opacity:.48;cursor:not-allowed}.actions{display:flex;flex-wrap:wrap;gap:8px}.technical{font-size:13px;color:#bcd1e1;white-space:pre-line}
+fieldset{min-width:0;border:1px solid #49657d;border-radius:8px;padding:11px}legend{color:#bde0f5;font-weight:600;font-size:12px}input[type=range]{width:100%;accent-color:#60bdd1;display:block;margin:12px 0}
+#planeInfo,#phaseInfo{color:#e6f2f8;font-size:12px;overflow-wrap:anywhere}#status{font-size:13px;color:#d9e9f4;min-height:3em;white-space:pre-line}footer{font-size:12px;text-align:center;color:#abc2d2;padding:13px 22px}
+@media(max-width:940px){.layout{grid-template-columns:minmax(0,1fr)}.preview{min-height:48vh}canvas{max-height:60vh}}

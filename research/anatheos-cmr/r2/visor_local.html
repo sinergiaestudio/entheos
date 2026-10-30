@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'; object-src 'none'">
+<title>ANATHEOS · RM cardíaca · 24 series</title><link rel="stylesheet" href="visor_cmr.css"></head>
+<body><header><div><h1>ANATHEOS · Resonancia cardíaca</h1><small>CMR-R2 · Catálogo de 24 series · Procesamiento 100 % local</small></div><strong class="flag">PROTOTIPO · NO DIAGNÓSTICO</strong></header>
+<main class="layout"><section class="preview"><canvas id="canvas" aria-label="Corte de imagen DICOM decodificado"></canvas><div id="empty" class="empty">Seleccioná una serie preparada en el catálogo. El material clínico no sale de esta computadora.</div><div class="notice" id="banner">Sin estudio seleccionado.</div></section>
+<aside class="controls"><label for="serie">Seleccionar serie clínica</label><select id="serie" aria-label="Seleccionar serie"><option value="">Cargando catálogo local…</option></select>
+<div id="summary" class="technical">Sin información.</div>
+<fieldset><legend>Posición / plano del estudio</legend><input id="plane" type="range" min="0" max="0" value="0"><div id="planeInfo">—</div></fieldset>
+<fieldset><legend>Imagen del plano · fase o contraste según protocolo</legend><input id="phase" type="range" min="0" max="0" value="0"><div id="phaseInfo">—</div></fieldset>
+<div class="actions"><button id="play" disabled>Reproducir / Pausar</button><button id="auto">Ventana automática</button></div>
+<fieldset><legend>Ventana de presentación (LUT, no altera píxeles)</legend><label for="center">Centro: <output id="centerN"></output></label><input id="center" type="range" min="0" max="65535" value="2000"><label for="width">Ancho: <output id="widthN"></output></label><input id="width" type="range" min="1" max="65535" value="4000"></fieldset>
+<p id="status" role="status">Preparado para abrir estudio privado.</p>
+</aside></main><footer>No mezclar imágenes de cine, perfusión, inversión y PSIR como si fueran cortes espaciales consecutivos. No validado para diagnóstico ni medición clínica. Sin solicitudes de red fuera de 127.0.0.1.</footer>
+<script src="visor_cmr.js" defer></script></body></html>

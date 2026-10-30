@@ -1,0 +1,35 @@
+name: ANATHEOS CMR-R2 · 24-series DICOM synthetic ingestion and viewer QA
+on:
+  push:
+    branches:
+      - anatheos/cmr-r2-full-24-series-2026-10-30
+  pull_request:
+    branches:
+      - anatheos/cmr-r1-jpeg2000-ingesta-2026-10-30
+permissions:
+  contents: read
+jobs:
+  cmr-r2-synthetic-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free imaging dependencies
+        run: python3 -m pip install --disable-pip-version-check --quiet "numpy>=1.24,<3" "Pillow>=11,<13" "playwright==1.56.0"
+      - name: Prepare public Chromium runner
+        run: python3 -m playwright install chromium
+      - name: Test all 24 synthetic DICOM JPEG2000 series, integrity and resume
+        working-directory: research/anatheos-cmr/r2
+        run: python3 tests/test_r2_e2e.py
+      - name: Test failure isolation for a corrupted JPEG2000 series
+        working-directory: research/anatheos-cmr/r2
+        run: python3 tests/test_isolation.py
+      - name: Test browser UI, family routing, and local server allowlist
+        working-directory: research/anatheos-cmr/r2
+        run: python3 tests/test_browser.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check CMR-R2 to ANATHEOS native bridge
+        working-directory: research/anatheos-cmr/r2
+        run: node tests/test_bridge.mjs

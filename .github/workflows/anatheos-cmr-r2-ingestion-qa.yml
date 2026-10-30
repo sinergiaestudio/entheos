@@ -10,7 +10,7 @@ permissions:
   contents: read
 jobs:
   cmr-r2-synthetic-e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 18
     steps:
       - uses: actions/checkout@v4

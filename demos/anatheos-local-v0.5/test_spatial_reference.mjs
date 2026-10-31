@@ -11,3 +11,6 @@ assert.throws(()=>plane({...frame(),pixel_spacing_row_col_mm:[0,1]},20,30));
 const repeated=eligibility([frame(),frame(),frame(2)],20,30);assert(repeated.groups[0].reasons.some(x=>x.includes('repetidas')));assert.equal(repeated.groups[0].volumeEligible,false);
 for(const angle of [.3,1.1,Math.PI]){const f={...frame(),image_orientation_patient_LPS:[Math.cos(angle),Math.sin(angle),0,-Math.sin(angle),Math.cos(angle),0]};const g=plane(f,20,30),p=lpsToPixel(g,pixelToLps(g,7,8));assert(Math.abs(p.i-7)<1e-9&&Math.abs(p.j-8)<1e-9);}
 console.log('SPATIAL_SYNTHETIC_PASS');
+const series=[0,2,4].map(z=>({...frame(z),study_instance_uid:'synthetic-study',series_instance_uid:'synthetic-series',frame_of_reference_uid:'synthetic-for',modality:'MR',image_type:'ORIGINAL',acquisition:{scan_sequence:'SE',tr:'500',te:'20'}}));
+assert.equal(eligibility(series,20,30).groups[0].volumeEligible,true);
+assert.equal(eligibility(series.map((f,i)=>i===2?{...f,acquisition:{...f.acquisition,te:'40'}}:f),20,30).groups[0].volumeEligible,false);

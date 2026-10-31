@@ -33,9 +33,13 @@ export function eligibility(frames,rows,cols){
   const step=steps.length?steps.reduce((a,b)=>a+b,0)/steps.length:0;
   if(steps.some(x=>Math.abs(x-step)>Math.max(.01,step*.01)))reason.push('Separación irregular o huecos');
   if(items.some(x=>{const d=sub(x.g.p,g.p),z=dot(d,g.n);return Math.hypot(...d.map((v,k)=>v-z*g.n[k]))>.01;}))reason.push('Desplazamiento fuera de la normal');
-  // Geometric regularity alone cannot establish acquisition/contrast equivalence.
-  reason.push('Equivalencia de adquisición y contraste pendiente de verificar');
-  return {capabilities:['A','B'],volumeEligible:false,indices:sorted.map(x=>x.index),spacingMm:step,reasons:reason};
+  const first=items[0].f;
+  const identity=f=>[f.study_instance_uid,f.series_instance_uid,f.frame_of_reference_uid,f.modality,f.image_type,f.acquisition?.scan_sequence,f.acquisition?.tr,f.acquisition?.te];
+  const signature=identity(first);
+  if(signature.some(x=>x===null||x===undefined||x==='')||items.some(x=>JSON.stringify(identity(x.f))!==JSON.stringify(signature)))reason.push('Equivalencia de adquisición y contraste pendiente de verificar');
+  if(items.some(x=>x.f.trigger_time_ms!=null||x.f.temporal_position_identifier!=null))reason.push('Contexto temporal requiere separación validada');
+  const eligible=reason.length===0;
+  return {capabilities:eligible?['A','B','C']:['A','B'],volumeEligible:eligible,indices:sorted.map(x=>x.index),spacingMm:step,reasons:reason,validation:'Geometría técnica; movimiento y fidelidad anatómica pendientes'};
  });
  return {groups:result,invalidFrames:frames.length-[...groups.values()].reduce((n,g)=>n+g.length,0),reasons:[...new Set(reasons)],temporal:'TIEMPO NO VALIDADO',derivedModel:false};
 }

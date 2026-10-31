@@ -25,3 +25,6 @@ assert.equal(eligibility(series.map((f,i)=>i?{...f,series_instance_uid:'other'}:
 assert.equal(eligibility(series.map((f,i)=>i===2?{...f,image_position_patient_LPS_mm:[0,0,20]}:f),20,30).groups[0].volumeEligible,false);
 assert.equal(eligibility(series.map(f=>({...f,trigger_time_ms:0})),20,30).groups[0].volumeEligible,true);
 assert.equal(eligibility(series,20,30,{mode:'cine_provisional'}).groups[0].volumeEligible,false);
+
+const derived=eligibility(series.map(f=>({...f,image_type:'DERIVED\\SECONDARY'})),20,30).groups[0];assert(derived.volumeEligible);assert(derived.sourceType.startsWith('DERIVADA'));
+assert.equal(eligibility(series.map(f=>({...f,image_type:'DERIVED\\PHASE'})),20,30).groups[0].volumeEligible,false);

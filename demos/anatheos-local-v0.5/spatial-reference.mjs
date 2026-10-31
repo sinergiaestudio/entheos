@@ -56,7 +56,7 @@ export function eligibility(frames,rows,cols,context={}){
   const required=[first.study_instance_uid,first.series_instance_uid,first.frame_of_reference_uid,first.modality,first.image_type,...(first.modality==='MR'?[first.acquisition?.scan_sequence,first.acquisition?.tr,first.acquisition?.te]:[first.rescale_slope,first.rescale_intercept])];
   if(required.some(x=>x===null||x===undefined||x==='')||items.some(x=>JSON.stringify(identity(x.f))!==JSON.stringify(signature)))reason.push('Equivalencia de adquisición y contraste pendiente de verificar');
   if(!['MR','CT'].includes(first.modality))reason.push('Modalidad no validada para volumen');
-  if(items.some(x=>/PHASE|PERFUSION|DYNAMIC/i.test(x.f.image_type||'')||(x.f.modality!=='CT'&&/DERIVED|SECONDARY/i.test(x.f.image_type||''))))reason.push('Imagen derivada/dinámica requiere validación específica');
+  if(items.some(x=>/PHASE|PERFUSION|DYNAMIC/i.test(x.f.image_type||'')))reason.push('Imagen de fase/dinámica requiere validación específica');
   if(items.some(x=>x.f.motion_status==='detected'))reason.push('Movimiento detectado: requiere registro');
   if(['trigger_time_ms','temporal_position_identifier'].some(key=>new Set(items.map(x=>x.f[key]??null)).size>1))reason.push('Variación temporal requiere separación validada');
   if(/cine|perfusion|inversion|psir|localizador/.test(context.mode||''))reason.push('Modo de adquisición no validado para volumen continuo');
@@ -65,7 +65,7 @@ export function eligibility(frames,rows,cols,context={}){
   else if(step>Math.min(...thickness)+Math.max(.05,step*.05))reason.push('Huecos entre espesores adquiridos: no volumen continuo');
   const eligible=reason.length===0;
   const derived=items.some(x=>/DERIVED|SECONDARY/i.test(x.f.image_type||''));
-  return {capabilities:eligible?['A','B','C']:['A','B'],volumeEligible:eligible,indices:sorted.map(x=>x.index),spacingMm:step,reasons:reason,sourceType:derived?'DERIVADA: reconstruye los vóxeles suministrados, no recupera la adquisición original':'ORIGINAL',motionStatus:'NO EVALUADO: no hay registro anatómico ni prueba de ausencia de movimiento',validation:'C es candidatura geométrica dentro de una serie; movimiento y fidelidad anatómica pendientes'};
+  return {capabilities:eligible?['A','B','C']:['A','B'],volumeEligible:eligible,indices:sorted.map(x=>x.index),spacingMm:step,reasons:reason,sourceType:derived?'DERIVADA: reconstruye los vóxeles suministrados; interpolación del proveedor y resolución adquirida no verificadas':'ORIGINAL',motionStatus:'NO EVALUADO: no hay registro anatómico ni prueba de ausencia de movimiento',validation:'C es candidatura geométrica dentro de una serie; movimiento y fidelidad anatómica pendientes'};
  });
  return {groups:result,invalidFrames:frames.length-[...groups.values()].reduce((n,g)=>n+g.length,0),reasons:[...new Set(reasons)],temporal:'TIEMPO NO VALIDADO',derivedModel:false};
 }

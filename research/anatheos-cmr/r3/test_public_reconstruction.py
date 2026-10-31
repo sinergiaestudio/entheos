@@ -1,5 +1,5 @@
 """Public source ZIP to the existing browser volume and mask controls; no exports."""
-import sys,threading
+import sys,threading,hashlib
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parent))
 from test_native import Handler
@@ -9,7 +9,11 @@ s=ThreadingHTTPServer(('127.0.0.1',0),Handler);threading.Thread(target=s.serve_f
 try:
  with sync_playwright() as p:
   b=p.chromium.launch(args=['--no-sandbox','--enable-webgl','--use-gl=angle','--use-angle=swiftshader']);page=b.new_page(viewport={'width':1920,'height':1080});errors=[];page.on('pageerror',lambda e:errors.append(type(e).__name__))
-  for name,path,n in [('Leeds',sys.argv[1],144),('LCTSC',sys.argv[2],130)]:
+  sources=[('Leeds',sys.argv[1],144),('LCTSC',sys.argv[2],130)]
+  if len(sys.argv)>3:
+   assert hashlib.sha256(Path(sys.argv[3]).read_bytes()).hexdigest()=='937b124862180374d52bd6992c34a8f96b5565e45183e9c50f42f0377d9dcb53'
+   sources.append(('Brain',sys.argv[3],64))
+  for name,path,n in sources:
    page.goto(f'http://127.0.0.1:{s.server_port}/index.html')
    page.set_input_files('#zipInput',path)
    expect(page.locator('#studySubtitle')).to_contain_text(str(n)+' instancias',timeout=120000)

@@ -73,7 +73,7 @@ with tempfile.TemporaryDirectory() as temp:
         assert c.getresponse().status == 200
         from playwright.sync_api import sync_playwright, expect
         with sync_playwright() as pw:
-            browser = pw.chromium.launch()
+            browser = pw.chromium.launch(args=['--enable-webgl','--use-gl=angle','--use-angle=swiftshader'])
             page = browser.new_page()
             page.goto('http://127.0.0.1:18965/')
             page.set_input_files('#cmrNativeZip', str(archive))
@@ -81,6 +81,8 @@ with tempfile.TemporaryDirectory() as temp:
             expect(page.locator('#cmrNativeCanvas')).to_be_visible()
             page.locator('#cmrNativeClose').click()
             expect(page.locator('#cmrNativePanel')).to_be_hidden()
+            expect(page.locator('#cmrReconstructionAnalysis button')).to_have_count(0)
+            expect(page.locator('#cmrNativeSeries option')).to_have_count(0)
             page.set_input_files('#cmrNativeZip',str(archive))
             expect(page.locator('#cmrNativeSeries option')).to_have_count(1,timeout=60000)
             page.locator('#cmrReconstructionAnalysis summary').click()
@@ -118,6 +120,22 @@ subprocess.run([str(exe),'--self-test'],check=True)
 assert sentinel.read_text()=='keep'
 rejected.unlink()
 print('FAILED_UPDATE_REJECTED_CURRENT_AND_PREVIOUS_PRESERVED_PASS')
+# Restart both the active app and its retained predecessor as actual localhost servers.
+for version,port in [('0.10.0-beta',18966),('0.9.0-beta',18967)]:
+    running=subprocess.Popen([str(root/f'versions/{version}/ANATHEOS.exe'),'--port',str(port)])
+    try:
+        ready=False
+        for _ in range(100):
+            try:
+                conn=http.client.HTTPConnection('127.0.0.1',port,timeout=2)
+                conn.request('GET','/api/cmr/capabilities')
+                ready=conn.getresponse().status==200
+                if ready:break
+            except OSError:time.sleep(.2)
+        assert ready,'Restart/previous version server failed'
+    finally:
+        running.terminate();running.wait(timeout=15)
+print('RESTART_AND_PREVIOUS_LOCALHOST_VERSION_PASS')
 print('UPGRADE_AND_PREVIOUS_VERSION_RECOVERY_PASS')
 subprocess.run([str(root / 'Uninstall.exe'), '/S'], check=True)
 time.sleep(3)

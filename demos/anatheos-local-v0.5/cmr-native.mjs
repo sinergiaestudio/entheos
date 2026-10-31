@@ -60,7 +60,7 @@ function start(){
  function stop(){if(interval!==null){clearInterval(interval);interval=null;}}
  function setStatus(x){$('cmrNativeStatus').textContent=x;}
  async function discardJob(){const id=jobId;jobId=null;if(!id)return;try{await fetch(`/api/cmr/jobs/${encodeURIComponent(id)}`,{method:'DELETE'});}catch(_){}}
- function resetStudy(){stop();studyGeneration++;seriesGeneration++;disposeWorkspace?.();disposeWorkspace=null;catalog=null;files=new Map();source=null;decoded=null;geometry=null;orientations=[];active=null;}
+ function resetStudy(){analysis.querySelectorAll('button').forEach(x=>x.remove());report.textContent='';$('cmrNativeSeries').replaceChildren();$('cmrNativeOri').replaceChildren();ctx.clearRect(0,0,canvas.width,canvas.height);stop();studyGeneration++;seriesGeneration++;disposeWorkspace?.();disposeWorkspace=null;catalog=null;files=new Map();source=null;decoded=null;geometry=null;orientations=[];active=null;}
  function close(){if(pollAbort)pollAbort.abort();pollAbort=null;discardJob();resetStudy();section.hidden=true;}
  function locate(f){const path=String(f.webkitRelativePath||f.name).replaceAll('\\','/');const match=path.match(/(?:^|\/)(RM-\d{3})\/(geometria_privada\.json|pixels_original_decoded\.npy)$/);if(match)return `${match[1]}/${match[2]}`;if(path.endsWith('/catalogo_local_privado.json')||path==='catalogo_local_privado.json')return 'catalogo_local_privado.json';return null;}
  async function activateCatalog(nextCatalog,nextSource){

@@ -13,19 +13,23 @@ jobs:
         with:
           node-version: '24'
       - run: node demos/anatheos-local-v0.5/test_spatial_reference.mjs
-      - run: python3 -m pip install numpy==2.2.6 Pillow==11.3.0 playwright==1.56.0 pydicom==3.0.1
+      - run: python3 -m pip install numpy==2.2.6 Pillow==11.3.0 playwright==1.56.0 pydicom==3.0.1 scikit-image==0.25.2 scipy==1.16.3
       - run: python3 -m playwright install chromium
       - run: python3 research/anatheos-cmr/r3/test_native.py
       - run: python3 research/anatheos-cmr/w1/test_w1_original_zip.py
       - run: node demos/anatheos-local-v0.5/test_eligible_volume.mjs
       - run: python3 research/anatheos-cmr/r3/test_g4.py
+      - run: python3 research/anatheos-cmr/r3/test_g4_original_zip.py
       - run: python3 research/anatheos-cmr/r3/test_mapping.py
       - name: Public reference eligibility with source hashes
         run: |
           curl --fail -L 'https://archive.researchdata.leeds.ac.uk/1609/6/RTKN0668_MR_DESS.zip' -o "$RUNNER_TEMP/leeds.zip"
           curl --fail -L 'https://zenodo.org/records/4747795/files/LCTSC_DICOM_TestData.zip?download=1' -o "$RUNNER_TEMP/lctsc.zip"
           python3 research/anatheos-cmr/r3/test_public_eligibility.py "$RUNNER_TEMP/leeds.zip" "$RUNNER_TEMP/lctsc.zip"
-          python3 research/anatheos-cmr/r3/test_public_reconstruction.py "$RUNNER_TEMP/leeds.zip" "$RUNNER_TEMP/lctsc.zip"
+          curl --fail -L --max-time 90 'https://saga-it.com/dicom/samples/files/mr-brain-upenn-gbm/series.zip' -o "$RUNNER_TEMP/brain.zip"
+          python3 research/anatheos-cmr/r3/test_public_reconstruction.py "$RUNNER_TEMP/leeds.zip" "$RUNNER_TEMP/lctsc.zip" "$RUNNER_TEMP/brain.zip"
+          python3 research/anatheos-t2b2/multilayer_viewer/preparar_lctsc.py --zip "$RUNNER_TEMP/lctsc.zip" --output "$RUNNER_TEMP/ct-five"
+          python3 research/anatheos-t2c1/qa_real_3d.py --zip "$RUNNER_TEMP/lctsc.zip" --ct "$RUNNER_TEMP/ct-five/CT_HU_LPS.nrrd" --mask "$RUNNER_TEMP/ct-five/LCTSC_RT_5_ORGANOS_LPS.nrrd"
   windows-update:
     runs-on: windows-2022
     timeout-minutes: 35

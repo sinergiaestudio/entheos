@@ -59,6 +59,11 @@ def main():
                 assert page.locator('#fitButton').evaluate("e=>{const r=e.getBoundingClientRect();return e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))}")
                 page.keyboard.press('Escape')
                 assert not page.locator('#uxMoreViewer').evaluate('e=>e.open')
+                page.locator('#cmrSpatialCompare summary').click()
+                assert page.locator('#cmrSpatialCompare canvas').count()==3
+                page.locator('#cmrSpatialCompare canvas').first.click(position={"x":10,"y":10})
+                assert 'distancia' in page.locator('#cmrSpatialCompare').inner_text()
+                page.locator('#cmrSpatialCompare summary').click()
                 assert page.locator("#cmrNativeSeries option").count()==2
                 counts=[]
                 for i in ["0","1","2"]:

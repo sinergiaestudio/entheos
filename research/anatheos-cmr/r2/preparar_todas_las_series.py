@@ -74,6 +74,9 @@ def get_catalog(z):
 
 def frame_record(r,raw):
     return {
+      'study_instance_uid':r.get('study'),'series_instance_uid':r.get('series'),
+      'frame_of_reference_uid':r.get('for_uid'),'modality':r.get('modality'),
+      'acquisition':{key:r.get(key) for key in ('scan_sequence','sequence_variant','tr','te','ti','slice_thickness','slice_spacing')},
       'instance_number':r.get('instance_number'),
       'source_sha256':hashlib.sha256(raw).hexdigest(),
       'sop_class':r.get('sop_class'),'transfer_syntax':r.get('ts'),

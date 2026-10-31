@@ -1,0 +1,20 @@
+.cmr-native[hidden]{display:none!important}
+.cmr-native{position:absolute;inset:0;z-index:25;display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,350px);background:#0c1621;color:#ebf3fb;gap:12px;padding:12px;font-size:14px;min-height:0}
+.cmr-native *{box-sizing:border-box}
+.cmr-native-main{display:flex;align-items:center;justify-content:center;background:#020609;min-width:0;min-height:0;overflow:hidden;position:relative;border:1px solid #4b657a;border-radius:8px}
+.cmr-native-image{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.cmr-native-image canvas{width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;transform:scale(var(--cmr-native-zoom,1));transform-origin:center center}
+.cmr-native-toolbar{position:absolute;top:10px;left:10px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:8px;background:#14293ae9;border:1px solid #66869a;border-radius:8px;z-index:1}
+.cmr-native-toolbar label{display:flex;gap:8px;align-items:center;font-size:12px}
+.cmr-native-controls{overflow:auto;display:flex;flex-direction:column;gap:14px;background:#101f2f;padding:15px;border:1px solid #355266;border-radius:8px;min-width:0}
+.cmr-native-controls label{display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:13px}
+.cmr-native-controls select,.cmr-native-controls button{min-height:36px;background:#213b53;color:#f5f9fe;border:1px solid #7297ae;border-radius:6px;padding:7px;font-size:13px}
+.cmr-native-controls input[type=range]{width:100%}
+.cmr-native-controls label[hidden]{display:none!important}
+.cmr-native-head{display:flex;gap:10px;justify-content:space-between;align-items:center}
+.cmr-native-disclaimer{font-size:12px;color:#c4d4e1}
+.cmr-native-actions{display:flex;gap:8px;flex-wrap:wrap}
+#cmrNativeStatus{white-space:pre-line;font-size:13px;color:#c8dbea}
+.cmr-native-main:fullscreen{height:100vh;width:100vw;border:0;border-radius:0}
+.cmr-native-toolbar button{padding:5px;background:#213b53;color:#f5f9fe;border:1px solid #7297ae}
+@media(max-width:900px){.cmr-native{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(200px,1fr) auto}.cmr-native-controls{max-height:28vh}}

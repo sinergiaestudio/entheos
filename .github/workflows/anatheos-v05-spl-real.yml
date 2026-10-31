@@ -14,7 +14,7 @@ permissions:
   contents: read
 jobs:
   spl-real-private-runner:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
       SPL_ATLAS_TMP_DIR: /tmp/anatheos-spl-atlas

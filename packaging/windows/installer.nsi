@@ -12,6 +12,22 @@ SetCompressor lzma
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
 !insertmacro MUI_LANGUAGE 'Spanish'
+Function .onInit
+  System::Call 'kernel32::OpenMutexW(i 0x100000, i 0, w "Local\ANATHEOS") p.r0'
+  ${If} $0 != 0
+    System::Call 'kernel32::CloseHandle(p r0)'
+    MessageBox MB_ICONSTOP 'Cerrá ANATHEOS antes de instalar o actualizar.'
+    Abort
+  ${EndIf}
+FunctionEnd
+Function un.onInit
+  System::Call 'kernel32::OpenMutexW(i 0x100000, i 0, w "Local\ANATHEOS") p.r0'
+  ${If} $0 != 0
+    System::Call 'kernel32::CloseHandle(p r0)'
+    MessageBox MB_ICONSTOP 'Cerrá ANATHEOS antes de desinstalar.'
+    Abort
+  ${EndIf}
+FunctionEnd
 Section
   SetShellVarContext current
   SetOutPath '$INSTDIR\versions\${VERSION}'

@@ -24,6 +24,11 @@ def main():
         assert (ROOT / 'demos/anatheos-local-v0.5/index.html').is_file()
         manifest = pathlib.Path(sys.executable).parent / 'version.json'
         version = json.loads(manifest.read_text())['version'] if manifest.exists() else 'development'
+        integrity = pathlib.Path(sys.executable).parent / 'manifest.json'
+        if integrity.exists():
+            import hashlib
+            for name, digest in json.loads(integrity.read_text()).items():
+                assert hashlib.sha256((integrity.parent / name).read_bytes()).hexdigest() == digest
         print(json.dumps({'jpeg2000': 'PASS', 'version': version}))
         return 0
     data = pathlib.Path(os.environ['LOCALAPPDATA']) / 'ANATHEOS'
@@ -31,6 +36,13 @@ def main():
         (data / name).mkdir(parents=True, exist_ok=True)
     import tempfile
     tempfile.tempdir = str(data / 'temp')
+    mutex = None
+    if sys.platform == 'win32':
+        import ctypes
+        ctypes.windll.kernel32.CreateMutexW.restype = ctypes.c_void_p
+        mutex = ctypes.windll.kernel32.CreateMutexW(None, False, 'Local\\ANATHEOS')
+        if ctypes.windll.kernel32.GetLastError() == 183:
+            return 1
     from servidor_anatheos_unificado import main as serve
     return serve(sys.argv[1:] or ['--open-browser'])
 

@@ -67,9 +67,12 @@ class Job:
         command += ["--entrada", str(self.zip_path),
                    "--destino", str(self.output)]
         try:
-            process = subprocess.Popen(command, cwd=str(self.preparer.parent), text=True,
-                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=1)
-            self.process = process
+            with self.lock:
+                if self.cancelled:
+                    return
+                process = subprocess.Popen(command, cwd=str(self.preparer.parent), text=True,
+                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=1)
+                self.process = process
             prepared = 0
             assert process.stdout is not None
             for line in process.stdout:
@@ -97,8 +100,9 @@ class Job:
             self.set(state="failed", error="No se pudo iniciar el decodificador local", message="Error local")
 
     def cancel(self):
-        self.cancelled = True
-        process = self.process
+        with self.lock:
+            self.cancelled = True
+            process = self.process
         if process and process.poll() is None:
             process.terminate()
             process.wait(timeout=10)

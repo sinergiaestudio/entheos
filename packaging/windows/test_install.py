@@ -60,6 +60,24 @@ with tempfile.TemporaryDirectory() as temp:
         c = http.client.HTTPConnection('127.0.0.1', 18965)
         c.request('DELETE', '/api/cmr/jobs/' + job)
         assert c.getresponse().status == 200
+        c = http.client.HTTPConnection('127.0.0.1', 18965)
+        c.request('POST', '/api/cmr/jobs', archive.read_bytes(),
+                  {'Origin': 'http://127.0.0.1:18965', 'Content-Type': 'application/zip'})
+        cancel_job = json.loads(c.getresponse().read())['job_id']
+        c = http.client.HTTPConnection('127.0.0.1', 18965)
+        c.request('DELETE', '/api/cmr/jobs/' + cancel_job)
+        assert c.getresponse().status == 200
+        from playwright.sync_api import sync_playwright, expect
+        with sync_playwright() as pw:
+            browser = pw.chromium.launch()
+            page = browser.new_page()
+            page.goto('http://127.0.0.1:18965/')
+            page.set_input_files('#cmrNativeZip', str(archive))
+            expect(page.locator('#cmrNativeSeries option')).to_have_count(1, timeout=60000)
+            expect(page.locator('#cmrNativeCanvas')).to_be_visible()
+            page.locator('#cmrNativeClose').click()
+            expect(page.locator('#cmrNativePanel')).to_be_hidden()
+            browser.close()
     finally:
         proc.terminate()
         proc.wait(timeout=15)

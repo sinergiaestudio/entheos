@@ -9,7 +9,7 @@ import json
 import sys
 import tempfile
 import zipfile
-import io,pydicom
+import io,pydicom,winreg
 
 root = pathlib.Path(os.environ['LOCALAPPDATA']) / 'Programs/ANATHEOS'
 data = pathlib.Path(os.environ['LOCALAPPDATA']) / 'ANATHEOS/projects'
@@ -98,6 +98,26 @@ assert sentinel.read_text() == 'keep'
 assert (root / 'versions/0.9.0-beta/ANATHEOS.exe').is_file()
 subprocess.run([str(root / 'versions/0.10.0-beta/ANATHEOS.exe'), '--self-test'], check=True)
 subprocess.run([str(root / 'versions/0.9.0-beta/ANATHEOS.exe'), '--self-test'], check=True)
+with winreg.OpenKey(winreg.HKEY_CURRENT_USER,r'Software\ANATHEOS') as key:
+    assert winreg.QueryValueEx(key,'CurrentVersion')[0]=='0.10.0-beta'
+    assert winreg.QueryValueEx(key,'PreviousVersion')[0]=='0.9.0-beta'
+# A deliberately corrupt test update must not activate; it is never distributed.
+manifest=pathlib.Path('dist/ANATHEOS/version.json')
+original=manifest.read_bytes()
+try:
+    manifest.write_text('{"version":"INVALID_INTERNAL_TEST"}')
+    subprocess.run([r'C:/Program Files (x86)/NSIS/makensis.exe','/DVERSION=0.10.0-rejected-test','packaging/windows/installer.nsi'],check=True,stdout=subprocess.DEVNULL)
+finally:
+    manifest.write_bytes(original)
+rejected=pathlib.Path('dist/ANATHEOS-Setup-0.10.0-rejected-test.exe').resolve()
+assert subprocess.run([str(rejected),'/S']).returncode != 0
+with winreg.OpenKey(winreg.HKEY_CURRENT_USER,r'Software\ANATHEOS') as key:
+    assert winreg.QueryValueEx(key,'CurrentVersion')[0]=='0.10.0-beta'
+    assert winreg.QueryValueEx(key,'PreviousVersion')[0]=='0.9.0-beta'
+subprocess.run([str(exe),'--self-test'],check=True)
+assert sentinel.read_text()=='keep'
+rejected.unlink()
+print('FAILED_UPDATE_REJECTED_CURRENT_AND_PREVIOUS_PRESERVED_PASS')
 print('UPGRADE_AND_PREVIOUS_VERSION_RECOVERY_PASS')
 subprocess.run([str(root / 'Uninstall.exe'), '/S'], check=True)
 time.sleep(3)

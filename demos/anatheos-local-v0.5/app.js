@@ -214,6 +214,7 @@ function commitRecords(files,source,errors,notes,gen){
  state.zoom=1;state.panX=0;state.panY=0;state.imageKey='';state.lastPixels=null;
  notes.unshift(`Importación local · ${files.length} instancias decodificadas en memoria · ${grouped.size} serie(s).`);
  notes.push('Posiciones ordenadas según el vector normal de ImageOrientationPatient; comprobar orientación y escala en Slicer.');
+ if(volumeDecision(state.current))notes.push(state.current.eligibility.groups[0].sourceType+' · '+state.current.eligibility.groups[0].validation);
  if(!volumeDecision(state.current))notes.push('Reconstrucción no habilitada: '+state.current.eligibility.groups.flatMap(g=>g.reasons).join('; '));
  warningsDisplay(errors,notes);thoraxReference.bind(state.current,render);updateControls();render();$('loading').hidden=true;
  showEligibleMpr(state.current);

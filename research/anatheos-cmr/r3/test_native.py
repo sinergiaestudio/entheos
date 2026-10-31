@@ -3,7 +3,7 @@
 import json, pathlib, tempfile, threading
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import numpy as np
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, expect
 
 ROOT = pathlib.Path(__file__).resolve().parents[3] / "demos" / "anatheos-local-v0.5"
 SCHEMA="anatheos-cmr-r2-private-v1"
@@ -51,7 +51,8 @@ def main():
                 page.goto(f"http://127.0.0.1:{server.server_port}/index.html",wait_until="domcontentloaded")
                 page.wait_for_selector("#cmrNativeOpen",timeout=20000)
                 page.set_input_files("#cmrNativeFolder",str(folder))
-                page.wait_for_function('!document.querySelector("#cmrNativePanel").hidden && document.querySelector("#cmrNativeOri").options.length===3',timeout=25000)
+                expect(page.locator("#cmrNativePanel")).to_be_visible(timeout=25000)
+                expect(page.locator("#cmrNativeOri option")).to_have_count(3,timeout=25000)
                 assert page.locator("#cmrNativeCanvas").evaluate("e=>e.width")==64
                 assert page.locator("#cmrNativeSeries option").count()==2
                 counts=[]
@@ -63,7 +64,7 @@ def main():
                 page.locator("#cmrNativeZoom").fill("200")
                 assert page.locator("#cmrNativeZoomText").inner_text()=="200 %"
                 page.select_option("#cmrNativeSeries","RM-002")
-                page.wait_for_function('document.querySelector("#cmrNativeOri").options.length===1')
+                expect(page.locator("#cmrNativeOri option")).to_have_count(1,timeout=12000)
                 assert page.locator("#cmrNativePlay").is_enabled()
                 assert int(page.locator("#cmrNativePlane").get_attribute("max"))==1
                 assert int(page.locator("#cmrNativePhase").get_attribute("max"))==2

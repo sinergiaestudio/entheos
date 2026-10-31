@@ -8,6 +8,10 @@ $files = @{
  '/app.js' = 'app.js'
  '/thorax-reference.mjs' = 'thorax-reference.mjs'
  '/cmr-native.mjs' = 'cmr-native.mjs'
+ '/spatial-reference.mjs' = 'spatial-reference.mjs'
+ '/spatial-workspace.mjs' = 'spatial-workspace.mjs'
+ '/image-tools.mjs' = 'image-tools.mjs'
+ '/eligible-volume.mjs' = 'eligible-volume.mjs'
  '/cmr-native.css' = 'cmr-native.css'
  '/volumetric.js' = 'volumetric.js'
  '/segmentation.mjs' = 'segmentation.mjs'
@@ -63,7 +67,7 @@ Write-Host 'ANATHEOS 3D · UX-N5 · estación 3D refinada · motor B7.2' -Foregr
 Write-Host 'Servidor limitado a tu computadora (127.0.0.1).'
 Write-Host "Abrir: $address" -ForegroundColor White
 Write-Host 'Para detener: Ctrl+C o cerrar esta ventana.'
-try { Start-Process $address } catch { Write-Host "Abrí manualmente $address" }
+if($env:ANATHEOS_NO_BROWSER -ne '1'){try { Start-Process $address } catch { Write-Host "Abrí manualmente $address" }}
 try {
  while ($true) {
   $client = $listener.AcceptTcpClient()

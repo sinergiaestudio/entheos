@@ -6,12 +6,8 @@ if ($LASTEXITCODE -ne 0) { throw 'PyInstaller failed' }
 if ($LASTEXITCODE -ne 0) { throw 'Frozen JPEG2000 self test failed' }
 New-Item -ItemType Directory -Force dist/ANATHEOS/THIRD_PARTY | Out-Null
 python packaging/windows/notices.py
-'{"version":"0.9.0-beta"}' | Set-Content -Encoding ascii dist/ANATHEOS/version.json
+'{"version":"0.10.0-beta"}' | Set-Content -Encoding ascii dist/ANATHEOS/version.json
 python packaging/windows/manifest.py
-& 'C:/Program Files (x86)/NSIS/makensis.exe' /DVERSION=0.9.0-beta packaging/windows/installer.nsi
+& 'C:/Program Files (x86)/NSIS/makensis.exe' /DVERSION=0.10.0-beta packaging/windows/installer.nsi
 if ($LASTEXITCODE -ne 0) { throw 'NSIS failed' }
-Get-FileHash dist/ANATHEOS-Setup-0.9.0-beta.exe -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  ANATHEOS-Setup-0.9.0-beta.exe" } | Set-Content dist/SHA256SUMS.txt
-'{"version":"0.9.1-beta"}' | Set-Content -Encoding ascii dist/ANATHEOS/version.json
-python packaging/windows/manifest.py
-& 'C:/Program Files (x86)/NSIS/makensis.exe' /DVERSION=0.9.1-beta packaging/windows/installer.nsi
-if ($LASTEXITCODE -ne 0) { throw 'Upgrade fixture build failed' }
+Get-FileHash dist/ANATHEOS-Setup-0.10.0-beta.exe -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower())  ANATHEOS-Setup-0.10.0-beta.exe" } | Set-Content dist/SHA256SUMS.txt

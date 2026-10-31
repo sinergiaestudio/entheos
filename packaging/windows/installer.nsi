@@ -32,17 +32,23 @@ Section
   SetShellVarContext current
   SetOutPath '$INSTDIR\versions\${VERSION}'
   File /r '..\..\dist\ANATHEOS\*'
+  ClearErrors
   ExecWait '"$INSTDIR\versions\${VERSION}\ANATHEOS.exe" --self-test' $0
-  ${If} $0 != 0
+  ${If} ${Errors}
+  ${OrIf} $0 != 0
+    IfSilent +2
     MessageBox MB_ICONSTOP 'La nueva versión no pasó su comprobación. La versión anterior permanece disponible.'
     SetErrorLevel 1
     Quit
   ${EndIf}
   ReadRegStr $1 HKCU 'Software\ANATHEOS' 'CurrentVersion'
-  WriteRegStr HKCU 'Software\ANATHEOS' 'PreviousVersion' '$1'
+  ${If} $1 != '${VERSION}'
+    WriteRegStr HKCU 'Software\ANATHEOS' 'PreviousVersion' '$1'
+  ${EndIf}
   WriteRegStr HKCU 'Software\ANATHEOS' 'CurrentVersion' '${VERSION}'
   CreateDirectory '$SMPROGRAMS\ANATHEOS'
   ${If} $1 != ''
+  ${AndIf} $1 != '${VERSION}'
     CreateShortcut '$SMPROGRAMS\ANATHEOS\Recuperar version anterior.lnk' '$INSTDIR\versions\$1\ANATHEOS.exe'
   ${EndIf}
   CreateShortcut '$SMPROGRAMS\ANATHEOS\ANATHEOS.lnk' '$INSTDIR\versions\${VERSION}\ANATHEOS.exe'

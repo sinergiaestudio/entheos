@@ -1,4 +1,6 @@
 import {thoraxReference} from './thorax-reference.mjs';
+import {planarDistanceMm} from './image-tools.mjs';
+import {eligibleVolume,reformat,legacyEligibility} from './eligible-volume.mjs';
 import { inspectVolumeGeometry, prepareVolumeTexture, VolumeRenderer } from './volumetric.js';
 import { createMask, paintDisk, growRegion2D, eraseRegion, countRegions, toNrrd, fromNrrd, REGION_COLORS } from './segmentation.mjs';
 import {makeMaskSurfaceSTLs} from './mask-to-surface.mjs';
@@ -13,7 +15,7 @@ const $=id=>document.getElementById(id);
 const state={mode:'2d',mixed:false,volumeRenderer:null,volumeToken:0,series:[],current:null,index:0,wlCenter:350,wlWidth:850,brightness:0,contrast:100,zoom:1,panX:0,panY:0,loadGeneration:0,source:'',imageKey:'',lastPixels:null,segMask:null,segCount:[0,0,0,0],segVersion:0,segVisibility:7,segOverlayKey:'',segEdit:false,annotationMode:'none',measureStart:null,annotations:[],tissueTypes:['','',''],b7Picking:false,b7Seed:null,b7Draft:null,b7DraftVersion:0};
 const LONG=new Set(['OB','OD','OF','OL','OV','OW','SQ','UC','UR','UT','UN']);
 const NUMTAG=new Set([0x00280002,0x00280010,0x00280011,0x00280100,0x00280101,0x00280102,0x00280103,0x00280006]);
-const TAGS=new Map([[0x00020010,'syntax'],[0x00080060,'modality'],[0x0008103e,'description'],[0x00080016,'sopClass'],[0x0020000e,'seriesUid'],[0x00200013,'instance'],[0x00200032,'ipp'],[0x00200037,'iop'],[0x00280002,'samples'],[0x00280004,'photo'],[0x00280008,'frames'],[0x00280010,'rows'],[0x00280011,'columns'],[0x00280030,'spacing'],[0x00280100,'bitsAllocated'],[0x00280101,'bitsStored'],[0x00280102,'highBit'],[0x00280103,'signed'],[0x00281052,'intercept'],[0x00281053,'slope'],[0x00281050,'dicomCenter'],[0x00281051,'dicomWidth'],[0x7fe00010,'pixels']]);
+const TAGS=new Map([[0x0020000d,'studyUid'],[0x00200052,'forUid'],[0x00080008,'imageType'],[0x00180020,'scanSequence'],[0x00180021,'sequenceVariant'],[0x00180080,'tr'],[0x00180081,'te'],[0x00180082,'ti'],[0x00180050,'sliceThickness'],[0x00180060,'kvp'],[0x00181210,'kernel'],[0x00181060,'triggerTime'],[0x00200100,'temporalPosition'],[0x00020010,'syntax'],[0x00080060,'modality'],[0x0008103e,'description'],[0x00080016,'sopClass'],[0x0020000e,'seriesUid'],[0x00200013,'instance'],[0x00200032,'ipp'],[0x00200037,'iop'],[0x00280002,'samples'],[0x00280004,'photo'],[0x00280008,'frames'],[0x00280010,'rows'],[0x00280011,'columns'],[0x00280030,'spacing'],[0x00280100,'bitsAllocated'],[0x00280101,'bitsStored'],[0x00280102,'highBit'],[0x00280103,'signed'],[0x00281052,'intercept'],[0x00281053,'slope'],[0x00281050,'dicomCenter'],[0x00281051,'dicomWidth'],[0x7fe00010,'pixels']]);
 const UTF8=new TextDecoder('utf-8');
 function stringVal(bytes){return UTF8.decode(bytes).replace(/[\x00 ]+$/g,'').trim();}
 function numericList(s){return (s||'').split('\\').map(Number).filter(Number.isFinite);}
@@ -199,7 +201,7 @@ function commitRecords(files,source,errors,notes,gen){
   const median=dist.slice().sort((a,b)=>a-b)[Math.floor(dist.length/2)]||0;
   if(dist.some(d=>Math.abs(d-median)>0.05))notes.push('Advertencia: espaciamiento irregular; no se habilitan reconstrucciones multiplanares.');
   if(compatible.some(m=>Math.abs(dot(normal,m.ipp)-m.projection)>1e-6))notes.push('Geometría de instancia inconsistente.');
-  return{uid,description:first.description||'Serie DICOM',items:compatible,normal,spacingBetween:median};
+  return{uid,description:first.description||'Serie DICOM',items:compatible,normal,spacingBetween:median,eligibility:legacyEligibility(items)};
  }).filter(s=>s.items.length).sort((a,b)=>b.items.length-a.items.length);
  if(!state.series.length)throw Error('Ninguna serie conserva orientación y matriz compatibles');
  state.b7Seed=null;state.b7Draft=null;state.b7DraftVersion++;$('b7SeedStatus').textContent='Sin semilla seleccionada.';$('b7Accept').disabled=true;
@@ -212,7 +214,10 @@ function commitRecords(files,source,errors,notes,gen){
  state.zoom=1;state.panX=0;state.panY=0;state.imageKey='';state.lastPixels=null;
  notes.unshift(`Importación local · ${files.length} instancias decodificadas en memoria · ${grouped.size} serie(s).`);
  notes.push('Posiciones ordenadas según el vector normal de ImageOrientationPatient; comprobar orientación y escala en Slicer.');
+ if(volumeDecision(state.current))notes.push(state.current.eligibility.groups[0].sourceType+' · '+state.current.eligibility.groups[0].validation);
+ if(!volumeDecision(state.current))notes.push('Reconstrucción no habilitada: '+state.current.eligibility.groups.flatMap(g=>g.reasons).join('; '));
  warningsDisplay(errors,notes);thoraxReference.bind(state.current,render);updateControls();render();$('loading').hidden=true;
+ showEligibleMpr(state.current);
  toast(`Serie cargada: ${state.current.items.length} cortes reales · sin transmisión externa`);
 }
 async function loadFiles(fileList){
@@ -233,9 +238,23 @@ async function loadIncluded(){const gen=++state.loadGeneration;clean();showLoad(
  try{const controller=new AbortController();loadIncluded.controller=controller;const r=await fetch('datasets/RTKN0668_MR_DESS.zip',{signal:controller.signal,cache:'no-store'});if(!r.ok)throw Error('No se encontró la DESS incluida en el paquete local');const b=await r.arrayBuffer();if(gen!==state.loadGeneration)return;await loadBuffer(b,'RTKN0668_MR_DESS.zip · incluida',gen);}catch(e){if(gen===state.loadGeneration){$('loading').hidden=true;warningsDisplay([e.message],[]);toast(e.message);}}}
 function clamp(n,low,high){return Math.max(low,Math.min(high,n));}
 function currentFrame(){return state.current?.items[state.index];}
+window.addEventListener('anatheos:open-eligible-volume',event=>{
+ try{const series=eligibleVolume(event.detail.data,event.detail.groupIndex);const gen=++state.loadGeneration;clean();commitRecords(series.items,'Serie elegible · '+event.detail.data.id,[],['Transferencia interna desde DICOM original; sin resampling.'],gen);window.dispatchEvent(new Event('anatheos:eligible-volume-opened'));$('threeDButton').click();
+ }catch(e){toast('Reconstrucción rechazada: '+e.message);}
+});
+function volumeDecision(series){const a=series.eligibility;return a?.groups.length===1&&a.invalidFrames===0&&a.groups[0].volumeEligible;}
+function showEligibleMpr(series){
+ document.getElementById('eligibleMpr')?.remove();
+ if(!volumeDecision(series))return;
+  let panel=document.getElementById('eligibleMpr');panel?.remove();panel=document.createElement('details');panel.id='eligibleMpr';const summary=document.createElement('summary');summary.textContent='MPR de la pila elegible · ejes de adquisición';panel.append(summary);
+  const axis=document.createElement('select'),slice=document.createElement('input'),image=document.createElement('canvas'),note=document.createElement('p');for(let k=0;k<3;k++)axis.add(new Option(['Columna fija','Fila fija','Corte original'][k],k));slice.type='range';slice.min=0;
+  let displayKey='';const draw=(force=true)=>{const key=[axis.value,slice.value,state.wlCenter,state.wlWidth,state.brightness,state.contrast].join('|');if(!force&&(!panel.open||key===displayKey))return;displayKey=key;if(!state.current||state.current.uid!==series.uid)return;const fixed=Number(axis.value),limits=[series.items[0].columns,series.items[0].rows,series.items.length];slice.max=limits[fixed]-1;slice.value=Math.min(Number(slice.value),limits[fixed]-1);const p=reformat(series,fixed,Number(slice.value));image.width=p.width;image.height=p.height;image.style.width=Math.min(700,p.width*p.spacing[1]*3)+'px';image.style.height=(Math.min(700,p.width*p.spacing[1]*3)*p.height*p.spacing[0]/(p.width*p.spacing[1]))+'px';image.style.maxWidth='100%';const ctx=image.getContext('2d'),pixels=ctx.createImageData(p.width,p.height);for(let i=0;i<p.values.length;i++){let v=clamp((p.values[i]-state.wlCenter+state.wlWidth/2)/Math.max(1,state.wlWidth),0,1);v=clamp((v-.5)*state.contrast/100+.5+state.brightness/100,0,1);v=(series.items[0].photo==='MONOCHROME1'?1-v:v)*255;pixels.data.set([v,v,v,255],i*4);}ctx.putImageData(pixels,0,0);note.textContent=p.provenance+' · '+series.eligibility.groups[0].sourceType+' · escala física conservada; cotejo Slicer pendiente';};
+  panel.redraw=()=>draw(false);axis.onchange=()=>{slice.value=0;draw();};slice.oninput=draw;panel.append(axis,slice,image,note);$('viewerRoot').after(panel);draw();
+}
+window.addEventListener('anatheos:study-reset',()=>document.getElementById('eligibleMpr')?.remove());
 function updateControls(){const active=currentFrame(),has=!!active;
- $('threeDButton').disabled=!has;
- $('mixedButton').disabled=!has;$('tripleButton').disabled=!has;
+ $('threeDButton').disabled=!has||!volumeDecision(state.current);
+ $('mixedButton').disabled=!has||!volumeDecision(state.current);$('tripleButton').disabled=!has||!volumeDecision(state.current);
 
  $('emptyViewer').style.display=has?'none':'flex';$('viewBadge').hidden=!has;
  $('studyTitle').textContent=has?state.current.description:'Sin estudio cargado';$('studySubtitle').textContent=has?`${state.current.items.length} instancias · ${active.modality} · ${state.source}`:'Seleccioná una secuencia para comenzar.';
@@ -269,7 +288,7 @@ function makePixels(frame){const {rows,columns,values,slope,intercept}=frame,out
 }
 const b7Overlay=document.createElement('canvas'),b7OverlayCtx=b7Overlay.getContext('2d');let b7OverlayKey='';
 const canvas=$('scanCanvas'),ctx=canvas.getContext('2d',{alpha:false}),offscreen=document.createElement('canvas'),offctx=offscreen.getContext('2d',{alpha:false}),segOverlayCanvas=document.createElement('canvas'),segOverlayCtx=segOverlayCanvas.getContext('2d');
-function render(){if(state.mode==='3d'&&!state.mixed){state.volumeRenderer?.draw();return;}const box=canvas.getBoundingClientRect(),ratio=Math.min(devicePixelRatio||1,2),w=Math.max(10,Math.round(box.width*ratio)),h=Math.max(10,Math.round(box.height*ratio));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
+function render(){document.getElementById('eligibleMpr')?.redraw?.();if(state.mode==='3d'&&!state.mixed){state.volumeRenderer?.draw();return;}const box=canvas.getBoundingClientRect(),ratio=Math.min(devicePixelRatio||1,2),w=Math.max(10,Math.round(box.width*ratio)),h=Math.max(10,Math.round(box.height*ratio));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
  ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#181b1e';ctx.fillRect(0,0,w,h);
  const frame=currentFrame();if(!frame)return;
  const key=[state.current.uid,state.index,state.wlCenter,state.wlWidth,state.brightness,state.contrast].join('|');
@@ -341,7 +360,7 @@ let dragging=false,lastX=0,lastY=0;canvas.onpointerdown=e=>{if(!currentFrame())r
   if(state.annotationMode==='point')state.annotations.push({type:'point',z:state.index,a:p});
   if(state.annotationMode==='measure'){
    if(state.measureStart?.z===state.index){
-    const a=state.measureStart.p,mm=Math.hypot((p[0]-a[0])*frame.spacing[1],(p[1]-a[1])*frame.spacing[0]);
+    const a=state.measureStart.p,mm=planarDistanceMm(a,p,frame.spacing);
     state.annotations.push({type:'measure',z:state.index,a,b:p,mm});state.measureStart=null;
     $('triptychToolStatus').textContent='Distancia 2D, corte '+(state.index+1)+': '+mm.toFixed(2)+' mm. No diagnóstica.';
    }else{state.measureStart={z:state.index,p};$('triptychToolStatus').textContent='Primer punto elegido. Marcá el segundo en el mismo corte.';}
@@ -393,6 +412,7 @@ async function enableVolume(asMixed=false){
  }
  const token=++state.volumeToken;
  try{
+  if(!volumeDecision(state.current))throw Error('Serie no elegible: '+(state.current.eligibility?.groups.flatMap(g=>g.reasons).join('; ')||'metadatos insuficientes'));
   const g=inspectVolumeGeometry(state.current);
   state.mode='3d';state.mixed=asMixed;switchModeButtons();
   showLoad('Preparando el volumen real de '+g.z+' cortes · '+g.x+' × '+g.y+' píxeles…',0);

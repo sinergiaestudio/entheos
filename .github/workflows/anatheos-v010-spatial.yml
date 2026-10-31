@@ -25,6 +25,7 @@ jobs:
           curl --fail -L 'https://archive.researchdata.leeds.ac.uk/1609/6/RTKN0668_MR_DESS.zip' -o "$RUNNER_TEMP/leeds.zip"
           curl --fail -L 'https://zenodo.org/records/4747795/files/LCTSC_DICOM_TestData.zip?download=1' -o "$RUNNER_TEMP/lctsc.zip"
           python3 research/anatheos-cmr/r3/test_public_eligibility.py "$RUNNER_TEMP/leeds.zip" "$RUNNER_TEMP/lctsc.zip"
+          python3 research/anatheos-cmr/r3/test_public_reconstruction.py "$RUNNER_TEMP/leeds.zip" "$RUNNER_TEMP/lctsc.zip"
   windows-update:
     runs-on: windows-2022
     timeout-minutes: 35
@@ -43,7 +44,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          python -c "import urllib.request,os,pathlib,zipfile,io,hashlib;req=urllib.request.Request('https://api.github.com/repos/sinergiaestudio/entheos/actions/artifacts/13050280635/zip',headers={'Authorization':'Bearer '+os.environ['GH_TOKEN']});raw=urllib.request.urlopen(req).read();z=zipfile.ZipFile(io.BytesIO(raw));data=z.read('ANATHEOS-Setup-0.9.0-beta.exe');assert hashlib.sha256(data).hexdigest()=='9c48ee60cacfcc9349b754d31344f9aee952c250484f8bb676596500d8dae98a';pathlib.Path('baseline').mkdir();pathlib.Path('baseline/ANATHEOS-Setup-0.9.0-beta.exe').write_bytes(data)"
+          curl.exe --fail --location --retry 2 --header "Authorization: Bearer $env:GH_TOKEN" --output baseline.zip "https://api.github.com/repos/sinergiaestudio/entheos/actions/artifacts/13050280635/zip"
+          if($LASTEXITCODE -ne 0){throw 'Cannot retrieve released baseline'}
+          python -c "import pathlib,zipfile,hashlib;z=zipfile.ZipFile('baseline.zip');data=z.read('ANATHEOS-Setup-0.9.0-beta.exe');assert hashlib.sha256(data).hexdigest()=='9c48ee60cacfcc9349b754d31344f9aee952c250484f8bb676596500d8dae98a';pathlib.Path('baseline').mkdir();pathlib.Path('baseline/ANATHEOS-Setup-0.9.0-beta.exe').write_bytes(data)"
       - run: ./packaging/windows/build.ps1
       - run: python packaging/windows/test_install.py
       - uses: actions/upload-artifact@v4

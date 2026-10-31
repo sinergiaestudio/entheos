@@ -12,7 +12,7 @@ export function eligibleVolume(data,groupIndex){
   iop:f.image_orientation_patient_LPS,ipp:f.image_position_patient_LPS_mm,spacing:f.pixel_spacing_row_col_mm,
   values:data.decoded.pixels.subarray(index*rows*columns,(index+1)*rows*columns),
   slope:f.rescale_slope??1,intercept:f.rescale_intercept??0,photo:f.photometric_interpretation||'MONOCHROME2',
-  instance:index+1,modality:f.modality,syntax:f.transfer_syntax||'',sourceSha256:f.source_sha256};});
+  originalFrame:f,instance:index+1,modality:f.modality,syntax:f.transfer_syntax||'',sourceSha256:f.source_sha256};});
  const series={uid:items[0].seriesUid,description:data.id,items,spacingBetween:group.spacingMm};
  inspectVolumeGeometry(series);return series;
 }
@@ -33,4 +33,17 @@ export function reformat(series,axis,index){
  return {width,height,values,spacing:[axis===2?f.spacing[0]:geo.stepMm,axis===0?f.spacing[0]:f.spacing[1]],
   originLps:f.ipp.map((n,k)=>n+index*step*direction[k]),iop:[...u,...v],axis,index,
   provenance:'Cuadrícula de la pila original; sin interpolación, sin resolución adicional'};
+}
+
+/** Normalize the existing uncompressed reader without inventing missing acquisition tags. */
+export function legacyEligibility(items){
+ const frames=items.map(f=>f.originalFrame||{
+ study_instance_uid:f.studyUid,series_instance_uid:f.seriesUid,frame_of_reference_uid:f.forUid,
+ modality:f.modality,image_type:f.imageType,image_orientation_patient_LPS:f.iop,
+ image_position_patient_LPS_mm:f.ipp,pixel_spacing_row_col_mm:f.spacing,
+ rescale_slope:f.slope,rescale_intercept:f.intercept,photometric_interpretation:f.photo,
+ trigger_time_ms:f.triggerTime,temporal_position_identifier:f.temporalPosition,
+ acquisition:{scan_sequence:f.scanSequence,sequence_variant:f.sequenceVariant,tr:f.tr,te:f.te,ti:f.ti,
+ slice_thickness:f.sliceThickness,kvp:f.kvp,convolution_kernel:f.kernel}});
+ return eligibility(frames,items[0].rows,items[0].columns);
 }

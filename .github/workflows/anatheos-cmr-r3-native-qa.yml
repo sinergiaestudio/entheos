@@ -1,0 +1,22 @@
+name: ANATHEOS CMR-R3 · integrated main app and SURVEY orientation QA
+on:
+  push:
+    branches:
+      - anatheos/cmr-r3-mainapp-integracion-survey-2026-10-31
+  pull_request:
+    branches:
+      - anatheos/cmr-r2-full-24-series-2026-10-30
+permissions:
+  contents: read
+jobs:
+  native-cmr-ui:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install free browser testing dependencies
+        run: |
+          python3 -m pip install --quiet --disable-pip-version-check numpy==2.2.6 playwright==1.56.0
+          python3 -m playwright install chromium
+      - name: Test full native ANATHEOS app with synthetic 3-orientation SURVEY and two-plane cine
+        run: python3 research/anatheos-cmr/r3/test_native.py

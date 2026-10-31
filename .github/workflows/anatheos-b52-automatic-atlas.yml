@@ -11,7 +11,7 @@ permissions:
   contents: read
 jobs:
   chromium-original-public-atlas:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 22
     env:
       SPL_ATLAS_TMP_DIR: /tmp/anatheos-b52-spl

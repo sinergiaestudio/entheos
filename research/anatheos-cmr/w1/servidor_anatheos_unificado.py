@@ -8,8 +8,8 @@ It delegates DICOM/JPEG2000 validation to the audited CMR-R2 preparer.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
-import os
 import pathlib
 import re
 import shutil
@@ -18,6 +18,7 @@ import sys
 import tempfile
 import threading
 import uuid
+import webbrowser
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
@@ -27,6 +28,11 @@ CHUNK = 1024**2
 JOB_RE = re.compile(r"^[a-f0-9]{32}$")
 DATA_RE = re.compile(r"^(?:catalogo_local_privado\.json|RM-\d{3}/(?:geometria_privada\.json|pixels_original_decoded\.npy))$")
 STATIC_EXT = {".html", ".js", ".mjs", ".css"}
+ATLAS = {
+    "femur-95.stl": (16447884, "f14b53539fe5dba8cc3488f172e651f729e35b9b1f49eb7f695586c61d39b277"),
+    "tibia-96.stl": (13344284, "4b74bcbfb8b344e157253471d97ab07426a72162586d7b5011ae57aeb2acc055"),
+    "SPLKneeAtlasLabels.nrrd": (466136, "3f9e2b8cdf7a969a346445ec570ebb89a2e91ad2f3719e588cf20021a4895d0d"),
+}
 
 
 class Job:
@@ -156,6 +162,14 @@ class Handler(BaseHTTPRequestHandler):
             self._send(HTTPStatus.NOT_FOUND); return
         if path == "/api/cmr/capabilities":
             self._json(HTTPStatus.OK, {"original_zip": True, "local_only": True, "cancel": True}); return
+        if path == "/api/spl/status":
+            self._json(HTTPStatus.OK, {"ready": self._atlas_ready(), "source": "SPL Knee Atlas", "clinical": False}); return
+        match = re.fullmatch(r"/atlas/(femur-95\.stl|tibia-96\.stl)", path)
+        if match:
+            name = match.group(1)
+            if not self._atlas_valid(name):
+                self._send(HTTPStatus.NOT_FOUND); return
+            self._file(self.server.app_root / "ATLAS_SPL" / name, "application/octet-stream"); return
         match = re.fullmatch(r"/api/cmr/jobs/([a-f0-9]{32})", path)
         if match:
             job = self._job(match.group(1))
@@ -178,19 +192,54 @@ class Handler(BaseHTTPRequestHandler):
 
     def _serve_static(self, path):
         relative = "index.html" if path == "/" else path.lstrip("/")
+        if relative == "datasets/RTKN0668_MR_DESS.zip":
+            self._file(self.server.app_root / relative, "application/zip"); return
         if "/" in relative or pathlib.Path(relative).suffix not in STATIC_EXT:
             self._send(HTTPStatus.NOT_FOUND); return
         target = (self.server.app_root / relative).resolve()
+        kind = {".html":"text/html; charset=utf-8", ".css":"text/css; charset=utf-8"}.get(target.suffix, "text/javascript; charset=utf-8")
+        self._file(target, kind)
+
+    def _file(self, target, kind):
         try:
             if not target.is_relative_to(self.server.app_root.resolve()) or not target.is_file():
                 raise FileNotFoundError
             data = target.read_bytes()
         except OSError:
             self._send(HTTPStatus.NOT_FOUND); return
-        kind = {".html":"text/html; charset=utf-8", ".css":"text/css; charset=utf-8"}.get(target.suffix, "text/javascript; charset=utf-8")
         self._send(HTTPStatus.OK, data, kind)
 
+    def _atlas_valid(self, name):
+        target = self.server.app_root / "ATLAS_SPL" / name
+        size, expected = ATLAS[name]
+        if not target.is_file() or target.stat().st_size != size:
+            return False
+        digest = hashlib.sha256()
+        with target.open("rb") as file:
+            for block in iter(lambda: file.read(CHUNK), b""):
+                digest.update(block)
+        return digest.hexdigest() == expected
+
+    def _atlas_ready(self):
+        return all(self._atlas_valid(name) for name in ATLAS)
+
     def do_POST(self):
+        if self._host_ok() and self._route() == "/api/spl/prepare":
+            expected = f"http://127.0.0.1:{self.server.server_port}"
+            if self.headers.get("Origin") != expected or not self.headers.get("Content-Type", "").startswith("application/json") or self.headers.get("Content-Length") != "2":
+                self._send(HTTPStatus.FORBIDDEN); return
+            if not self._atlas_ready():
+                script = self.server.app_root / "obtener_atlas_spl.ps1"
+                if sys.platform != "win32" or not script.is_file():
+                    self._json(HTTPStatus.SERVICE_UNAVAILABLE, {"ok": False, "message": "Atlas no disponible en este equipo"}); return
+                try:
+                    subprocess.run(["powershell.exe", "-NoProfile", "-File", str(script)],
+                                   cwd=str(self.server.app_root), timeout=180, check=True,
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                except (OSError, subprocess.SubprocessError):
+                    self._json(HTTPStatus.SERVICE_UNAVAILABLE, {"ok": False, "message": "No se pudo preparar el atlas"}); return
+            self._json(HTTPStatus.OK if self._atlas_ready() else HTTPStatus.SERVICE_UNAVAILABLE,
+                       {"ok": self._atlas_ready(), "ready": self._atlas_ready()}); return
         if not self._host_ok() or self._route() != "/api/cmr/jobs":
             self._send(HTTPStatus.FORBIDDEN); return
         origin = self.headers.get("Origin", "")
@@ -234,6 +283,7 @@ class Handler(BaseHTTPRequestHandler):
 def main(argv=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--open-browser", action="store_true")
     args = parser.parse_args(argv)
     if not 1024 <= args.port <= 65535:
         parser.error("Puerto inválido")
@@ -245,6 +295,8 @@ def main(argv=None):
         server.app_root, server.jobs_root, server.preparer = app, pathlib.Path(temp), preparer
         server.jobs, server.jobs_lock = {}, threading.Lock()
         print(f"ANATHEOS W1 local: http://127.0.0.1:{server.server_port}/", flush=True)
+        if args.open_browser:
+            webbrowser.open(f"http://127.0.0.1:{server.server_port}/")
         try:
             server.serve_forever(poll_interval=.2)
         except KeyboardInterrupt:

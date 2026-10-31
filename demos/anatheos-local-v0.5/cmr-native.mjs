@@ -3,6 +3,8 @@
  * The primary flow imports the original ZIP through the loopback-only W1 service.
  * The prepared-folder picker remains as an explicit QA/recovery fallback.
  */
+import {eligibility} from './spatial-reference.mjs';
+import {createWorkspace} from './spatial-workspace.mjs';
 const byId=id=>document.getElementById(id);
 function require(condition,reason){if(!condition)throw Error(reason);}
 function decodeNpy(buffer){
@@ -52,6 +54,7 @@ function start(){
  const section=document.createElement('section');section.id='cmrNativePanel';section.hidden=true;section.className='cmr-native';
  section.innerHTML=`<div class="cmr-native-main"><div class="cmr-native-image"><canvas id="cmrNativeCanvas" aria-label="Imagen cardíaca original decodificada"></canvas></div><div class="cmr-native-toolbar"><label>Ampliación <output id="cmrNativeZoomText">Ajustar</output><input id="cmrNativeZoom" type="range" min="100" max="400" step="25" value="100"></label><button id="cmrNativeFull" type="button">Pantalla completa</button></div></div><aside class="cmr-native-controls"><div class="cmr-native-head"><strong>RM cardíaca · ANATHEOS</strong><button id="cmrNativeClose" type="button">Cerrar vista</button></div><p class="cmr-native-disclaimer">Imágenes originales procesadas únicamente en el servidor local de esta computadora. Navegación exploratoria, no diagnóstica. Sin 3D/4D validado.</p><label>Serie<select id="cmrNativeSeries"></select></label><label id="cmrNativeOriLabel">Orientación<select id="cmrNativeOri"></select></label><label>Posición / corte <output id="cmrNativePlaneText"></output><input type="range" id="cmrNativePlane" min="0" max="0" value="0"></label><label>Fotograma / fase / contraste <output id="cmrNativePhaseText"></output><input type="range" id="cmrNativePhase" min="0" max="0" value="0"></label><div class="cmr-native-actions"><button id="cmrNativePlay" type="button" disabled>Reproducir</button><button id="cmrNativeWindow" type="button">Ventana automática</button><button id="cmrNativeCancel" type="button" hidden>Cancelar importación</button></div><p id="cmrNativeStatus" role="status">Seleccioná el ZIP DICOM original. La importación no sale de esta computadora.</p></aside>`;
  byId('viewerRoot').appendChild(section);
+ const analysis=document.createElement('details');analysis.id='cmrReconstructionAnalysis';const title=document.createElement('summary');title.textContent='Análisis de reconstrucción';const report=document.createElement('p');analysis.append(title,report);section.querySelector('.cmr-native-controls').append(analysis);
  const $=id=>byId(id),canvas=$('cmrNativeCanvas'),ctx=canvas.getContext('2d');
  let catalog=null,files=new Map(),source=null,jobId=null,decoded=null,geometry=null,orientations=[],active=null,interval=null,pollAbort=null;
  function stop(){if(interval!==null){clearInterval(interval);interval=null;}}
@@ -111,6 +114,9 @@ function start(){
  async function selectSeries(){stop();const id=$('cmrNativeSeries').value;active=catalog.series.find(s=>s.serie_local===id);require(active?.estado==='preparada','Serie no preparada');
   require(source,'No hay una fuente local activa');const g=JSON.parse(await source.text(`${id}/geometria_privada.json`)),d=decodeNpy(await source.buffer(`${id}/pixels_original_decoded.npy`));require(g.serie_local===id&&g.frames?.length===d.dims[0]&&d.dims[0]===active.instancias,'Geometría y píxeles no corresponden');
   geometry=g;decoded=d;orientations=organize(g.frames);
+  let comparison=section.querySelector('#cmrSpatialCompare');if(!comparison){comparison=document.createElement('details');comparison.id='cmrSpatialCompare';const summary=document.createElement('summary');summary.textContent='Comparar orientaciones · misma serie';comparison.append(summary);section.querySelector('.cmr-native-controls').append(comparison);}comparison.querySelectorAll('div').forEach(x=>x.remove());const space=document.createElement('div');comparison.append(space);createWorkspace(space,d,g.frames,orientations);
+  const assessment=eligibility(g.frames,d.dims[1],d.dims[2]);
+  report.textContent=`${catalog.series.length} series identificadas. Serie activa: ${assessment.groups.length} grupos geométricos. A: imágenes originales. B: planos con geometría disponible. ${assessment.temporal}. Modelos derivados: requieren máscaras verificadas. `+assessment.groups.map((x,i)=>`Grupo ${i+1}: ${x.indices.length} imágenes; ${x.reasons.join('; ')}.`).join(' ');
   const ori=$('cmrNativeOri');ori.textContent='';orientations.forEach((group,i)=>{const o=document.createElement('option');o.value=String(i);o.textContent=`${group.label} · orientación ${i+1} (${group.planes.length} posiciones)`;ori.appendChild(o)});
   $('cmrNativeOriLabel').hidden=orientations.length<=1;ori.value='0';positionChange();
   $('cmrNativePlay').disabled=!['cine_provisional','perfusion_temporal'].includes(active.modo_seguro)||!orientations.some(x=>x.planes.some(p=>p.indices.length>1));

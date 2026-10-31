@@ -1,0 +1,19 @@
+name: ANATHEOS 0.10 spatial gates
+on:
+  pull_request:
+    branches: [anatheos/w21-windows-installer]
+permissions:
+  contents: read
+jobs:
+  geometry-menu:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node demos/anatheos-local-v0.5/test_spatial_reference.mjs
+      - run: python3 -m pip install numpy==2.2.6 Pillow==11.3.0 playwright==1.56.0
+      - run: python3 -m playwright install chromium
+      - run: python3 research/anatheos-cmr/r3/test_native.py
+      - run: python3 research/anatheos-cmr/w1/test_w1_original_zip.py

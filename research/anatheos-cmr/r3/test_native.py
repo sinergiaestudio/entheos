@@ -54,6 +54,11 @@ def main():
                 expect(page.locator("#cmrNativePanel")).to_be_visible(timeout=25000)
                 expect(page.locator("#cmrNativeOri option")).to_have_count(3,timeout=25000)
                 assert page.locator("#cmrNativeCanvas").evaluate("e=>e.width")==64
+                page.locator('#uxMoreViewer summary').click()
+                page.wait_for_function("()=>document.querySelector('.ux-clean-menu-content').matches(':popover-open')")
+                assert page.locator('#fitButton').evaluate("e=>{const r=e.getBoundingClientRect();return e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))}")
+                page.keyboard.press('Escape')
+                assert not page.locator('#uxMoreViewer').evaluate('e=>e.open')
                 assert page.locator("#cmrNativeSeries option").count()==2
                 counts=[]
                 for i in ["0","1","2"]:

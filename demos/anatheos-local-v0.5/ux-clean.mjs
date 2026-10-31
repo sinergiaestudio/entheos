@@ -54,6 +54,12 @@ const moreItems=make('div','ux-clean-menu-content');
 for(const id of ['fitButton','zoomOut','zoomIn','clearButton'])moreItems.append(byId(id));
 more.append(moreItems);
 toolbar.append(more);
+// Native top layer escapes both clipping and ancestor stacking contexts.
+moreItems.setAttribute('popover','manual');
+const positionMore=()=>{const r=more.querySelector('summary').getBoundingClientRect();moreItems.style.position='fixed';moreItems.style.margin='0';moreItems.style.left=Math.max(8,Math.min(innerWidth-216,r.right-200))+'px';moreItems.style.top=Math.min(r.bottom+7,innerHeight-moreItems.offsetHeight-8)+'px';};
+more.addEventListener('toggle',()=>{if(more.open){moreItems.showPopover();positionMore();}else if(moreItems.matches(':popover-open'))moreItems.hidePopover();});
+window.addEventListener('resize',positionMore);
+document.addEventListener('scroll',()=>{if(more.open)positionMore();},true);
 
 // Hide redundant flow/status copy but retain it in DOM for existing observers.
 const studyBlock=sidebar.querySelector('.sideblock');
@@ -102,6 +108,7 @@ for(const d of [more,imports,appearance,provenance,credits]){
 }
 document.addEventListener('keydown',e=>{
  if(e.key==='Escape'){
+  if(more.open)more.querySelector('summary').focus();
   for(const d of [more,imports,appearance,provenance,credits])d.open=false;
  }
 });

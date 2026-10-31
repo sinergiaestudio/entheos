@@ -64,6 +64,13 @@ with tempfile.TemporaryDirectory() as temp:
         proc.terminate()
         proc.wait(timeout=15)
 print('FROZEN_ORIGINAL_JPEG2000_ZIP_IMPORT_PASS')
+upgrade = pathlib.Path('dist/ANATHEOS-Setup-0.9.1-beta.exe').resolve()
+subprocess.run([str(upgrade), '/S'], check=True)
+assert sentinel.read_text() == 'keep'
+assert (root / 'versions/0.9.0-beta/ANATHEOS.exe').is_file()
+subprocess.run([str(root / 'versions/0.9.1-beta/ANATHEOS.exe'), '--self-test'], check=True)
+subprocess.run([str(root / 'versions/0.9.0-beta/ANATHEOS.exe'), '--self-test'], check=True)
+print('UPGRADE_AND_PREVIOUS_VERSION_RECOVERY_PASS')
 subprocess.run([str(root / 'Uninstall.exe'), '/S'], check=True)
 time.sleep(3)
 assert sentinel.read_text() == 'keep'

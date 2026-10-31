@@ -1,7 +1,11 @@
 """Preserve all bundled dependency license texts from installed distributions."""
 import importlib.metadata
 import pathlib
+import sys
+import shutil
 out = pathlib.Path('dist/ANATHEOS/THIRD_PARTY')
+for source in pathlib.Path(sys.base_prefix).glob('LICENSE*'):
+    shutil.copy2(source, out / source.name)
 for name in ('numpy', 'Pillow', 'pyinstaller'):
     dist = importlib.metadata.distribution(name)
     for file in dist.files or []:

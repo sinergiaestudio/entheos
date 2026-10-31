@@ -4,6 +4,9 @@ on:
     branches: [anatheos/work-integracion-unificada]
 permissions:
   contents: read
+concurrency:
+  group: windows-installer-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   installer:
     runs-on: windows-2022

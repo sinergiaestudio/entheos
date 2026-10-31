@@ -22,7 +22,9 @@ def main():
         stream.seek(0)
         assert np.array_equal(np.asarray(Image.open(stream)), pixels)
         assert (ROOT / 'demos/anatheos-local-v0.5/index.html').is_file()
-        print(json.dumps({'jpeg2000': 'PASS', 'version': '0.9.0-beta'}))
+        manifest = pathlib.Path(sys.executable).parent / 'version.json'
+        version = json.loads(manifest.read_text())['version'] if manifest.exists() else 'development'
+        print(json.dumps({'jpeg2000': 'PASS', 'version': version}))
         return 0
     data = pathlib.Path(os.environ['LOCALAPPDATA']) / 'ANATHEOS'
     for name in ('projects', 'preferences', 'temp'):

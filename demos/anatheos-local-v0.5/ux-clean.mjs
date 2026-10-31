@@ -56,6 +56,9 @@ more.append(moreItems);
 toolbar.append(more);
 // Native top layer escapes both clipping and ancestor stacking contexts.
 moreItems.setAttribute('popover','manual');
+moreItems.style.right='auto';moreItems.style.bottom='auto';
+const moreHome=document.createComment('More tools home');more.before(moreHome);
+document.addEventListener('fullscreenchange',()=>{more.open=false;const full=document.fullscreenElement;if(full){full.append(more);more.style.cssText='position:absolute;right:10px;top:10px;z-index:40;background:#111e27;padding:8px';}else{moreHome.after(more);more.removeAttribute('style');}});
 const positionMore=()=>{const r=more.querySelector('summary').getBoundingClientRect();moreItems.style.position='fixed';moreItems.style.margin='0';moreItems.style.left=Math.max(8,Math.min(innerWidth-216,r.right-200))+'px';moreItems.style.top=Math.min(r.bottom+7,innerHeight-moreItems.offsetHeight-8)+'px';};
 more.addEventListener('toggle',()=>{if(more.open){moreItems.showPopover();positionMore();}else if(moreItems.matches(':popover-open'))moreItems.hidePopover();});
 window.addEventListener('resize',positionMore);

@@ -2,6 +2,14 @@
 #cmrSpatialCompare{position:absolute;bottom:8px;left:8px;z-index:2;background:#101f2f;padding:8px;max-height:100%;overflow:auto}
 #cmrSpatialCompare[open]{inset:0}
 #cmrSpatialCompare>div{height:calc(100% - 32px)}
+.spatial-grid{display:grid;gap:8px;min-height:0;overflow:auto}
+.spatial-pane{min-width:0;background:#101f2f;border:1px solid #355266;padding:8px}
+.spatial-pane>div:first-child{display:flex;flex-wrap:wrap;gap:6px}
+.spatial-pane label{font-size:11px;display:flex;flex-direction:column;max-width:130px}
+.spatial-pane input[type=range]{max-width:100px}
+.spatial-image{display:flex;align-items:center;justify-content:center;overflow:hidden;height:28vh;background:#020609}
+.spatial-image canvas{display:block;max-width:100%;max-height:100%;width:auto;height:auto;transform-origin:center;touch-action:none}
+.spatial-pane p{font-size:12px}
 .cmr-native{position:absolute;inset:0;z-index:25;display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,350px);background:#0c1621;color:#ebf3fb;gap:12px;padding:12px;font-size:14px;min-height:0}
 .cmr-native *{box-sizing:border-box}
 .cmr-native-main{display:flex;align-items:center;justify-content:center;background:#020609;min-width:0;min-height:0;overflow:hidden;position:relative;border:1px solid #4b657a;border-radius:8px}

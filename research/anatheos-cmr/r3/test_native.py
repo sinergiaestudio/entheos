@@ -8,6 +8,7 @@ from playwright.sync_api import sync_playwright, expect
 ROOT = pathlib.Path(__file__).resolve().parents[3] / "demos" / "anatheos-local-v0.5"
 SCHEMA="anatheos-cmr-r2-private-v1"
 def series(folder,sid,frames,mode):
+    frames=[{**f,"study_instance_uid":"synthetic-study","series_instance_uid":sid,"frame_of_reference_uid":"synthetic-for"} for f in frames]
     dest=folder/sid;dest.mkdir()
     arr=np.zeros((len(frames),64,64),dtype="<u2")
     yy,xx=np.ogrid[:64,:64]
@@ -59,10 +60,28 @@ def main():
                 assert page.locator('#fitButton').evaluate("e=>{const r=e.getBoundingClientRect();return e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))}")
                 page.keyboard.press('Escape')
                 assert not page.locator('#uxMoreViewer').evaluate('e=>e.open')
+                for width,height in [(1366,768),(1920,1080)]:
+                    page.set_viewport_size({"width":width,"height":height})
+                    page.locator('#uxMoreViewer summary').focus()
+                    page.keyboard.press('Enter')
+                    expect(page.locator('#fitButton')).to_be_visible()
+                    page.keyboard.press('Escape')
+                    assert page.locator('#uxMoreViewer summary').evaluate('e=>e===document.activeElement')
+                page.locator('#cmrNativeFull').click()
+                page.wait_for_function('()=>Boolean(document.fullscreenElement)')
+                page.locator('#uxMoreViewer summary').click()
+                expect(page.locator('#fitButton')).to_be_visible()
+                page.keyboard.press('Escape')
+                page.evaluate('()=>document.exitFullscreen()')
                 page.locator('#cmrSpatialCompare summary').click()
                 assert page.locator('#cmrSpatialCompare canvas').count()==3
                 page.locator('#cmrSpatialCompare canvas').first.click(position={"x":10,"y":10})
                 assert 'distancia' in page.locator('#cmrSpatialCompare').inner_text()
+                page.select_option('[aria-label="Serie vista 2"]','RM-002')
+                page.wait_for_function("()=>document.querySelectorAll('.spatial-pane p')[1].textContent.includes('RM-002')")
+                assert page.locator('[aria-label="Serie vista 1"]').input_value()=='RM-001'
+                assert 'INCOMPATIBLE' in page.locator('.spatial-pane p').nth(1).inner_text()
+                assert page.locator('.spatial-pane label').filter(has_text='Zoom').count()==3
                 page.locator('#cmrSpatialCompare summary').click()
                 assert page.locator("#cmrNativeSeries option").count()==2
                 counts=[]

@@ -9,7 +9,24 @@ export function plane(f,rows,cols){
  return {p,r,c,n:cross(r,c),s,rows,cols};
 }
 export function pixelToLps(g,i,j){return g.p.map((x,k)=>x+i*g.s[1]*g.r[k]+j*g.s[0]*g.c[k]);}
-export function lpsToPixel(g,p){const d=sub(p,g.p),i=dot(d,g.r)/g.s[1],j=dot(d,g.c)/g.s[0],distance=dot(d,g.n);return {i,j,distance,status:i<0||j<0||i>g.cols-1||j>g.rows-1?'FUERA DE CAMPO':Math.abs(distance)<=.01?'EN PLANO':'PROYECCIÓN CERCANA'};}
+export const SPATIAL_TOLERANCES=Object.freeze({coincidenceMm:.01,nearMm:2});
+export function lpsToPixel(g,p,tolerances=SPATIAL_TOLERANCES){
+ if(!Array.isArray(p)||p.length!==3||!p.every(Number.isFinite))throw Error('Punto LPS inválido');
+ const {coincidenceMm,nearMm}=tolerances;
+ if(!Number.isFinite(coincidenceMm)||!Number.isFinite(nearMm)||coincidenceMm<0||nearMm<coincidenceMm)throw Error('Tolerancias inválidas');
+ const d=sub(p,g.p),i=dot(d,g.r)/g.s[1],j=dot(d,g.c)/g.s[0],distance=dot(d,g.n);
+ const inField=i>=0&&j>=0&&i<=g.cols-1&&j<=g.rows-1,inPlane=Math.abs(distance)<=coincidenceMm,nearPlane=Math.abs(distance)<=nearMm;
+ return {i,j,distance,inField,inPlane,nearPlane,status:!inField?'FUERA DE CAMPO':inPlane?'EN PLANO':nearPlane?'PROYECCIÓN CERCANA':'PROYECCIÓN LEJANA'};
+}
+export function correspondence(a,b){
+ const warning='Referencia geométrica; movimiento/apnea no registrados. TIEMPO NO VALIDADO';
+ if(!a||!b)return {compatible:false,reason:'Geometría ausente'};
+ for(const key of ['study_instance_uid','series_instance_uid','frame_of_reference_uid'])if(!a[key]||!b[key])return {compatible:false,reason:'Identidad o Frame of Reference ausente'};
+ if(a.study_instance_uid!==b.study_instance_uid||a.frame_of_reference_uid!==b.frame_of_reference_uid)return {compatible:false,reason:'Estudio o Frame of Reference incompatible'};
+ if(a.series_instance_uid!==b.series_instance_uid)return {compatible:false,reason:'Series distintas: requieren registro validado; FoR común insuficiente'};
+ for(const key of ['temporal_position_identifier','trigger_time_ms'])if((a[key]!=null||b[key]!=null)&&a[key]!==b[key])return {compatible:false,reason:'Fotogramas de contexto temporal diferente'};
+ return {compatible:true,reason:warning};
+}
 export function intersection(a,b){
  // Clip the intersection of b's plane with a's visible rectangle.
  const corners=[[0,0],[a.cols-1,0],[a.cols-1,a.rows-1],[0,a.rows-1]],points=[];
@@ -34,12 +51,16 @@ export function eligibility(frames,rows,cols){
   if(steps.some(x=>Math.abs(x-step)>Math.max(.01,step*.01)))reason.push('Separación irregular o huecos');
   if(items.some(x=>{const d=sub(x.g.p,g.p),z=dot(d,g.n);return Math.hypot(...d.map((v,k)=>v-z*g.n[k]))>.01;}))reason.push('Desplazamiento fuera de la normal');
   const first=items[0].f;
-  const identity=f=>[f.study_instance_uid,f.series_instance_uid,f.frame_of_reference_uid,f.modality,f.image_type,f.acquisition?.scan_sequence,f.acquisition?.tr,f.acquisition?.te];
+  const identity=f=>[f.study_instance_uid,f.series_instance_uid,f.frame_of_reference_uid,f.modality,f.image_type,f.acquisition?.scan_sequence,f.acquisition?.sequence_variant,f.acquisition?.tr,f.acquisition?.te,f.acquisition?.ti,f.rescale_slope,f.rescale_intercept,f.photometric_interpretation];
   const signature=identity(first);
-  if(signature.some(x=>x===null||x===undefined||x==='')||items.some(x=>JSON.stringify(identity(x.f))!==JSON.stringify(signature)))reason.push('Equivalencia de adquisición y contraste pendiente de verificar');
+  const required=[first.study_instance_uid,first.series_instance_uid,first.frame_of_reference_uid,first.modality,first.image_type,first.acquisition?.scan_sequence,first.acquisition?.tr,first.acquisition?.te];
+  if(required.some(x=>x===null||x===undefined||x==='')||items.some(x=>JSON.stringify(identity(x.f))!==JSON.stringify(signature)))reason.push('Equivalencia de adquisición y contraste pendiente de verificar');
+  if(!['MR','CT'].includes(first.modality))reason.push('Modalidad no validada para volumen');
+  if(items.some(x=>/DERIVED|SECONDARY|PHASE|PERFUSION|DYNAMIC/i.test(x.f.image_type||'')))reason.push('Imagen derivada/dinámica requiere validación específica');
+  if(items.some(x=>x.f.motion_status==='detected'))reason.push('Movimiento detectado: requiere registro');
   if(items.some(x=>x.f.trigger_time_ms!=null||x.f.temporal_position_identifier!=null))reason.push('Contexto temporal requiere separación validada');
   const eligible=reason.length===0;
-  return {capabilities:eligible?['A','B','C']:['A','B'],volumeEligible:eligible,indices:sorted.map(x=>x.index),spacingMm:step,reasons:reason,validation:'Geometría técnica; movimiento y fidelidad anatómica pendientes'};
+  return {capabilities:eligible?['A','B','C']:['A','B'],volumeEligible:eligible,indices:sorted.map(x=>x.index),spacingMm:step,reasons:reason,motionStatus:'NO EVALUADO: no hay registro anatómico ni prueba de ausencia de movimiento',validation:'C es candidatura geométrica dentro de una serie; movimiento y fidelidad anatómica pendientes'};
  });
  return {groups:result,invalidFrames:frames.length-[...groups.values()].reduce((n,g)=>n+g.length,0),reasons:[...new Set(reasons)],temporal:'TIEMPO NO VALIDADO',derivedModel:false};
 }

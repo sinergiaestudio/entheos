@@ -1,4 +1,5 @@
 import {thoraxReference} from './thorax-reference.mjs';
+import {planarDistanceMm} from './image-tools.mjs';
 import { inspectVolumeGeometry, prepareVolumeTexture, VolumeRenderer } from './volumetric.js';
 import { createMask, paintDisk, growRegion2D, eraseRegion, countRegions, toNrrd, fromNrrd, REGION_COLORS } from './segmentation.mjs';
 import {makeMaskSurfaceSTLs} from './mask-to-surface.mjs';
@@ -341,7 +342,7 @@ let dragging=false,lastX=0,lastY=0;canvas.onpointerdown=e=>{if(!currentFrame())r
   if(state.annotationMode==='point')state.annotations.push({type:'point',z:state.index,a:p});
   if(state.annotationMode==='measure'){
    if(state.measureStart?.z===state.index){
-    const a=state.measureStart.p,mm=Math.hypot((p[0]-a[0])*frame.spacing[1],(p[1]-a[1])*frame.spacing[0]);
+    const a=state.measureStart.p,mm=planarDistanceMm(a,p,frame.spacing);
     state.annotations.push({type:'measure',z:state.index,a,b:p,mm});state.measureStart=null;
     $('triptychToolStatus').textContent='Distancia 2D, corte '+(state.index+1)+': '+mm.toFixed(2)+' mm. No diagnóstica.';
    }else{state.measureStart={z:state.index,p};$('triptychToolStatus').textContent='Primer punto elegido. Marcá el segundo en el mismo corte.';}

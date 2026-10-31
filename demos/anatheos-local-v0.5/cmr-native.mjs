@@ -56,11 +56,11 @@ function start(){
  byId('viewerRoot').appendChild(section);
  const analysis=document.createElement('details');analysis.id='cmrReconstructionAnalysis';const title=document.createElement('summary');title.textContent='Análisis de reconstrucción';const report=document.createElement('p');analysis.append(title,report);section.querySelector('.cmr-native-controls').append(analysis);
  const $=id=>byId(id),canvas=$('cmrNativeCanvas'),ctx=canvas.getContext('2d');
- let catalog=null,files=new Map(),source=null,jobId=null,decoded=null,geometry=null,orientations=[],active=null,interval=null,pollAbort=null;
+ let catalog=null,files=new Map(),source=null,jobId=null,decoded=null,geometry=null,orientations=[],active=null,interval=null,pollAbort=null,disposeWorkspace=null,studyGeneration=0,seriesGeneration=0;
  function stop(){if(interval!==null){clearInterval(interval);interval=null;}}
  function setStatus(x){$('cmrNativeStatus').textContent=x;}
  async function discardJob(){const id=jobId;jobId=null;if(!id)return;try{await fetch(`/api/cmr/jobs/${encodeURIComponent(id)}`,{method:'DELETE'});}catch(_){}}
- function resetStudy(){stop();catalog=null;files=new Map();source=null;decoded=null;geometry=null;orientations=[];active=null;}
+ function resetStudy(){stop();studyGeneration++;seriesGeneration++;disposeWorkspace?.();disposeWorkspace=null;catalog=null;files=new Map();source=null;decoded=null;geometry=null;orientations=[];active=null;}
  function close(){if(pollAbort)pollAbort.abort();pollAbort=null;discardJob();resetStudy();section.hidden=true;}
  function locate(f){const path=String(f.webkitRelativePath||f.name).replaceAll('\\','/');const match=path.match(/(?:^|\/)(RM-\d{3})\/(geometria_privada\.json|pixels_original_decoded\.npy)$/);if(match)return `${match[1]}/${match[2]}`;if(path.endsWith('/catalogo_local_privado.json')||path==='catalogo_local_privado.json')return 'catalogo_local_privado.json';return null;}
  async function activateCatalog(nextCatalog,nextSource){
@@ -112,11 +112,16 @@ function start(){
  function positionChange(){const group=currentGroup();$('cmrNativePlane').max=String(Math.max(0,group.length-1));$('cmrNativePlane').value='0';phaseChange();}
  function phaseChange(){const group=currentGroup(),frames=group[Number($('cmrNativePlane').value)]?.indices||[];$('cmrNativePhase').max=String(Math.max(0,frames.length-1));$('cmrNativePhase').value='0';win=frameWindow();render();}
  async function selectSeries(){stop();const id=$('cmrNativeSeries').value;active=catalog.series.find(s=>s.serie_local===id);require(active?.estado==='preparada','Serie no preparada');
+  const generation=++seriesGeneration;
   require(source,'No hay una fuente local activa');const g=JSON.parse(await source.text(`${id}/geometria_privada.json`)),d=decodeNpy(await source.buffer(`${id}/pixels_original_decoded.npy`));require(g.serie_local===id&&g.frames?.length===d.dims[0]&&d.dims[0]===active.instancias,'Geometría y píxeles no corresponden');
+  if(generation!==seriesGeneration)return;
   geometry=g;decoded=d;orientations=organize(g.frames);
-  let comparison=section.querySelector('#cmrSpatialCompare');if(!comparison){comparison=document.createElement('details');comparison.id='cmrSpatialCompare';const summary=document.createElement('summary');summary.textContent='Comparar orientaciones · misma serie';comparison.append(summary);section.querySelector('.cmr-native-main').append(comparison);}comparison.querySelectorAll('div').forEach(x=>x.remove());const space=document.createElement('div');comparison.append(space);createWorkspace(space,d,g.frames,orientations);
+  disposeWorkspace?.();let comparison=section.querySelector('#cmrSpatialCompare');if(!comparison){comparison=document.createElement('details');comparison.id='cmrSpatialCompare';const summary=document.createElement('summary');summary.textContent='Comparar series y orientaciones';comparison.append(summary);section.querySelector('.cmr-native-main').append(comparison);}comparison.querySelectorAll('div').forEach(x=>x.remove());const space=document.createElement('div');comparison.append(space);
+  const study=studyGeneration,origin=source,records=catalog.series;
+  const loadSeries=async seriesId=>{const record=records.find(x=>x.serie_local===seriesId&&x.estado==='preparada');require(record,'Serie no preparada');const meta=JSON.parse(await origin.text(`${seriesId}/geometria_privada.json`)),pixels=decodeNpy(await origin.buffer(`${seriesId}/pixels_original_decoded.npy`));require(study===studyGeneration&&meta.serie_local===seriesId&&meta.frames?.length===pixels.dims[0]&&pixels.dims[0]===record.instancias&&pixels.pixels.byteLength<=128*1024**2,'Datos incompatibles o memoria excedida');return {id:seriesId,frames:meta.frames,decoded:pixels,orientations:organize(meta.frames)};};
+  disposeWorkspace=createWorkspace(space,{catalog,loadSeries,initial:{id,decoded:d,frames:g.frames,orientations}});
   const assessment=eligibility(g.frames,d.dims[1],d.dims[2]);
-  report.textContent=`${catalog.series.length} series identificadas. Serie activa: ${assessment.groups.length} grupos geométricos. A: imágenes originales. B: planos con geometría disponible. ${assessment.temporal}. Modelos derivados: requieren máscaras verificadas. `+assessment.groups.map((x,i)=>`Grupo ${i+1}: ${x.indices.length} imágenes; ${x.reasons.join('; ')}.`).join(' ');
+  report.textContent=`${catalog.series.length} series identificadas. Serie activa: ${assessment.groups.length} grupos geométricos. ${assessment.temporal}. Modelos derivados: requieren máscaras verificadas. `+assessment.groups.map((x,i)=>`Grupo ${i+1}: ${x.capabilities.join(', ')}; ${x.indices.length} imágenes; ${x.reasons.join('; ')}. ${x.validation}.`).join(' ');
   const ori=$('cmrNativeOri');ori.textContent='';orientations.forEach((group,i)=>{const o=document.createElement('option');o.value=String(i);o.textContent=`${group.label} · orientación ${i+1} (${group.planes.length} posiciones)`;ori.appendChild(o)});
   $('cmrNativeOriLabel').hidden=orientations.length<=1;ori.value='0';positionChange();
   $('cmrNativePlay').disabled=!['cine_provisional','perfusion_temporal'].includes(active.modo_seguro)||!orientations.some(x=>x.planes.some(p=>p.indices.length>1));

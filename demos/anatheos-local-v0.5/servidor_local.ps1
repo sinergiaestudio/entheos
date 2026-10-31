@@ -10,6 +10,7 @@ $files = @{
  '/cmr-native.mjs' = 'cmr-native.mjs'
  '/spatial-reference.mjs' = 'spatial-reference.mjs'
  '/spatial-workspace.mjs' = 'spatial-workspace.mjs'
+ '/image-tools.mjs' = 'image-tools.mjs'
  '/cmr-native.css' = 'cmr-native.css'
  '/volumetric.js' = 'volumetric.js'
  '/segmentation.mjs' = 'segmentation.mjs'

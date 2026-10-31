@@ -40,7 +40,7 @@ export function intersection(a,b){
   const t=[-x/d,(max-x)/d].sort((x,y)=>x-y);lo=Math.max(lo,t[0]);hi=Math.min(hi,t[1]);}
  return lo>hi?[]:[lo,hi].map(t=>points[0].map((x,i)=>x+t*(points[1][i]-x)));
 }
-export function eligibility(frames,rows,cols){
+export function eligibility(frames,rows,cols,context={}){
  const reasons=[],groups=new Map();
  frames.forEach((f,index)=>{try{const g=plane(f,rows,cols),key=[...g.r,...g.c,...g.s].map(x=>x.toFixed(5)).join(',');if(!groups.has(key))groups.set(key,[]);groups.get(key).push({g,index,f});}catch(e){reasons.push(e.message);}});
  const result=[...groups.values()].map(items=>{
@@ -51,16 +51,21 @@ export function eligibility(frames,rows,cols){
   if(steps.some(x=>Math.abs(x-step)>Math.max(.01,step*.01)))reason.push('Separación irregular o huecos');
   if(items.some(x=>{const d=sub(x.g.p,g.p),z=dot(d,g.n);return Math.hypot(...d.map((v,k)=>v-z*g.n[k]))>.01;}))reason.push('Desplazamiento fuera de la normal');
   const first=items[0].f;
-  const identity=f=>[f.study_instance_uid,f.series_instance_uid,f.frame_of_reference_uid,f.modality,f.image_type,f.acquisition?.scan_sequence,f.acquisition?.sequence_variant,f.acquisition?.tr,f.acquisition?.te,f.acquisition?.ti,f.rescale_slope,f.rescale_intercept,f.photometric_interpretation];
+  const identity=f=>[f.study_instance_uid,f.series_instance_uid,f.frame_of_reference_uid,f.modality,f.image_type,f.acquisition?.scan_sequence,f.acquisition?.sequence_variant,f.acquisition?.tr,f.acquisition?.te,f.acquisition?.ti,f.acquisition?.convolution_kernel,f.acquisition?.kvp,f.rescale_slope,f.rescale_intercept,f.photometric_interpretation];
   const signature=identity(first);
-  const required=[first.study_instance_uid,first.series_instance_uid,first.frame_of_reference_uid,first.modality,first.image_type,first.acquisition?.scan_sequence,first.acquisition?.tr,first.acquisition?.te];
+  const required=[first.study_instance_uid,first.series_instance_uid,first.frame_of_reference_uid,first.modality,first.image_type,...(first.modality==='MR'?[first.acquisition?.scan_sequence,first.acquisition?.tr,first.acquisition?.te]:[first.rescale_slope,first.rescale_intercept])];
   if(required.some(x=>x===null||x===undefined||x==='')||items.some(x=>JSON.stringify(identity(x.f))!==JSON.stringify(signature)))reason.push('Equivalencia de adquisición y contraste pendiente de verificar');
   if(!['MR','CT'].includes(first.modality))reason.push('Modalidad no validada para volumen');
-  if(items.some(x=>/DERIVED|SECONDARY|PHASE|PERFUSION|DYNAMIC/i.test(x.f.image_type||'')))reason.push('Imagen derivada/dinámica requiere validación específica');
+  if(items.some(x=>/PHASE|PERFUSION|DYNAMIC/i.test(x.f.image_type||'')||(x.f.modality!=='CT'&&/DERIVED|SECONDARY/i.test(x.f.image_type||''))))reason.push('Imagen derivada/dinámica requiere validación específica');
   if(items.some(x=>x.f.motion_status==='detected'))reason.push('Movimiento detectado: requiere registro');
-  if(items.some(x=>x.f.trigger_time_ms!=null||x.f.temporal_position_identifier!=null))reason.push('Contexto temporal requiere separación validada');
+  if(['trigger_time_ms','temporal_position_identifier'].some(key=>new Set(items.map(x=>x.f[key]??null)).size>1))reason.push('Variación temporal requiere separación validada');
+  if(/cine|perfusion|inversion|psir|localizador/.test(context.mode||''))reason.push('Modo de adquisición no validado para volumen continuo');
+  const thickness=items.map(x=>Number(x.f.acquisition?.slice_thickness));
+  if(thickness.some(x=>!Number.isFinite(x)||x<=0))reason.push('Espesor adquirido insuficientemente documentado');
+  else if(step>Math.min(...thickness)+Math.max(.05,step*.05))reason.push('Huecos entre espesores adquiridos: no volumen continuo');
   const eligible=reason.length===0;
-  return {capabilities:eligible?['A','B','C']:['A','B'],volumeEligible:eligible,indices:sorted.map(x=>x.index),spacingMm:step,reasons:reason,motionStatus:'NO EVALUADO: no hay registro anatómico ni prueba de ausencia de movimiento',validation:'C es candidatura geométrica dentro de una serie; movimiento y fidelidad anatómica pendientes'};
+  const derived=items.some(x=>/DERIVED|SECONDARY/i.test(x.f.image_type||''));
+  return {capabilities:eligible?['A','B','C']:['A','B'],volumeEligible:eligible,indices:sorted.map(x=>x.index),spacingMm:step,reasons:reason,sourceType:derived?'DERIVADA: reconstruye los vóxeles suministrados, no recupera la adquisición original':'ORIGINAL',motionStatus:'NO EVALUADO: no hay registro anatómico ni prueba de ausencia de movimiento',validation:'C es candidatura geométrica dentro de una serie; movimiento y fidelidad anatómica pendientes'};
  });
  return {groups:result,invalidFrames:frames.length-[...groups.values()].reduce((n,g)=>n+g.length,0),reasons:[...new Set(reasons)],temporal:'TIEMPO NO VALIDADO',derivedModel:false};
 }

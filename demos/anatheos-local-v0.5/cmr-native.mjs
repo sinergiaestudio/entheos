@@ -120,8 +120,9 @@ function start(){
   const study=studyGeneration,origin=source,records=catalog.series;
   const loadSeries=async seriesId=>{const record=records.find(x=>x.serie_local===seriesId&&x.estado==='preparada');require(record,'Serie no preparada');const meta=JSON.parse(await origin.text(`${seriesId}/geometria_privada.json`)),pixels=decodeNpy(await origin.buffer(`${seriesId}/pixels_original_decoded.npy`));require(study===studyGeneration&&meta.serie_local===seriesId&&meta.frames?.length===pixels.dims[0]&&pixels.dims[0]===record.instancias&&pixels.pixels.byteLength<=128*1024**2,'Datos incompatibles o memoria excedida');return {id:seriesId,frames:meta.frames,decoded:pixels,orientations:organize(meta.frames)};};
   disposeWorkspace=createWorkspace(space,{catalog,loadSeries,initial:{id,decoded:d,frames:g.frames,orientations}});
-  const assessment=eligibility(g.frames,d.dims[1],d.dims[2]);
+  const assessment=eligibility(g.frames,d.dims[1],d.dims[2],{mode:active.modo_seguro});
   report.textContent=`${catalog.series.length} series identificadas. Serie activa: ${assessment.groups.length} grupos geométricos. ${assessment.temporal}. Modelos derivados: requieren máscaras verificadas. `+assessment.groups.map((x,i)=>`Grupo ${i+1}: ${x.capabilities.join(', ')}; ${x.indices.length} imágenes; ${x.reasons.join('; ')}. ${x.validation}.`).join(' ');
+  analysis.querySelectorAll('button').forEach(x=>x.remove());assessment.groups.forEach((group,groupIndex)=>{if(!group.volumeEligible)return;const button=document.createElement('button');button.type='button';button.textContent=`Grupo ${groupIndex+1} · Abrir volumen, MPR y máscaras`;button.onclick=()=>window.dispatchEvent(new CustomEvent('anatheos:open-eligible-volume',{detail:{data:{id,frames:g.frames,decoded:d,mode:active.modo_seguro},groupIndex}}));analysis.append(button);});
   const ori=$('cmrNativeOri');ori.textContent='';orientations.forEach((group,i)=>{const o=document.createElement('option');o.value=String(i);o.textContent=`${group.label} · orientación ${i+1} (${group.planes.length} posiciones)`;ori.appendChild(o)});
   $('cmrNativeOriLabel').hidden=orientations.length<=1;ori.value='0';positionChange();
   $('cmrNativePlay').disabled=!['cine_provisional','perfusion_temporal'].includes(active.modo_seguro)||!orientations.some(x=>x.planes.some(p=>p.indices.length>1));
@@ -140,5 +141,6 @@ function start(){
  $('cmrNativePlay').addEventListener('click',()=>{if(interval!==null){stop();return;}if($('cmrNativePlay').disabled)return;const g=currentGroup()[Number($('cmrNativePlane').value)];if(g?.indices.length<=1)return;interval=setInterval(()=>{$('cmrNativePhase').value=(Number($('cmrNativePhase').value)+1)%g.indices.length;render();},120);});
  fetch('/api/cmr/capabilities',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error();return r.json()}).then(c=>{require(c.original_zip&&c.local_only,'Servicio W1 incompatible')}).catch(()=>{zipOpen.disabled=true;zipOpen.title='Iniciá ANATHEOS con el servicio local W1 para abrir el ZIP original';});
  window.addEventListener('pagehide',stop);
+ window.addEventListener('anatheos:eligible-volume-opened',()=>{stop();disposeWorkspace?.();disposeWorkspace=null;section.hidden=true;});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();

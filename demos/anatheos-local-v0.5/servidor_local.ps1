@@ -11,6 +11,7 @@ $files = @{
  '/spatial-reference.mjs' = 'spatial-reference.mjs'
  '/spatial-workspace.mjs' = 'spatial-workspace.mjs'
  '/image-tools.mjs' = 'image-tools.mjs'
+ '/eligible-volume.mjs' = 'eligible-volume.mjs'
  '/cmr-native.css' = 'cmr-native.css'
  '/volumetric.js' = 'volumetric.js'
  '/segmentation.mjs' = 'segmentation.mjs'

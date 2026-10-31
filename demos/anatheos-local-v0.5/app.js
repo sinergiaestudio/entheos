@@ -1,5 +1,6 @@
 import {thoraxReference} from './thorax-reference.mjs';
 import {planarDistanceMm} from './image-tools.mjs';
+import {eligibleVolume,reformat} from './eligible-volume.mjs';
 import { inspectVolumeGeometry, prepareVolumeTexture, VolumeRenderer } from './volumetric.js';
 import { createMask, paintDisk, growRegion2D, eraseRegion, countRegions, toNrrd, fromNrrd, REGION_COLORS } from './segmentation.mjs';
 import {makeMaskSurfaceSTLs} from './mask-to-surface.mjs';
@@ -234,6 +235,15 @@ async function loadIncluded(){const gen=++state.loadGeneration;clean();showLoad(
  try{const controller=new AbortController();loadIncluded.controller=controller;const r=await fetch('datasets/RTKN0668_MR_DESS.zip',{signal:controller.signal,cache:'no-store'});if(!r.ok)throw Error('No se encontró la DESS incluida en el paquete local');const b=await r.arrayBuffer();if(gen!==state.loadGeneration)return;await loadBuffer(b,'RTKN0668_MR_DESS.zip · incluida',gen);}catch(e){if(gen===state.loadGeneration){$('loading').hidden=true;warningsDisplay([e.message],[]);toast(e.message);}}}
 function clamp(n,low,high){return Math.max(low,Math.min(high,n));}
 function currentFrame(){return state.current?.items[state.index];}
+window.addEventListener('anatheos:open-eligible-volume',event=>{
+ try{const series=eligibleVolume(event.detail.data,event.detail.groupIndex);const gen=++state.loadGeneration;clean();commitRecords(series.items,'Serie elegible · '+event.detail.data.id,[],['Transferencia interna desde DICOM original; sin resampling.'],gen);window.dispatchEvent(new Event('anatheos:eligible-volume-opened'));$('threeDButton').click();
+  let panel=document.getElementById('eligibleMpr');panel?.remove();panel=document.createElement('details');panel.id='eligibleMpr';const summary=document.createElement('summary');summary.textContent='MPR de la pila elegible · ejes de adquisición';panel.append(summary);
+  const axis=document.createElement('select'),slice=document.createElement('input'),image=document.createElement('canvas'),note=document.createElement('p');for(let k=0;k<3;k++)axis.add(new Option(['Columna fija','Fila fija','Corte original'][k],k));slice.type='range';slice.min=0;
+  const draw=()=>{if(state.current!==state.series[0])return;const fixed=Number(axis.value),limits=[series.items[0].columns,series.items[0].rows,series.items.length];slice.max=limits[fixed]-1;slice.value=Math.min(Number(slice.value),limits[fixed]-1);const p=reformat(series,fixed,Number(slice.value));image.width=p.width;image.height=p.height;image.style.width=Math.min(700,p.width*p.spacing[1]*3)+'px';image.style.height=(Math.min(700,p.width*p.spacing[1]*3)*p.height*p.spacing[0]/(p.width*p.spacing[1]))+'px';image.style.maxWidth='100%';const ctx=image.getContext('2d'),pixels=ctx.createImageData(p.width,p.height);for(let i=0;i<p.values.length;i++){const v=Math.max(0,Math.min(255,(p.values[i]-state.wlCenter+state.wlWidth/2)*255/state.wlWidth));pixels.data.set([v,v,v,255],i*4);}ctx.putImageData(pixels,0,0);note.textContent=p.provenance+' · escala física conservada; cotejo Slicer pendiente';};
+  axis.onchange=()=>{slice.value=0;draw();};slice.oninput=draw;panel.append(axis,slice,image,note);$('viewerRoot').after(panel);draw();
+ }catch(e){toast('Reconstrucción rechazada: '+e.message);}
+});
+window.addEventListener('anatheos:study-reset',()=>document.getElementById('eligibleMpr')?.remove());
 function updateControls(){const active=currentFrame(),has=!!active;
  $('threeDButton').disabled=!has;
  $('mixedButton').disabled=!has;$('tripleButton').disabled=!has;

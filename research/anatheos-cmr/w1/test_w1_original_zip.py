@@ -55,6 +55,10 @@ def main():
                 errors = []
                 page.on("pageerror", lambda error: errors.append(str(error)))
                 page.goto(f"http://127.0.0.1:{server.server_port}/", wait_until="domcontentloaded")
+                assert page.request.get(f"http://127.0.0.1:{server.server_port}/api/spl/status").json()["ready"] is False
+                assert page.request.get(f"http://127.0.0.1:{server.server_port}/atlas/femur-95.stl").status == 404
+                assert page.request.get(f"http://127.0.0.1:{server.server_port}/datasets/RTKN0668_MR_DESS.zip").status == 404
+                assert page.request.get(f"http://127.0.0.1:{server.server_port}/surface-ui.mjs").status == 200
                 expect(page.locator("#cmrNativeZipOpen")).to_be_visible(timeout=20_000)
                 page.set_input_files("#cmrNativeZip", str(source))
                 expect(page.locator("#cmrNativeSeries option")).to_have_count(2, timeout=60_000)

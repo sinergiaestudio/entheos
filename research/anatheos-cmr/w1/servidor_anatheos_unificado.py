@@ -63,12 +63,16 @@ class Job:
 
     def run(self):
         self.set(state="processing", progress=1, message="Validando y clasificando DICOM")
-        command = [sys.executable, str(self.preparer), "--entrada", str(self.zip_path),
+        command = [sys.executable, "--prepare"] if getattr(sys, "frozen", False) else [sys.executable, str(self.preparer)]
+        command += ["--entrada", str(self.zip_path),
                    "--destino", str(self.output)]
         try:
-            process = subprocess.Popen(command, cwd=str(self.preparer.parent), text=True,
-                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=1)
-            self.process = process
+            with self.lock:
+                if self.cancelled:
+                    return
+                process = subprocess.Popen(command, cwd=str(self.preparer.parent), text=True,
+                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=1)
+                self.process = process
             prepared = 0
             assert process.stdout is not None
             for line in process.stdout:
@@ -96,10 +100,12 @@ class Job:
             self.set(state="failed", error="No se pudo iniciar el decodificador local", message="Error local")
 
     def cancel(self):
-        self.cancelled = True
-        process = self.process
+        with self.lock:
+            self.cancelled = True
+            process = self.process
         if process and process.poll() is None:
             process.terminate()
+            process.wait(timeout=10)
         shutil.rmtree(self.root, ignore_errors=True)
 
 
@@ -287,7 +293,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if not 1024 <= args.port <= 65535:
         parser.error("Puerto inválido")
-    root = pathlib.Path(__file__).resolve().parents[3]
+    root = pathlib.Path(sys._MEIPASS) if getattr(sys, "frozen", False) else pathlib.Path(__file__).resolve().parents[3]
     app = root / "demos" / "anatheos-local-v0.5"
     preparer = root / "research" / "anatheos-cmr" / "r2" / "preparar_todas_las_series.py"
     with tempfile.TemporaryDirectory(prefix="anatheos-w1-") as temp:

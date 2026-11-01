@@ -68,6 +68,10 @@ def main():
                 expect(page.locator(".spatial-pane canvas").first).to_be_visible()
                 assert page.locator("#cmrNativeCanvas").evaluate("element => element.width") == 22
                 assert "listo" not in page.locator("#cmrNativeStatus").inner_text().lower() or not errors
+                # Start two imports back-to-back; only the last generation may activate.
+                page.set_input_files("#cmrNativeZip", str(source))
+                page.set_input_files("#cmrNativeZip", str(source))
+                expect(page.locator("#cmrNativeSeries option")).to_have_count(2, timeout=60_000)
                 command(page,'Archivo','Cerrar estudio')
                 for _ in range(40):
                     if not server.jobs:

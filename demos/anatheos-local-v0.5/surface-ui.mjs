@@ -44,7 +44,7 @@ function syncSurfaceUI(){
  $('surfaceHelpOverlay').hidden=!active||ready;
 }
 function resetSurfaceView(){if(!renderer)return;renderer.yaw=.5;renderer.pitch=.18;renderer.zoom=1.6;renderer.draw();}
-function showMode(kind='external'){session.mode('surface');
+function showMode(kind='external'){
  if($('viewerRoot').dataset.uxMode==='triple'&&kind==='derived'){
   showTriptychGeometry();return;
  }
@@ -79,7 +79,7 @@ function showMode(kind='external'){session.mode('surface');
   :'Sin modelos importados';
  syncSurfaceUI();
  if(!renderer.meshes.length)status(emptyHint);
- renderer.draw();
+ session.mode('surface');renderer.draw();
 }
 function leaveMode(){
  if(!active)return;

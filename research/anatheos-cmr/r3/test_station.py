@@ -39,6 +39,13 @@ def main():
      page.locator('#viewerRoot').focus();page.keyboard.press('Shift+F10');expect(page.locator('[aria-label="Acciones de la vista"]')).to_be_visible();page.keyboard.press('Escape')
      command(page,'Vistas','Ampliar vista seleccionada');assert page.locator('.spatial-pane:visible').count()==1
      command(page,'Vistas','Ampliar vista seleccionada');assert page.locator('.spatial-pane:visible').count()==4
+    command(page,'Vistas','Pantalla completa');page.wait_for_function('()=>!!document.fullscreenElement')
+    page.locator('.spatial-pane canvas').first.click(button='right');expect(page.locator('[aria-label="Acciones de la vista"]')).to_be_visible();page.keyboard.press('Escape')
+    if page.evaluate('!!document.fullscreenElement'):page.evaluate('document.exitFullscreen()')
+    # Cine uses the selected eligible temporal view, not a hidden second canvas.
+    page.locator('#seriesList button').nth(1).click();expect(page.locator('.spatial-pane p').first).to_contain_text('RM-002')
+    command(page,'Navegación','Cine compatible');page.wait_for_function("()=>!document.querySelector('.spatial-pane p').textContent.includes('fotograma 1.')")
+    command(page,'Navegación','Cine compatible')
     command(page,'Archivo','Cerrar estudio');expect(page.locator('#studyTitle')).to_have_text('Sin estudio cargado');expect(page.locator('.spatial-pane')).to_have_count(0)
     page.set_input_files('#cmrNativeFolder',str(folder));expect(page.locator('#studyTitle')).to_have_text('Estudio DICOM')
     assert not errors,errors

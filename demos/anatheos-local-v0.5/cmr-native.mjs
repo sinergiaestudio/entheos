@@ -33,12 +33,12 @@ function start(){
  byId('viewerRoot').appendChild(section);
  const analysis=document.createElement('details');analysis.id='cmrReconstructionAnalysis';const title=document.createElement('summary');title.textContent='Análisis de reconstrucción';const report=document.createElement('p');analysis.append(title,report);section.querySelector('.cmr-native-controls').append(analysis);
  const $=id=>byId(id),canvas=$('cmrNativeCanvas'),ctx=canvas.getContext('2d');
- let catalog=null,files=new Map(),source=null,jobId=null,decoded=null,geometry=null,orientations=[],active=null,interval=null,pollAbort=null,disposeWorkspace=null,studyGeneration=0,seriesGeneration=0;
+ let catalog=null,files=new Map(),source=null,jobId=null,decoded=null,geometry=null,orientations=[],active=null,interval=null,pollAbort=null,disposeWorkspace=null,studyGeneration=0,seriesGeneration=0,importGeneration=0;
  function stop(){if(interval!==null){clearInterval(interval);interval=null;}}
  function setStatus(x){$('cmrNativeStatus').textContent=x;}
  async function discardJob(){const id=jobId;jobId=null;if(!id)return;try{await fetch(`/api/cmr/jobs/${encodeURIComponent(id)}`,{method:'DELETE'});}catch(_){}}
  function resetStudy(){analysis.querySelectorAll('button').forEach(x=>x.remove());report.textContent='';$('cmrNativeSeries').replaceChildren();$('cmrNativeOri').replaceChildren();ctx.clearRect(0,0,canvas.width,canvas.height);stop();studyGeneration++;seriesGeneration++;disposeWorkspace?.();disposeWorkspace=null;catalog=null;files=new Map();source=null;decoded=null;geometry=null;orientations=[];active=null;}
- function close(){session.clear('cmr');if(pollAbort)pollAbort.abort();pollAbort=null;discardJob();resetStudy();section.hidden=true;}
+ function close(){importGeneration++;session.clear('cmr');if(pollAbort)pollAbort.abort();pollAbort=null;discardJob();resetStudy();section.hidden=true;}
  function locate(f){const path=String(f.webkitRelativePath||f.name).replaceAll('\\','/');const match=path.match(/(?:^|\/)(RM-\d{3})\/(geometria_privada\.json|pixels_original_decoded\.npy)$/);if(match)return `${match[1]}/${match[2]}`;if(path.endsWith('/catalogo_local_privado.json')||path==='catalogo_local_privado.json')return 'catalogo_local_privado.json';return null;}
  async function activateCatalog(nextCatalog,nextSource){
   catalog=nextCatalog;source=nextSource;require(catalog.schema==='anatheos-cmr-r2-private-v1'&&Array.isArray(catalog.series)&&catalog.series.length<=1000,'Catálogo incompatible');
@@ -46,21 +46,23 @@ function start(){
   for(const s of catalog.series){if(!/^RM-\d{3}$/.test(s.serie_local))continue;const o=document.createElement('option');o.value=s.serie_local;o.textContent=`${s.serie_local} · ${s.familia_probable||'Serie'} (${s.instancias})`;o.disabled=s.estado!=='preparada';sel.appendChild(o);}
   const eligible=catalog.series.find(s=>s.estado==='preparada');require(eligible,'No hay series preparadas');sel.value=eligible.serie_local;section.hidden=false;await selectSeries();
  }
- async function ingest(fs){session.clear();await discardJob();resetStudy();files=new Map();
+ async function ingest(fs){importGeneration++;pollAbort?.abort();pollAbort=null;session.clear();await discardJob();resetStudy();files=new Map();
   for(const f of fs){const key=locate(f);if(key&&!files.has(key))files.set(key,f);}
   const c=files.get('catalogo_local_privado.json');require(c,'No se encontró catálogo CMR-R2 en la carpeta seleccionada');
   await activateCatalog(JSON.parse(await c.text()),{text:key=>files.get(key)?.text(),buffer:key=>files.get(key)?.arrayBuffer()});
  }
  const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
- async function importZip(file){
-  session.clear();require(file&&file.name.toLowerCase().endsWith('.zip'),'Seleccioná un archivo ZIP');
-  await discardJob();resetStudy();section.hidden=false;$('cmrNativeCancel').hidden=false;zipOpen.disabled=true;pollAbort=new AbortController();
+ async function importZip(file,generation){
+  pollAbort?.abort();pollAbort=null;session.clear();require(file&&file.name.toLowerCase().endsWith('.zip'),'Seleccioná un archivo ZIP');
+  await discardJob();resetStudy();section.hidden=false;$('cmrNativeCancel').hidden=false;zipOpen.disabled=true;const controller=new AbortController();pollAbort=controller;
   setStatus('Copiando el ZIP al procesador local…');
-  const created=await fetch('/api/cmr/jobs',{method:'POST',headers:{'Content-Type':'application/zip'},body:file,signal:pollAbort.signal});
+  // Receive the job handle even after cancellation, so stale uploads can be deleted.
+  const created=await fetch('/api/cmr/jobs',{method:'POST',headers:{'Content-Type':'application/zip'},body:file});
   if(!created.ok)throw Error(await created.text()||'El servidor local rechazó el ZIP');
-  const first=await created.json();jobId=first.job_id;require(/^[a-f0-9]{32}$/.test(jobId),'Respuesta local inválida');
+  const first=await created.json();if(generation!==importGeneration){if(/^[a-f0-9]{32}$/.test(first.job_id))await fetch(`/api/cmr/jobs/${first.job_id}`,{method:'DELETE'});throw new DOMException('Importación reemplazada','AbortError');}jobId=first.job_id;require(/^[a-f0-9]{32}$/.test(jobId),'Respuesta local inválida');
   for(;;){
-   const response=await fetch(`/api/cmr/jobs/${jobId}`,{cache:'no-store',signal:pollAbort.signal});require(response.ok,'No se pudo consultar la importación local');
+   if(generation!==importGeneration)throw new DOMException('Importación reemplazada','AbortError');
+   const response=await fetch(`/api/cmr/jobs/${jobId}`,{cache:'no-store',signal:controller.signal});require(response.ok,'No se pudo consultar la importación local');
    const status=await response.json();setStatus(`${status.message||'Procesando estudio…'}${Number.isFinite(status.progress)?` · ${status.progress}%`:''}`);
    if(status.state==='ready')break;
    if(status.state==='failed'||status.state==='cancelled')throw Error(status.error||'La importación no pudo completarse');
@@ -70,7 +72,7 @@ function start(){
    text:async key=>{const r=await fetch(`/api/cmr/jobs/${jobId}/data/${key}`,{cache:'no-store'});require(r.ok,'Falta un archivo preparado');return r.text();},
    buffer:async key=>{const r=await fetch(`/api/cmr/jobs/${jobId}/data/${key}`,{cache:'no-store'});require(r.ok,'Falta un archivo preparado');return r.arrayBuffer();}
   };
-  const raw=await source.text('catalogo_local_privado.json');await activateCatalog(JSON.parse(raw),source);
+  const raw=await source.text('catalogo_local_privado.json');if(generation!==importGeneration)throw new DOMException('Importación reemplazada','AbortError');await activateCatalog(JSON.parse(raw),source);
  }
  function publishStudy(assessment){
   const record={owner:'cmr',title:'Estudio DICOM',source:'ZIP original · procesamiento local',
@@ -117,10 +119,10 @@ function start(){
   $('cmrNativePlay').disabled=!['cine_provisional','perfusion_temporal'].includes(active.modo_seguro)||!orientations.some(x=>x.planes.some(p=>p.indices.length>1));
  }
  picker.addEventListener('change',async()=>{try{await ingest([...picker.files]);}catch(e){section.hidden=false;setStatus('No se pudo abrir la carpeta CMR: '+e.message);}finally{picker.value='';}});
- async function importOriginal(file){try{await importZip(file);}catch(e){await discardJob();resetStudy();section.hidden=false;if(e.name!=='AbortError')setStatus('No se pudo importar el ZIP: '+e.message);}finally{zipPicker.value='';zipOpen.disabled=false;$('cmrNativeCancel').hidden=true;pollAbort=null;}}
+ async function importOriginal(file){const generation=++importGeneration;try{await importZip(file,generation);}catch(e){if(generation!==importGeneration)return;await discardJob();resetStudy();section.hidden=false;if(e.name!=='AbortError')setStatus('No se pudo importar el ZIP: '+e.message);}finally{if(generation!==importGeneration)return;zipPicker.value='';zipOpen.disabled=false;$('cmrNativeCancel').hidden=true;pollAbort=null;}}
  zipPicker.addEventListener('change',()=>importOriginal(zipPicker.files[0]));window.addEventListener('anatheos:import-original-zip',e=>importOriginal(e.detail.file));
  zipOpen.addEventListener('click',()=>zipPicker.click());open.addEventListener('click',()=>picker.click());$('cmrNativeClose').addEventListener('click',close);
- $('cmrNativeCancel').addEventListener('click',()=>{if(pollAbort)pollAbort.abort();pollAbort=null;discardJob();resetStudy();$('cmrNativeCancel').hidden=true;zipOpen.disabled=false;setStatus('Importación cancelada; los temporales locales fueron descartados.');});
+ $('cmrNativeCancel').addEventListener('click',()=>{importGeneration++;if(pollAbort)pollAbort.abort();pollAbort=null;discardJob();resetStudy();$('cmrNativeCancel').hidden=true;zipOpen.disabled=false;setStatus('Importación cancelada; los temporales locales fueron descartados.');});
  $('cmrNativeSeries').addEventListener('change',async()=>{try{await selectSeries()}catch(e){setStatus(e.message)}});
  $('cmrNativeOri').addEventListener('change',()=>{stop();positionChange();});
  $('cmrNativePlane').addEventListener('input',()=>{stop();phaseChange();});
@@ -130,6 +132,7 @@ function start(){
  $('cmrNativeFull').addEventListener('click',()=>{const box=section.querySelector('.cmr-native-main');if(document.fullscreenElement)document.exitFullscreen();else box.requestFullscreen?.();});
  $('cmrNativePlay').addEventListener('click',()=>{if(interval!==null){stop();return;}if($('cmrNativePlay').disabled)return;const g=currentGroup()[Number($('cmrNativePlane').value)];if(g?.indices.length<=1)return;interval=setInterval(()=>{$('cmrNativePhase').value=(Number($('cmrNativePhase').value)+1)%g.indices.length;render();},120);});
  fetch('/api/cmr/capabilities',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error();return r.json()}).then(c=>{require(c.original_zip&&c.local_only,'Servicio W1 incompatible')}).catch(()=>{zipOpen.disabled=true;zipOpen.title='Iniciá ANATHEOS con el servicio local W1 para abrir el ZIP original';});
+ window.addEventListener('anatheos:study-reset',()=>{if(pollAbort){importGeneration++;pollAbort.abort();pollAbort=null;discardJob();resetStudy();section.hidden=true;zipOpen.disabled=false;}});
  window.addEventListener('pagehide',stop);
  window.addEventListener('anatheos:eligible-volume-opened',()=>{stop();section.hidden=true;});
 }

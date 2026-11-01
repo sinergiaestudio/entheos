@@ -4,6 +4,9 @@ on:
     branches: [anatheos/v010-spatial-integration]
 permissions:
   contents: read
+concurrency:
+  group: anatheos-v011-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   workstation-regressions:
     runs-on: ubuntu-24.04
@@ -33,6 +36,7 @@ jobs:
       - name: Shared study and viewport interaction
         run: |
           python research/anatheos-cmr/r3/test_station.py
+          python research/anatheos-cmr/r3/test_station_editors.py
           python research/anatheos-cmr/r3/test_mapping.py
           python research/anatheos-cmr/r3/test_g4.py
           python research/anatheos-cmr/r3/test_g4_original_zip.py
@@ -64,6 +68,7 @@ jobs:
           curl.exe --fail --location --retry 2 --header "Authorization: Bearer $env:GH_TOKEN" --output baseline10.zip "https://api.github.com/repos/sinergiaestudio/entheos/actions/artifacts/13056264060/zip"
           if($LASTEXITCODE -ne 0){throw 'Cannot retrieve 0.10 baseline'}
           python -c "import pathlib,zipfile,hashlib;pathlib.Path('baseline').mkdir();pairs=[('09','0.9.0','9c48ee60cacfcc9349b754d31344f9aee952c250484f8bb676596500d8dae98a'),('10','0.10.0','f56ddce17f5bc3998678bfe6ad457afc08d70eb4ee0d6d8929599b48d17b6d64')];[(lambda data,name,digest:(hashlib.sha256(data).hexdigest()==digest or (_ for _ in ()).throw(AssertionError('baseline hash')),pathlib.Path('baseline',name).write_bytes(data)))(zipfile.ZipFile('baseline'+k+'.zip').read('ANATHEOS-Setup-'+v+'-beta.exe'),'ANATHEOS-Setup-'+v+'-beta.exe',sha) for k,v,sha in pairs]"
+      - run: powershell -NoProfile -File demos/anatheos-local-v0.5/verificar_modulos_locales.ps1
       - run: ./packaging/windows/build.ps1
       - run: python packaging/windows/test_install.py
       - uses: actions/upload-artifact@v4

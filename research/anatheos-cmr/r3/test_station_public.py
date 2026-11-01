@@ -1,5 +1,5 @@
 """Actual offline example -> existing GPU/CPU volume, controls, MPR, layouts."""
-import hashlib,io,threading,time
+import hashlib,io,threading,time,os,pathlib
 from http.server import ThreadingHTTPServer
 from PIL import Image,ImageStat
 from playwright.sync_api import sync_playwright,expect
@@ -7,7 +7,9 @@ from test_native import Handler
 from test_station import command
 
 def exercise(page):
- errors=[];external=[];page.on('pageerror',lambda e:errors.append(str(e)))
+ errors=[];external=[];started=time.monotonic()
+ page.evaluate("""()=>{window.textureQA={create:0,drop:0};for(const [method,key] of [['createTexture','create'],['deleteTexture','drop']]){const original=WebGL2RenderingContext.prototype[method];WebGL2RenderingContext.prototype[method]=function(...args){window.textureQA[key]++;return original.apply(this,args);};}}""")
+ page.on('pageerror',lambda e:errors.append(str(e)))
  page.route('**/*',lambda route:route.continue_() if route.request.url.startswith('http://127.0.0.1:') else (external.append('external_request'),route.abort())[1])
  command(page,'Archivo','RM de ejemplo · Leeds (offline)')
  expect(page.locator('#studySubtitle')).to_contain_text('144 instancias',timeout=120000)
@@ -19,6 +21,8 @@ def exercise(page):
  assert hashlib.sha256(before).digest()!=hashlib.sha256(canvas.screenshot()).digest(),'Rotation unchanged'
  command(page,'Capas','Propiedades de volumen');page.locator('#volumeOpacity').fill('65');page.locator('#volumeClip').fill('65')
  assert hashlib.sha256(before).digest()!=hashlib.sha256(canvas.screenshot()).digest(),'Volume controls unchanged'
+ if os.environ.get('ANATHEOS_PUBLIC_QA_DIR'):
+  folder=pathlib.Path(os.environ['ANATHEOS_PUBLIC_QA_DIR']);folder.mkdir(parents=True,exist_ok=True);page.screenshot(path=str(folder/'leeds-volume.png'))
  for width,height in [(1366,768),(1920,1080)]:
   page.set_viewport_size({'width':width,'height':height})
   command(page,'Reconstrucción','MPR');expect(page.locator('#eligibleMpr canvas')).to_be_visible()
@@ -29,7 +33,7 @@ def exercise(page):
  assert not external,external
  command(page,'Archivo','Cerrar estudio');expect(page.locator('#studyTitle')).to_have_text('Sin estudio cargado');expect(page.locator('#nativeComparison')).to_have_count(0);expect(page.locator('#eligibleMpr')).to_have_count(0)
  assert not errors,errors
- print('LEEDS_144_OFFLINE_REAL_VOLUME_ROTATION_CONTROLS_MPR_SHARED_LAYOUT_PASS',flush=True)
+ print('LEEDS_144_OFFLINE_REAL_VOLUME_ROTATION_CONTROLS_MPR_SHARED_LAYOUT_PASS; seconds='+str(round(time.monotonic()-started,2)),flush=True)
 
 def exercise_ct(page):
  command(page,'Archivo','TC de ejemplo · cinco capas expertas (offline)')
@@ -45,7 +49,8 @@ def exercise_ct(page):
  assert hashlib.sha256(heart).digest()!=hashlib.sha256(blank).digest(),'Heart reference invisible'
  page.locator('#thoraxRefLayer3').check();page.locator('#thoraxRefAlpha3').fill('0');zero=page.locator('#volumeCanvas').screenshot();assert zero==blank,'Zero opacity must hide isolated reference'
  command(page,'Archivo','Cerrar estudio');expect(page.locator('#thoraxRefStatus')).not_to_contain_text('Referencia vinculada');expect(page.locator('#studyTitle')).to_have_text('Sin estudio cargado')
- print('CT_130_FIVE_SAME_CASE_REFERENCES_COLOR_ALPHA_GPU_VOLUME_PASS',flush=True)
+ metrics=page.evaluate('window.textureQA');assert metrics['create']==metrics['drop'],metrics
+ print('CT_130_FIVE_SAME_CASE_REFERENCES_COLOR_ALPHA_GPU_VOLUME_PASS; texture resources released='+str(metrics),flush=True)
 
 def main():
  s=ThreadingHTTPServer(('127.0.0.1',0),Handler);threading.Thread(target=s.serve_forever,daemon=True).start()

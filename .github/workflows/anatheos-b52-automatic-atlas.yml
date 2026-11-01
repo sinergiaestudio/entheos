@@ -11,6 +11,8 @@ permissions:
   contents: read
 jobs:
   chromium-original-public-atlas:
+    # Replaced on 0.11 by the consolidated workstation gate; see V011_QA_MIGRATION.md.
+    if: github.head_ref != 'anatheos/v011-unified-workstation'
     runs-on: ubuntu-24.04
     timeout-minutes: 22
     env:
@@ -78,6 +80,8 @@ jobs:
         if: always()
         run: rm -rf "$SPL_ATLAS_TMP_DIR"
   windows-loopback-atlas:
+    # Replaced on 0.11 by the consolidated workstation gate; see V011_QA_MIGRATION.md.
+    if: github.head_ref != 'anatheos/v011-unified-workstation'
     runs-on: windows-latest
     timeout-minutes: 24
     steps:

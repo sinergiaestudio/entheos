@@ -8,8 +8,8 @@ mode buttons, the old toolbar and the old mobile page layout. Those assertions
 conflict with the explicitly requested workstation. They remain unchanged and
 runnable on their original branches, but their jobs do not run on the exact
 0.11 successor branch. This is a declared migration of functional UI coverage,
-not evidence that historical UI assertions passed on 0.11. Security CI remains
-unmodified. Avoid repeating cumulative pipelines and public downloads.
+not evidence that historical UI assertions passed on 0.11. The source-only binary hygiene check is retained in the consolidated job before
+public examples are fetched; security CI remains unmodified. Avoid repeating cumulative pipelines and public downloads.
 
 Replacement coverage:
 

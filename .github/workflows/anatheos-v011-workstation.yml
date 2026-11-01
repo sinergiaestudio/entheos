@@ -13,6 +13,16 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+      - name: Reject medical/media/model binaries in public source before fetching examples
+        run: |
+          python - <<'PY_QA'
+          import pathlib,subprocess
+          roots=['demos/anatheos-local-v0.5','research/anatheos-cmr']
+          files=subprocess.check_output(['git','ls-files','--',*roots],text=True).splitlines()
+          blocked=('.dcm','.dicom','.nrrd','.nii','.nii.gz','.stl','.obj','.npy','.npz','.exe','.zip','.png','.jpg','.jpeg','.avi','.mp4')
+          assert not any(p.lower().endswith(blocked) for p in files),'Binary clinical/model/media payload in public source'
+          print('PUBLIC_SOURCE_BINARY_HYGIENE_PASS')
+          PY_QA
       - uses: actions/setup-node@v4
         with:
           node-version: '24'

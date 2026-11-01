@@ -4,7 +4,8 @@ on:
     branches:
       - experiment/anatheos-afe-engine
     paths:
-      - "research/anatheos-afe/**"
+      - "research/anatheos-afe/tools/prepare_public_case.py"
+      - "research/anatheos-afe/tools/run_public_sparse.py"
       - ".github/workflows/anatheos-afe01d-real-slicer.yml"
   workflow_dispatch:
 permissions:
@@ -94,6 +95,15 @@ jobs:
           print('AFE01D_CT_SANITIZED_MISSING_TAG_COUNTS',dict(mods),dict(missing))
           PY
           fi
+      - name: AFE-02A physical point locators on ONLY original acquired planes (no masks)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for c in Leeds-RTKN0668-DESS LCTSC-CT; do
+            PYTHONPATH=research/anatheos-afe python3 research/anatheos-afe/tools/run_public_sparse.py \
+              --case-json "/tmp/afe01d-public/$c/afe.json" \
+              --out "/tmp/afe01d-reports/afe02a-$c.json"
+          done
       - name: Download AND verify actual official 3D Slicer 5.12.4 Linux stable
         shell: bash
         run: |

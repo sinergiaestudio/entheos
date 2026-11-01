@@ -31,3 +31,7 @@ Ejecutado: pruebas repetidas matemáticas Gauss-Jordan, VTK 9.6.2, barrido JS y 
 
 ## AFE-01D · Native Slicer physical source gate achieved; formal acceptance pending
 Both verified public originals Leeds and LCTSC processed through real 3D Slicer 5.12.4 in Github Actions (run 41316484907). 27 points per case PASS with pre-registered numerical thresholds and true MRML IJK↔RAS matrices. Earlier AFE-01C block 'Slicer not available / originals not accessible' is resolved. Still pending Directorate acceptance of full AFE-01 and temporal/clinical boundary review; AFE-02 remains BLOCKED. See docs/REAL_SLICER_AFE01D.md and new ADRs.
+
+
+## AFE-02A · Experimental discrete physical clouds (2026-11-01)
+AFE-01-SPATIAL accepted for limited Leeds/LCTSC public sources by Direction comment 6559712411. AFE-02A authorized only as synthetic-mask and source-registered discrete-acquired-plane engine; no clinical label, 3D viewer, new surfaces beyond exposed synthetic mask faces, Gaussian splatting or shared modules. Gate for expert LCTSC masks and temporal equivalence remains separate. Bench results and CI checkpoint in docs/POINT_CLOUD_AFE02A.md. AFE-02B not authorized pending Direction review.

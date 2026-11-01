@@ -47,3 +47,11 @@ The Node test imports the **existing unchanged** `demos/anatheos-local-v0.5/spat
 
 ## AFE-01D · Execute official native Slicer and public originals
 Runnable experiment CI (no installed viewer): .github/workflows/anatheos-afe01d-real-slicer.yml; Linux ubuntu-24.04, native official 3D Slicer 5.12.4 SHA512 official and xvfb. DICOM URLs pinned with ZIP byte size and SHA256, copies transient and license-limited. Matrix comparator research/anatheos-afe/tools/slicer_compare.py reads native MRML, 27 corners/interiors, inverse and norms. Metadata QA uses existing CMR-R1 MR parser and existing ANATHEOS T2-B1 pydicom QA dependency for CT; neither alters CMR-R3 or production. See docs/REAL_SLICER_AFE01D.md, ADR0009/0010. Real execution PASSED in run 41316484907. Temporal evidence still absent; retain spatial-only status.
+
+
+## AFE-02A · Experimental physical point sets
+- Modules afe/points.py and afe/point_io.py. They do not import DICOM, modify CMR-R3/ANATHEOS, render a new viewer, label anatomy or authorize continuous volume reconstruction.
+- Synthetic mask methods: centers, exposed face centers, adaptive boundary-preserving center sampling. Per-voxel/source attestation uses SHA256 mask bytes, source digest and exact affine fingerprint; output is a deterministic sequence of source-registered LPS coordinates, CRS locations, original frame indices and unknown label. Upper bounds 2M dense input voxels / 150k points.
+- Repro: from research/anatheos-afe run python -m unittest discover -s tests -v and python tools/run_point_phantoms.py --out /tmp/afe02a-synthetic . Creates eight PLY + JSON pairs and benchmark.json (20 cases) in a temporary directory; never commits generated point files to public GitHub.
+- Public original locations only: python tools/run_public_sparse.py --case-json /tmp/verified-source/afe.json --out /tmp/sample-report.json, after the hash-checked AFE01D metadata preflight. Status ACCEPTED_SPATIAL_ONLY, no mask, no interpolation, no tissue label or continuous-volume status. The experimental AFE-01D workflow runs this for Leeds and LCTSC.
+- Contracts, engineering thresholds, failure cases and benchmark scope in docs/POINT_CLOUD_AFE02A.md and ADR-0011/0012. Legacy synthetic QA and Slicer validation remain independent.

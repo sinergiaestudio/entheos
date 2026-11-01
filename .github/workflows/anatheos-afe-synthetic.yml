@@ -31,6 +31,17 @@ jobs:
           PYTHONPATH=. python tests/make_crosscheck_fixtures.py /tmp/afe-crosscheck.json
           node tests/crosscheck_existing.mjs /tmp/afe-crosscheck.json
           node tests/skew_sweep_existing.mjs
+      - name: AFE-02A independent analytic point phantom benchmarks and eight synthetic PLY examples
+        working-directory: research/anatheos-afe
+        run: |
+          python tools/run_point_phantoms.py --out /tmp/afe02a-synthetic
+      - name: Upload SYNTHETIC point-cloud evidence only (no patient/DICOM)
+        uses: actions/upload-artifact@v4
+        with:
+          name: afe02a-synthetic-points-${{ github.sha }}
+          path: /tmp/afe02a-synthetic/*
+          if-no-files-found: error
+          retention-days: 7
       - name: Create source-only recovery archive and manifest
         shell: bash
         run: |

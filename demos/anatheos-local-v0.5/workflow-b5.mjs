@@ -23,7 +23,7 @@ function syncPresentation(){
  const title=$('studyTitle').textContent;
  const subtitle=$('studySubtitle').textContent;
  const loaded=title!=='Sin estudio cargado';
- if(session.snapshot.active?.owner==='cmr'){document.body.dataset.b5View='slice';$('b5StudyType').textContent='Estudio DICOM activo';status('Exploración multiserie · elegibilidad por adquisición');$('b5SourceNote').textContent='Planos originales; volumen sólo en grupos elegibles.';return;}
+ if(session.snapshot.active?.owner==='cmr'&&view!=='surface'){document.body.dataset.b5View='slice';$('b5StudyType').textContent='Estudio DICOM activo';status('Exploración multiserie · elegibilidad por adquisición');$('b5SourceNote').textContent='Planos originales; volumen sólo en grupos elegibles.';return;}
  const leeds=loaded&&/RTKN0668|MR_DESS\.zip|incluida/i.test(subtitle);
  $('b5StudyType').textContent=loaded?(leeds?'RM Leeds · serie original':title):'Sin estudio';
  const source=$('surfaceSource').value;

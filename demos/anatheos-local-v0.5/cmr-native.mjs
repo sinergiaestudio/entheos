@@ -81,7 +81,7 @@ function start(){
    assessment,eligible:assessment.groups.some(g=>g.volumeEligible),reasons:assessment.groups.flatMap(g=>g.reasons),
    select:id=>{$('cmrNativeSeries').value=id;selectSeries().catch(e=>setStatus(e.message));},
    release:()=>{if(pollAbort)pollAbort.abort();pollAbort=null;discardJob();resetStudy();section.hidden=true;},
-   openMode:mode=>{if(mode==='2d'){section.hidden=false;return;}const index=assessment.groups.findIndex(g=>g.volumeEligible);if(index<0)return;window.dispatchEvent(new CustomEvent('anatheos:open-eligible-volume',{detail:{data:{id:active.serie_local,frames:geometry.frames,decoded,mode:active.modo_seguro},groupIndex:index}}));if(mode==='mpr')session.snapshot.active?.openMode('mpr');}
+   openMode:mode=>{if(mode==='2d'){$('twoDButton').click();section.hidden=false;session.mode('2d');return;}const index=assessment.groups.findIndex(g=>g.volumeEligible);if(index<0)return;window.dispatchEvent(new CustomEvent('anatheos:open-eligible-volume',{detail:{data:{id:active.serie_local,frames:geometry.frames,decoded,mode:active.modo_seguro},groupIndex:index}}));if(mode==='mpr')session.snapshot.active?.openMode('mpr');}
   };
   if(session.snapshot.active?.owner==='cmr')session.update(record);else session.activate(record);
  }

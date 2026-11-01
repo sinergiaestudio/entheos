@@ -39,6 +39,7 @@ def exercise_ct(page):
  command(page,'Archivo','TC de ejemplo · cinco capas expertas (offline)')
  expect(page.locator('#studySubtitle')).to_contain_text('130 instancias',timeout=120000)
  expect(page.locator('#thoraxRefStatus')).to_contain_text('Referencia vinculada',timeout=120000)
+ expect(page.locator('#warnings')).not_to_contain_text('ERROR')
  command(page,'Capas','Máscaras y segmentación')
  expect(page.locator('#thoraxRefColor3')).to_be_visible();page.locator('#thoraxRefColor3').fill('#00ff00');page.locator('#thoraxRefAlpha3').fill('70')
  command(page,'Reconstrucción','Volumen 3D');expect(page.locator('#loading')).to_be_hidden(timeout=120000)

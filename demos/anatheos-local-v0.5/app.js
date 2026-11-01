@@ -99,6 +99,7 @@ function readDicom(buffer,name){
   }
   offset+=length;
  }
+ if(pixelOffset<0&&meta.modality==='RTSTRUCT')return null;
  if(pixelOffset<0)throw Error('No se encontró Pixel Data (7FE0,0010)');
  if(!['1.2.840.10008.1.2.1','1.2.840.10008.1.2'].includes(meta.syntax))throw Error('Transfer Syntax '+(meta.syntax||'desconocida')+' no compatible con Demo v0.1');
  if(meta.frames&&Number(meta.frames)>1)throw Error('Instancia multiframe: todavía no compatible con esta demo local');
@@ -168,7 +169,7 @@ async function loadBuffer(buffer,source,gen){
  let files=[];const errors=[];let notes=[];const entries=listZip(buffer);
  let selected=entries;
  const nested=entries.filter(e=>/\.zip$/i.test(e.name));
- const dicoms=entries.filter(e=>!e.name.includes('__MACOSX')&&!e.name.endsWith('.txt')&&!e.name.endsWith('.zip'));
+ const dicoms=entries.filter(e=>!e.name.includes('__MACOSX')&&!e.name.endsWith('.txt')&&!e.name.endsWith('.zip')&&!/^(LICEN[CS]E(?:\..*)?|README(?:\..*)?|DICOMDIR|\.DS_Store)$/i.test(e.name.split('/').pop())&&!e.name.split('/').pop().startsWith('._'));
  if(nested.length&&!dicoms.length){
   const target=nested.find(e=>/MR_DESS\.zip$/i.test(e.name));
   if(!target)throw Error('Contenedor con ZIP: no se encontró RTKN*_MR_DESS.zip');
@@ -184,7 +185,7 @@ async function loadBuffer(buffer,source,gen){
   if(gen!==state.loadGeneration)return;
   const e=selected[i];
   if(e.uncompressed>100*1024*1024){errors.push(e.name+': archivo excesivamente grande');continue;}
-  try{const raw=await unpackMember(buffer,e);const record=readDicom(raw.buffer,e.name);files.push(record);}catch(ex){if(/encapsulada|comprimida|Transfer Syntax/.test(ex.message)){const next=Error('Requiere decoder original');next.originalDecoder=true;throw next;}if(errors.length<150)errors.push(e.name.split('/').pop()+': '+ex.message);}
+  try{const raw=await unpackMember(buffer,e);const record=readDicom(raw.buffer,e.name);if(record)files.push(record);else notes.push('RTSTRUCT no es una imagen: los contornos requieren importación de máscara con procedencia y geometría verificadas.');}catch(ex){if(/encapsulada|comprimida|Transfer Syntax/.test(ex.message)){const next=Error('Requiere decoder original');next.originalDecoder=true;throw next;}if(errors.length<150)errors.push(e.name.split('/').pop()+': '+ex.message);}
   total++;if(i%6===0){showLoad('Leyendo instancias DICOM… '+total+' de '+selected.length,Math.round(total/selected.length*95));await yieldUI();}
  }
  if(gen!==state.loadGeneration)return;
@@ -226,11 +227,11 @@ function commitRecords(files,source,errors,notes,gen){
 async function loadFiles(fileList){session.clear();
  const gen=++state.loadGeneration;clean();showLoad('Leyendo archivos de la carpeta…',0);const errors=[],notes=[],records=[];
  try{
-  const list=Array.from(fileList).filter(f=>!f.name.startsWith('.')&&!f.name.endsWith('.txt'));
+  const list=Array.from(fileList).filter(f=>!f.name.startsWith('.')&&!f.name.endsWith('.txt')&&!/^(LICEN[CS]E(?:\..*)?|README(?:\..*)?|DICOMDIR)$/i.test(f.name));
   if(list.length>2500)throw Error('Demasiados archivos en la carpeta');
   for(let i=0;i<list.length;i++){
    if(gen!==state.loadGeneration)return;
-   try{records.push(readDicom(await list[i].arrayBuffer(),list[i].name));}catch(e){if(errors.length<150)errors.push(list[i].name+': '+e.message);}
+   try{const record=readDicom(await list[i].arrayBuffer(),list[i].name);if(record)records.push(record);else notes.push('RTSTRUCT no es una imagen: requiere máscara verificada.');}catch(e){if(errors.length<150)errors.push(list[i].name+': '+e.message);}
    if(i%6===0){showLoad('Leyendo carpeta… '+(i+1)+' de '+list.length,Math.round((i+1)/list.length*100));await yieldUI();}
   }
   commitRecords(records,'Carpeta local',errors,notes,gen);

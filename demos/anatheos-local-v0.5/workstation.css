@@ -47,3 +47,6 @@ body.workstation[data-study-owner=cmr] #stationInspector>.controls,body.workstat
 /* Keep the working original volume controls; hide their obsolete mirrored proxies. */
 body.workstation #uxAppearanceDetails{display:none!important}
 #stationViewControls select,#stationViewControls button{border:1px solid #304853;border-radius:5px;background:#13242d;color:#dbe9ef;padding:5px 8px}#stationViewControls button:hover{background:#23424e}#stationViewControls select{min-height:29px}
+/* External model scenes suspend the study view; they never overlay its anatomy. */
+body.workstation[data-station-mode=surface] #cmrNativePanel,body.workstation[data-station-mode=surface] #nativeComparison,body.workstation[data-station-mode=surface] #stationViewControls,body.workstation[data-station-mode=surface] #stationEligibility{display:none!important}
+body.workstation[data-study-owner=cmr][data-station-mode=surface] #surfaceCanvas{display:block!important}

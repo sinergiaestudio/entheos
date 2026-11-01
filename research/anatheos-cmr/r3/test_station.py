@@ -48,6 +48,9 @@ def main():
     command(page,'Navegación','Cine compatible')
     command(page,'Archivo','Cerrar estudio');expect(page.locator('#studyTitle')).to_have_text('Sin estudio cargado');expect(page.locator('.spatial-pane')).to_have_count(0)
     page.set_input_files('#cmrNativeFolder',str(folder));expect(page.locator('#studyTitle')).to_have_text('Estudio DICOM')
+    tri=b'solid synthetic\nfacet normal 0 0 1\nouter loop\nvertex 0 0 0\nvertex 1 0 0\nvertex 0 1 0\nendloop\nendfacet\nendsolid synthetic\n'
+    page.set_input_files('#surfaceFile',{'name':'synthetic.stl','mimeType':'application/octet-stream','buffer':tri});expect(page.locator('#surfaceCanvas')).to_be_visible();expect(page.locator('#cmrNativePanel')).to_be_hidden();expect(page.locator('#surfaceLayers')).to_have_attribute('data-origin','external');expect(page.locator('#uxLayerExternal')).to_be_visible()
+    command(page,'Reconstrucción','Cortes 2D');expect(page.locator('.spatial-pane canvas').first).to_be_visible();expect(page.locator('#uxLayerExternal')).to_be_hidden()
     assert not errors,errors
     page.screenshot(path='/tmp/anatheos-v011-synthetic.png')
     browser.close()

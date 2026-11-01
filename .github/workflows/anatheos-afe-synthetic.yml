@@ -1,0 +1,27 @@
+name: ANATHEOS AFE · synthetic geometry
+on:
+  push:
+    branches: ['experiment/anatheos-afe-engine']
+    paths:
+      - 'research/anatheos-afe/**'
+      - '.github/workflows/anatheos-afe-synthetic.yml'
+  pull_request:
+    paths:
+      - 'research/anatheos-afe/**'
+      - '.github/workflows/anatheos-afe-synthetic.yml'
+  workflow_dispatch:
+jobs:
+  synthetic-geometry:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile and test synthetic physical geometry (no PHI)
+        working-directory: research/anatheos-afe
+        run: |
+          python -m compileall -q afe tests
+          python -m unittest discover -s tests -v

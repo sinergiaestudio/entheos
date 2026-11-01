@@ -19,7 +19,7 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update -qq
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq xvfb libxcb-cursor0 libopengl0 libgl1 libxkbcommon-x11-0 libxcb-icccm4 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 libxcb-randr0 libxcb-shape0 libxcb-xfixes0 libxcb-util1 libnss3 libasound2t64 libpulse0 libegl1 libglu1-mesa
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq xvfb libxcb-cursor0 libopengl0 libgl1 libxkbcommon-x11-0 libxcb-icccm4 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 libxcb-randr0 libxcb-shape0 libxcb-xfixes0 libxcb-util1 libnss3 libasound2t64 libpulse0 libegl1 libglu1-mesa libpulse-mainloop-glib0
       - name: Download official pinned public Leeds and LCTSC original ZIPs
         shell: bash
         run: |
@@ -109,6 +109,7 @@ jobs:
           test -x /tmp/slicer-native/Slicer-5.12.4-linux-amd64/Slicer
           echo 'AFE01D_SLICER_LOADER_MISSING_START'
           ( ldd /tmp/slicer-native/Slicer-5.12.4-linux-amd64/Slicer | grep 'not found' || true )
+          ( ldd /tmp/slicer-native/Slicer-5.12.4-linux-amd64/bin/SlicerApp-real | grep 'not found' || true )
           echo 'AFE01D_SLICER_LOADER_MISSING_END'
           echo 'AFE01D_SLICER_OFFICIAL_SHA512_VERIFIED version=5.12.4 revision=34645 linux-amd64'
       - name: Run OFFICIAL 3D Slicer DICOM import and MRML physical comparison (two original cases)

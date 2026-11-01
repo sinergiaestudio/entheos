@@ -34,7 +34,7 @@ def main():
     input_dir=os.environ['AFE_SLICER_INPUT_DIR']
     case=json.loads(Path(os.environ['AFE_SLICER_AFE_JSON']).read_text(encoding='utf8'))
     output=Path(os.environ['AFE_SLICER_REPORT'])
-    if case.get('schema')!='afe-public-geometry-v1' or case.get('geometry_status')!='ACCEPTED':
+    if case.get('schema')!='afe-public-geometry-v1' or case.get('geometry_status') not in ('ACCEPTED','ACCEPTED_SPATIAL_ONLY'):
         raise ValueError('CASE_NOT_PROVEN_ELIGIBLE')
     members=case['dicom_members']; digests=case['sha256_by_member']
     if len(members)<3 or len(members)!=case['frames'] or len(digests)!=len(members):
@@ -84,6 +84,7 @@ def main():
           'vtk_version':vtk.vtkVersion.GetVTKVersion(),
           'original_zip_sha256':case['original_zip_sha256'],
           'frame_count':case['frames'],'dims_crs':dimensions,
+          'temporal_context_verified':case.get('temporal_context_verified',False),
           'sample_count':len(samples),
           'max_world_mm':max(error_mm),'mean_world_mm':statistics.fmean(error_mm),
           'p95_world_mm':sorted(error_mm)[math.ceil(.95*len(error_mm))-1],

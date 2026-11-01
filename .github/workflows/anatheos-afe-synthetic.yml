@@ -36,7 +36,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          tar --exclude='*/__pycache__' --exclude='*.pyc' -czf dist/afe-source.tar.gz research/anatheos-afe .github/workflows/anatheos-afe-synthetic.yml research/anatheos-cmr/r2/auditar_dicom_offline.py demos/anatheos-local-v0.5/spatial-reference.mjs
+          tar --exclude='*/__pycache__' --exclude='*.pyc' -czf dist/afe-source.tar.gz research/anatheos-afe .github/workflows/anatheos-afe-synthetic.yml research/anatheos-cmr/r2/auditar_dicom_offline.py demos/anatheos-local-v0.5/spatial-reference.mjs .github/workflows/anatheos-afe01d-real-slicer.yml
           if tar -tzf dist/afe-source.tar.gz | grep -E '(__pycache__/|\.pyc$)'; then echo 'Compiled cache leaked into source backup' >&2; exit 1; fi
           ( cd dist && sha256sum afe-source.tar.gz > SHA256SUMS.txt )
           printf '%s\n' "$GITHUB_SHA" > dist/COMMIT_SHA.txt

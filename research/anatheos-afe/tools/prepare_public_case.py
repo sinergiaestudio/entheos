@@ -95,30 +95,30 @@ def main():
                           'frames':len(frames),'status':'REJECTED_GEOMETRY',
                           'reason_code':'GEOMETRY_CORE_REJECTED'}))
         return 2
-    if not time_valid:
-        print(json.dumps({'case':opt.case_id,'source_hash_verified':True,
-                          'frames':len(frames),'status':'UNVERIFIED_TEMPORAL',
-                          'physical_grid_observed':True}))
-        return 3
+    # Missing temporal tags prevent phase-coherent volume claims, but not the
+    # separate physical-location matrix comparison against Slicer native DICOM.
+    geometry_status='ACCEPTED_SPATIAL_ONLY' if not time_valid else 'ACCEPTED'
     aff=geo.affine_lps
     axis_norms=[sum(aff[i][j]**2 for i in range(3))**.5 for j in range(3)]
     result={'schema':'afe-public-geometry-v1',
             'case_id':opt.case_id,'license':opt.license,
             'original_zip_sha256':source_digest.hexdigest(),
-            'geometry_status':'ACCEPTED',
+            'geometry_status':geometry_status,
+            'temporal_context_verified':time_valid,
+            'geometrically_regular':True,
             'frames':len(frames),'dimensions_crs':geo.dimensions_crs,
             'physical_axis_norms_mm':axis_norms,'affine_lps':aff,
             'interplane_spacing_mm':geo.interplane_spacing_mm,
             'acquisition_thickness_mm':geo.acquisition_thickness_mm,
-            'gap_mm':geo.gap_mm,'volume_eligible':geo.volume_eligible,
+            'gap_mm':geo.gap_mm,'volume_eligible':geo.volume_eligible and time_valid,
             'interpolation_required':geo.interpolation_required,
             'dicom_members':members,'sha256_by_member':hashes}
     # This private output contains only relative filenames, physical values
     # and hashes. It must still NOT be committed with real study content.
     opt.output.write_text(json.dumps(result,sort_keys=True,indent=2),encoding='utf8')
     print(json.dumps({'case':opt.case_id,'source_hash_verified':True,
-                      'frames':len(frames),'status':'ACCEPTED',
-                      'dims':geo.dimensions_crs,'volume_eligible':geo.volume_eligible}))
+                      'frames':len(frames),'status':geometry_status,
+                      'dims':geo.dimensions_crs,'volume_eligible':geo.volume_eligible and time_valid}))
     return 0
 
 if __name__=='__main__':sys.exit(main())

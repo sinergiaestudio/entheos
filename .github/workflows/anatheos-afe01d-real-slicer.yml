@@ -1,0 +1,124 @@
+name: ANATHEOS AFE-01D · real public DICOM and official Slicer gate
+on:
+  push:
+    branches:
+      - experiment/anatheos-afe-engine
+    paths:
+      - "research/anatheos-afe/**"
+      - ".github/workflows/anatheos-afe01d-real-slicer.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-slicer-public:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 42
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install headless display dependencies for actual Slicer application
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq xvfb libxcb-cursor0 libopengl0 libgl1 libxkbcommon-x11-0
+      - name: Download official pinned public Leeds and LCTSC original ZIPs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,urllib.request,pathlib,zipfile,shutil,json
+          cases={
+            "Leeds-RTKN0668-DESS":("https://archive.researchdata.leeds.ac.uk/1609/6/RTKN0668_MR_DESS.zip","1c378e89d3a2e7aa57a1049f1fa91b9278529e544369d1071d4c453073ce951d",28685147),
+            "LCTSC-CT":("https://zenodo.org/records/4747795/files/LCTSC_DICOM_TestData.zip?download=1","0e02554ffbf80c8c7e8f0868ec527c8ec10f7c4fd5b532c715cb3d6333676e5f",29183170)
+          }
+          root=pathlib.Path("/tmp/afe01d-public");root.mkdir(exist_ok=False)
+          for name,(url,expected,size) in cases.items():
+              folder=root/name;folder.mkdir();source=folder/"original.zip"
+              req=urllib.request.Request(url,headers={"User-Agent":"ANATHEOS-AFE01D-repro-1.0"})
+              checksum=hashlib.sha256();count=0
+              with urllib.request.urlopen(req,timeout=180) as response,source.open("xb") as f:
+                  while block:=response.read(2**20):
+                      count+=len(block)
+                      if count>50*2**20:raise ValueError("PUBLIC_DOWNLOAD_EXCEEDS_LIMIT")
+                      f.write(block);checksum.update(block)
+              if count!=size or checksum.hexdigest()!=expected:raise ValueError("PUBLIC_SOURCE_SHA_OR_SIZE_MISMATCH")
+              dicom=folder/"dicom";dicom.mkdir()
+              with zipfile.ZipFile(source) as z:
+                  files=z.infolist()
+                  if len(files)>3000 or sum(x.file_size for x in files)>700*2**20:raise ValueError("EXTRACT_LIMIT")
+                  for entry in files:
+                      if entry.is_dir():continue
+                      pure=pathlib.PurePosixPath(entry.filename)
+                      if pure.is_absolute() or ".." in pure.parts or "\\" in entry.filename or entry.flag_bits&1:raise ValueError("UNSAFE_ZIP_MEMBER")
+                      dest=dicom.joinpath(*pure.parts);dest.parent.mkdir(parents=True,exist_ok=True)
+                      with z.open(entry) as inp,dest.open("xb") as out:shutil.copyfileobj(inp,out)
+              print("AFE01D_PUBLIC_SOURCE_SHA256_VERIFIED",name,count,expected,flush=True)
+          PY
+      - name: AFE metadata-only physical preflight on ACTUAL public DICOM
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/afe01d-reports
+          PYTHONPATH=research/anatheos-afe python3 research/anatheos-afe/tools/prepare_public_case.py \
+            --zip /tmp/afe01d-public/Leeds-RTKN0668-DESS/original.zip \
+            --expected-sha256 1c378e89d3a2e7aa57a1049f1fa91b9278529e544369d1071d4c453073ce951d \
+            --case-id Leeds-RTKN0668-DESS --license CC-BY-4.0 \
+            --output /tmp/afe01d-public/Leeds-RTKN0668-DESS/afe.json
+          PYTHONPATH=research/anatheos-afe python3 research/anatheos-afe/tools/prepare_public_case.py \
+            --zip /tmp/afe01d-public/LCTSC-CT/original.zip \
+            --expected-sha256 0e02554ffbf80c8c7e8f0868ec527c8ec10f7c4fd5b532c715cb3d6333676e5f \
+            --case-id LCTSC-CT --license CC-BY-3.0 \
+            --output /tmp/afe01d-public/LCTSC-CT/afe.json
+      - name: Download AND verify actual official 3D Slicer 5.12.4 Linux stable
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 --connect-timeout 30 --max-time 600 \
+            'https://download.slicer.org/bitstream/6aa1beb7ce9de556d3010204' \
+            -o /tmp/Slicer-5.12.4-linux-amd64.tar.gz
+          printf '%s  %s\n' \
+            ac76c5061a8fff20d4e59732855f74360930fd4891450085bcbc6a8eb1a1f4ade9a1ca4fc633142661b714dbe8c4604306079f9546e52053faa5e6f99410cf76 \
+            /tmp/Slicer-5.12.4-linux-amd64.tar.gz | sha512sum -c -
+          mkdir -p /tmp/slicer-native
+          tar -xzf /tmp/Slicer-5.12.4-linux-amd64.tar.gz -C /tmp/slicer-native
+          test -x /tmp/slicer-native/Slicer-5.12.4-linux-amd64/Slicer
+          echo 'AFE01D_SLICER_OFFICIAL_SHA512_VERIFIED version=5.12.4 revision=34645 linux-amd64'
+      - name: Run OFFICIAL 3D Slicer DICOM import and MRML physical comparison (two original cases)
+        shell: bash
+        env:
+          QTWEBENGINE_DISABLE_SANDBOX: "1"
+          QT_X11_NO_MITSHM: "1"
+        run: |
+          set -euo pipefail
+          executable=/tmp/slicer-native/Slicer-5.12.4-linux-amd64/Slicer
+          for c in Leeds-RTKN0668-DESS LCTSC-CT; do
+            export AFE_SLICER_INPUT_DIR="/tmp/afe01d-public/$c/dicom"
+            export AFE_SLICER_AFE_JSON="/tmp/afe01d-public/$c/afe.json"
+            export AFE_SLICER_REPORT="/tmp/afe01d-reports/$c.json"
+            echo "AFE01D_SLICER_EXECUTE $c"
+            set +e
+            timeout 420 xvfb-run -a -s '-screen 0 1280x960x24' "$executable" \
+              --no-splash --no-main-window --python-script \
+              research/anatheos-afe/tools/slicer_compare.py > /tmp/afe01d-slicer-local.log 2>&1
+            rc=$?
+            set -e
+            if [ -f "$AFE_SLICER_REPORT" ]; then
+              python3 - "$AFE_SLICER_REPORT" <<'PY'
+          import json,sys
+          d=json.load(open(sys.argv[1]))
+          safe={k:d.get(k) for k in ('status','case_id','slicer_version','slicer_revision','sample_count','max_world_mm','max_inverse_voxel','max_spacing_delta_mm','error_type','source_zip_sha256')}
+          print('AFE01D_REAL_SLICER_SANITIZED_REPORT',json.dumps(safe,sort_keys=True),flush=True)
+          PY
+            else
+              echo "AFE01D_SLICER_NO_REPORT rc=$rc"
+              grep -E 'AFE01D_|Error|failed|libQt|xcb|libGL' /tmp/afe01d-slicer-local.log | tail -n 12 || true
+            fi
+            if [ "$rc" -ne 0 ]; then echo "AFE01D_SLICER_CASE_FAILED $c rc=$rc";exit 1; fi
+          done
+      - name: Upload SANITIZED results only, no DICOM, no full private metadata
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: afe01d-public-real-slicer-summary
+          path: /tmp/afe01d-reports/*.json
+          retention-days: 7
+          if-no-files-found: warn

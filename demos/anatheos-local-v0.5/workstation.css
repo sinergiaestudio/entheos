@@ -42,3 +42,8 @@ body.workstation .sidebar #uxStudyImport .hint{display:none}
 body.workstation #viewerOverlayActions{display:none!important}
 body.workstation[data-study-owner=cmr] #stationInspector>.controls,body.workstation[data-study-owner=cmr] #stationInspector details:has(>#volumeControls),body.workstation[data-study-owner=cmr] #stationInspector details:has(>#segmentationPanel),body.workstation[data-study-owner=cmr] #stationInspector details:has(>.controls){display:none}
 #nativeComparison{position:absolute;inset:0;z-index:24;overflow:hidden;background:#030a0e}#nativeComparison>div:first-child{display:none}.workstation.native-comparison #scanCanvas,.workstation.native-comparison #volumeCanvas,.workstation.native-comparison .sliceBar{display:none!important}
+.workstation #stationImportProgress[hidden]{display:none!important}.workstation #stationImportProgress .cmr-native-controls>label,.workstation #stationImportProgress #cmrNativePlay,.workstation #stationImportProgress #cmrNativeWindow,.workstation #stationImportProgress #cmrReconstructionAnalysis{display:none!important}
+#stationEligibility p{font-size:11px;line-height:1.5;color:#afc3cf;overflow-wrap:anywhere}
+/* Keep the working original volume controls; hide their obsolete mirrored proxies. */
+body.workstation #uxAppearanceDetails{display:none!important}
+#stationViewControls select,#stationViewControls button{border:1px solid #304853;border-radius:5px;background:#13242d;color:#dbe9ef;padding:5px 8px}#stationViewControls button:hover{background:#23424e}#stationViewControls select{min-height:29px}

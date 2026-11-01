@@ -267,11 +267,11 @@ function publishNative(){
  const study={owner:'native',title:state.current.description,source:state.source,
   series:state.series.map((s,i)=>({id:String(i),label:s.description,count:s.items.length})),
   seriesId:String(state.series.indexOf(state.current)),count:state.current.items.length,
-  eligible:volumeDecision(state.current),reasons:state.current.eligibility.groups.flatMap(g=>g.reasons),
+  eligible:volumeDecision(state.current),assessment:state.current.eligibility,reasons:state.current.eligibility.groups.flatMap(g=>g.reasons),
   layout:nativeLayout,zoom:factor=>{if(state.volumeRenderer){state.volumeRenderer.zoom=clamp(state.volumeRenderer.zoom*factor,.4,5);state.volumeRenderer.draw();}else{state.zoom=clamp(state.zoom*factor,.3,10);render();}},
   select:id=>{const next=state.series[Number(id)];if(!next||next===state.current)return;nativeSeriesEdits.set(state.current.uid,{segMask:state.segMask,segCount:state.segCount,annotations:state.annotations,index:state.index,tissueTypes:state.tissueTypes});stopVolume();state.mode='2d';state.mixed=false;state.current=next;const saved=nativeSeriesEdits.get(next.uid);state.segMask=saved?.segMask||createMask(next.items[0].columns,next.items[0].rows,next.items.length);state.segCount=saved?.segCount||[0,0,0,0];state.annotations=saved?.annotations||[];state.tissueTypes=saved?.tissueTypes||['','',''];state.b7Seed=null;state.b7Draft=null;state.index=saved?.index||0;state.imageKey='';state.segVersion++;thoraxReference.bind(next,render);switchModeButtons();updateControls();render();showEligibleMpr(next);publishNative();},
   release:()=>{if(state.current){state.loadGeneration++;clean(true);}},
-  openMode:mode=>{closeNativeWorkspace();if(mode==='mpr'){stopVolume();state.mode='2d';state.mixed=false;switchModeButtons();const p=$('eligibleMpr');if(p){p.open=true;session.mode('mpr');}}else $(mode==='volume'?'threeDButton':mode==='mixed'?'mixedButton':mode==='triple'?'tripleButton':'twoDButton').click();}
+  openMode:mode=>{closeNativeWorkspace();session.update({selectedSeriesId:String(state.series.indexOf(state.current)),selectedAssessment:null});if(mode==='mpr'){stopVolume();state.mode='2d';state.mixed=false;switchModeButtons();const p=$('eligibleMpr');if(p){p.open=true;session.mode('mpr');}}else $(mode==='volume'?'threeDButton':mode==='mixed'?'mixedButton':mode==='triple'?'tripleButton':'twoDButton').click();}
  };
  if(session.snapshot.active?.owner==='native')session.update(study);else session.activate(study);
 }

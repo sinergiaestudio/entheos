@@ -55,7 +55,7 @@ function start(){
  async function importZip(file,generation){
   pollAbort?.abort();pollAbort=null;session.clear();require(file&&file.name.toLowerCase().endsWith('.zip'),'Seleccioná un archivo ZIP');
   await discardJob();resetStudy();section.hidden=false;$('cmrNativeCancel').hidden=false;zipOpen.disabled=true;const controller=new AbortController();pollAbort=controller;
-  setStatus('Copiando el ZIP al procesador local…');
+  session.mode('importing');setStatus('Copiando el ZIP al procesador local…');
   // Receive the job handle even after cancellation, so stale uploads can be deleted.
   const created=await fetch('/api/cmr/jobs',{method:'POST',headers:{'Content-Type':'application/zip'},body:file});
   if(!created.ok)throw Error(await created.text()||'El servidor local rechazó el ZIP');
@@ -78,7 +78,7 @@ function start(){
   const record={owner:'cmr',title:'Estudio DICOM',source:'ZIP original · procesamiento local',
    series:catalog.series.filter(x=>x.estado==='preparada').map(s=>({id:s.serie_local,label:s.familia_probable||s.serie_local,count:s.instancias})),
    seriesId:active.serie_local,count:catalog.series.reduce((n,s)=>n+s.instancias,0),
-   eligible:assessment.groups.some(g=>g.volumeEligible),reasons:assessment.groups.flatMap(g=>g.reasons),
+   assessment,eligible:assessment.groups.some(g=>g.volumeEligible),reasons:assessment.groups.flatMap(g=>g.reasons),
    select:id=>{$('cmrNativeSeries').value=id;selectSeries().catch(e=>setStatus(e.message));},
    release:()=>{if(pollAbort)pollAbort.abort();pollAbort=null;discardJob();resetStudy();section.hidden=true;},
    openMode:mode=>{if(mode==='2d'){section.hidden=false;return;}const index=assessment.groups.findIndex(g=>g.volumeEligible);if(index<0)return;window.dispatchEvent(new CustomEvent('anatheos:open-eligible-volume',{detail:{data:{id:active.serie_local,frames:geometry.frames,decoded,mode:active.modo_seguro},groupIndex:index}}));if(mode==='mpr')session.snapshot.active?.openMode('mpr');}

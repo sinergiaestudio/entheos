@@ -22,7 +22,7 @@ with tempfile.TemporaryDirectory() as temp:
     expect(page.locator('#cmrReconstructionAnalysis button')).to_have_count(1)
     if attempt==0:
      command(page,'Archivo','Cerrar estudio');expect(page.locator('#cmrNativeSeries option')).to_have_count(0);expect(page.locator('#cmrReconstructionAnalysis button')).to_have_count(0)
-   page.locator('#cmrReconstructionAnalysis summary').click();page.locator('#cmrReconstructionAnalysis button').click()
+   command(page,'Reconstrucción','Elegibilidad y motivos');command(page,'Reconstrucción','Volumen 3D')
    expect(page.locator('#volumeStatus')).to_contain_text('Volumen',timeout=30000);expect(page.locator('#eligibleMpr')).to_have_count(1)
    browser.close()
   print('ORIGINAL_JPEG2000_ZIP_CLOSE_REIMPORT_EXISTING_VOLUME_MPR_PASS')

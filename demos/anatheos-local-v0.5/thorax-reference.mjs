@@ -116,6 +116,7 @@ export const thoraxReference={
     }else{status.textContent=`${which==='ct'?'CT HU':'Máscara'} cargada; falta su pareja NRRD para verificar el mismo estudio.`;}
    }catch(e){this.ct=null;this.mask=null;this.verified=false;this.lastKey='';this.canvas=null;status.textContent='RECHAZADO · '+e.message;this.notify();}
   };
+  this.ingest=ingest;
   uploadCT.addEventListener('change',e=>{const file=e.target.files?.[0];e.target.value='';ingest('ct',file);});
   uploadMask.addEventListener('change',e=>{const file=e.target.files?.[0];e.target.value='';ingest('mask',file);});
  },

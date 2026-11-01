@@ -51,6 +51,10 @@ Section
   ${AndIf} $1 != '${VERSION}'
     CreateShortcut '$SMPROGRAMS\ANATHEOS\Recuperar version anterior.lnk' '$INSTDIR\versions\$1\ANATHEOS.exe'
   ${EndIf}
+  IfFileExists '$INSTDIR\versions\0.9.0-beta\ANATHEOS.exe' 0 +2
+  CreateShortcut '$SMPROGRAMS\ANATHEOS\Recuperar 0.9.0.lnk' '$INSTDIR\versions\0.9.0-beta\ANATHEOS.exe'
+  IfFileExists '$INSTDIR\versions\0.10.0-beta\ANATHEOS.exe' 0 +2
+  CreateShortcut '$SMPROGRAMS\ANATHEOS\Recuperar 0.10.0.lnk' '$INSTDIR\versions\0.10.0-beta\ANATHEOS.exe'
   CreateShortcut '$SMPROGRAMS\ANATHEOS\ANATHEOS.lnk' '$INSTDIR\versions\${VERSION}\ANATHEOS.exe'
   CreateShortcut '$DESKTOP\ANATHEOS.lnk' '$INSTDIR\versions\${VERSION}\ANATHEOS.exe'
   WriteUninstaller '$INSTDIR\Uninstall.exe'

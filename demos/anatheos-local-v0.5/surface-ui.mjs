@@ -1,3 +1,4 @@
+import {session} from './study-session.mjs';
 import {loadSurface,MAX_SCENE_TRIANGLES} from './surface-core.mjs';
 import {SurfaceRenderer,surfaceOrbitDrag} from './surface-renderer.mjs';
 import {verifyOriginalSPLMesh,SPL_MESH_MANIFEST} from './spl-provenance.mjs';
@@ -43,7 +44,7 @@ function syncSurfaceUI(){
  $('surfaceHelpOverlay').hidden=!active||ready;
 }
 function resetSurfaceView(){if(!renderer)return;renderer.yaw=.5;renderer.pitch=.18;renderer.zoom=1.6;renderer.draw();}
-function showMode(kind='external'){
+function showMode(kind='external'){session.mode('surface');
  if($('viewerRoot').dataset.uxMode==='triple'&&kind==='derived'){
   showTriptychGeometry();return;
  }

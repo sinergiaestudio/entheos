@@ -6,7 +6,7 @@ from test_native import Handler,synth
 
 def command(page,menu,label):
  page.locator('#stationToolbar').get_by_role('button',name=menu,exact=False).click()
- page.locator('.station-menu:popover-open').get_by_role('button',name=label,exact=True).click()
+ page.locator('.station-menu:popover-open').get_by_role('menuitem',name=label,exact=True).click()
 
 def main():
  with tempfile.TemporaryDirectory() as t:
@@ -34,7 +34,7 @@ def main():
      command(page,'Vistas','1 ventana');command(page,'Vistas','4 ventanas');expect(page.locator('.spatial-pane p').nth(1)).to_contain_text('RM-002')
      canvas=page.locator('.spatial-pane canvas').first;canvas.click(button='right')
      expect(page.locator('[aria-label="Acciones de la vista"]')).to_be_visible()
-     expect(page.locator('[aria-label="Acciones de la vista"]').get_by_role('button',name='Volumen 3D',exact=True)).to_be_disabled()
+     expect(page.locator('[aria-label="Acciones de la vista"]').get_by_role('menuitem',name='Volumen 3D',exact=True)).to_be_disabled()
      page.keyboard.press('Escape');expect(page.locator('[aria-label="Acciones de la vista"]')).to_be_hidden()
      page.locator('#viewerRoot').focus();page.keyboard.press('Shift+F10');expect(page.locator('[aria-label="Acciones de la vista"]')).to_be_visible();page.keyboard.press('Escape')
      command(page,'Vistas','Ampliar vista seleccionada');assert page.locator('.spatial-pane:visible').count()==1

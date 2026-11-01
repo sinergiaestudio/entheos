@@ -67,7 +67,7 @@ function confirmExactDICOM(ct,series){
  return checked;
 }
 export const thoraxReference={
- series:null,redraw:null,ct:null,mask:null,canvas:null,ctx:null,lastKey:'',opacity:.55,visible:31,serial:0,verified:false,isolate3d:false,onVolumeChange:null,
+ colors:palette.map(x=>x.slice()),alphas:[1,1,1,1,1],series:null,redraw:null,ct:null,mask:null,canvas:null,ctx:null,lastKey:'',opacity:.55,visible:31,serial:0,verified:false,isolate3d:false,onVolumeChange:null,
  notify(){this.redraw?.();this.onVolumeChange?.();},
  initialize(){
   const root=document.getElementById('segmentationPanel');if(!root)return;
@@ -84,7 +84,8 @@ export const thoraxReference={
   for(let i=0;i<5;i++){
    const label=document.createElement('label');const box=document.createElement('input');box.type='checkbox';box.checked=true;box.id=`thoraxRefLayer${i+1}`;
    box.addEventListener('change',()=>{this.visible=box.checked?this.visible|(1<<i):this.visible&~(1<<i);this.lastKey='';this.notify()});
-   const text=document.createElement('span');text.textContent=' '+names[i]+' · referencia externa';label.append(box,text);layers.append(label);
+   const text=document.createElement('span');text.textContent=' '+names[i]+' · referencia externa';const color=document.createElement('input');color.type='color';color.id=`thoraxRefColor${i+1}`;color.value='#'+this.colors[i].map(x=>x.toString(16).padStart(2,'0')).join('');color.setAttribute('aria-label','Color '+names[i]);color.oninput=()=>{this.colors[i]=color.value.slice(1).match(/../g).map(x=>parseInt(x,16));this.lastKey='';this.notify();};
+   const alpha=document.createElement('input');alpha.type='range';alpha.id=`thoraxRefAlpha${i+1}`;alpha.min=0;alpha.max=100;alpha.value=100;alpha.setAttribute('aria-label','Opacidad '+names[i]);alpha.oninput=()=>{this.alphas[i]=Number(alpha.value)/100;this.lastKey='';this.notify();};label.append(box,text,color,alpha);layers.append(label);
   }
   const opacity=document.createElement('input');opacity.type='range';opacity.id='thoraxRefOpacity';opacity.min=0;opacity.max=100;opacity.value=55;
   opacity.addEventListener('input',()=>{this.opacity=Number(opacity.value)/100;this.lastKey='';this.notify()});
@@ -130,8 +131,8 @@ export const thoraxReference={
    for(let i=0;i<x*y;i++){
     const bits=this.mask.values[base+i]&this.visible;if(!bits)continue;
     let count=0,r=0,g=0,b=0;
-    for(let k=0;k<5;k++){if(bits&(1<<k)){count++;r+=palette[k][0];g+=palette[k][1];b+=palette[k][2];}}
-    const at=i*4;dest[at]=r/count;dest[at+1]=g/count;dest[at+2]=b/count;dest[at+3]=Math.round(255*this.opacity);
+    for(let k=0;k<5;k++){if(bits&(1<<k)){count+=this.alphas[k];r+=this.colors[k][0]*this.alphas[k];g+=this.colors[k][1]*this.alphas[k];b+=this.colors[k][2]*this.alphas[k];}}
+    if(count===0)continue;const at=i*4;dest[at]=r/count;dest[at+1]=g/count;dest[at+2]=b/count;dest[at+3]=Math.round(255*this.opacity*Math.min(1,count));
    }
    this.ctx.putImageData(image,0,0);this.lastKey=key;
   }

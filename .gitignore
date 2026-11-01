@@ -55,3 +55,7 @@ next-env.d.ts
 # signed distributables
 /public/downloads/*.apk
 /public/downloads/*.zip
+
+# Public example fetched and hash-verified at build time
+/demos/anatheos-local-v0.5/datasets/*.zip
+/demos/anatheos-local-v0.5/datasets/*.download

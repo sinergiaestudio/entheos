@@ -1,3 +1,5 @@
+import {organize} from './frame-index.mjs';
+import {session} from './study-session.mjs';
 /** ANATHEOS CMR-W1 · Native, locally imported 2D/cine module.
  * Clinical datasets never leave the host. Native DICOM module remains untouched.
  * The primary flow imports the original ZIP through the loopback-only W1 service.
@@ -19,31 +21,6 @@ function decodeNpy(buffer){
  require(Number.isSafeInteger(count)&&count>0&&count<170000000&&start%2===0&&start+count*2===buffer.byteLength,'Longitud NPY incompatible');
  return {dims,pixels:new Uint16Array(buffer,start,count)};
 }
-const position=f=>{
- const a=f?.image_orientation_patient_LPS,p=f?.image_position_patient_LPS_mm;
- if(!Array.isArray(a)||a.length!==6||!Array.isArray(p)||p.length!==3)return null;
- const [r1,r2,r3,c1,c2,c3]=a.map(Number),n=[r2*c3-r3*c2,r3*c1-r1*c3,r1*c2-r2*c1];
- const v=p.reduce((s,x,i)=>s+Number(x)*n[i],0);return Number.isFinite(v)?v:null;
-};
-const orientation=f=>Array.isArray(f?.image_orientation_patient_LPS)&&f.image_orientation_patient_LPS.length===6?
- f.image_orientation_patient_LPS.map(x=>Number(x).toFixed(3)).join(','):'sin_orientacion';
-const anatomical=f=>{
- const a=f?.image_orientation_patient_LPS;if(!Array.isArray(a)||a.length!==6)return 'Sin orientación';
- const [r1,r2,r3,c1,c2,c3]=a.map(Number),n=[Math.abs(r2*c3-r3*c2),Math.abs(r3*c1-r1*c3),Math.abs(r1*c2-r2*c1)],i=n.indexOf(Math.max(...n));
- return n[i]>=.94?['Sagital','Coronal','Axial'][i]:'Oblicua';
-};
-function organize(frames){
- const byOri=new Map();
- frames.forEach((f,i)=>{
-  const key=orientation(f);if(!byOri.has(key))byOri.set(key,{label:anatomical(f),positionMap:new Map()});
-  const group=byOri.get(key),pos=position(f),pk=pos===null?'unknown':pos.toFixed(2);
-  if(!group.positionMap.has(pk))group.positionMap.set(pk,{pos,indices:[]});group.positionMap.get(pk).indices.push(i);
- });
- return [...byOri.values()].map(g=>({label:g.label,planes:[...g.positionMap.values()].sort((a,b)=>(a.pos??0)-(b.pos??0)).map(p=>{
-  const key=i=>frames[i].temporal_position_identifier??frames[i].trigger_time_ms??frames[i].instance_number??i;
-  p.indices.sort((a,b)=>Number(key(a))-Number(key(b))||a-b);return p;
- })}));
-}
 function start(){
  if(!byId('zipButton')||!byId('viewerRoot'))return;
  const zipOpen=document.createElement('button');zipOpen.type='button';zipOpen.id='cmrNativeZipOpen';zipOpen.className='primary';zipOpen.textContent='RM cardíaca · Abrir ZIP DICOM original';
@@ -61,7 +38,7 @@ function start(){
  function setStatus(x){$('cmrNativeStatus').textContent=x;}
  async function discardJob(){const id=jobId;jobId=null;if(!id)return;try{await fetch(`/api/cmr/jobs/${encodeURIComponent(id)}`,{method:'DELETE'});}catch(_){}}
  function resetStudy(){analysis.querySelectorAll('button').forEach(x=>x.remove());report.textContent='';$('cmrNativeSeries').replaceChildren();$('cmrNativeOri').replaceChildren();ctx.clearRect(0,0,canvas.width,canvas.height);stop();studyGeneration++;seriesGeneration++;disposeWorkspace?.();disposeWorkspace=null;catalog=null;files=new Map();source=null;decoded=null;geometry=null;orientations=[];active=null;}
- function close(){if(pollAbort)pollAbort.abort();pollAbort=null;discardJob();resetStudy();section.hidden=true;}
+ function close(){session.clear('cmr');if(pollAbort)pollAbort.abort();pollAbort=null;discardJob();resetStudy();section.hidden=true;}
  function locate(f){const path=String(f.webkitRelativePath||f.name).replaceAll('\\','/');const match=path.match(/(?:^|\/)(RM-\d{3})\/(geometria_privada\.json|pixels_original_decoded\.npy)$/);if(match)return `${match[1]}/${match[2]}`;if(path.endsWith('/catalogo_local_privado.json')||path==='catalogo_local_privado.json')return 'catalogo_local_privado.json';return null;}
  async function activateCatalog(nextCatalog,nextSource){
   catalog=nextCatalog;source=nextSource;require(catalog.schema==='anatheos-cmr-r2-private-v1'&&Array.isArray(catalog.series)&&catalog.series.length<=1000,'Catálogo incompatible');
@@ -69,14 +46,14 @@ function start(){
   for(const s of catalog.series){if(!/^RM-\d{3}$/.test(s.serie_local))continue;const o=document.createElement('option');o.value=s.serie_local;o.textContent=`${s.serie_local} · ${s.familia_probable||'Serie'} (${s.instancias})`;o.disabled=s.estado!=='preparada';sel.appendChild(o);}
   const eligible=catalog.series.find(s=>s.estado==='preparada');require(eligible,'No hay series preparadas');sel.value=eligible.serie_local;section.hidden=false;await selectSeries();
  }
- async function ingest(fs){await discardJob();resetStudy();files=new Map();
+ async function ingest(fs){session.clear();await discardJob();resetStudy();files=new Map();
   for(const f of fs){const key=locate(f);if(key&&!files.has(key))files.set(key,f);}
   const c=files.get('catalogo_local_privado.json');require(c,'No se encontró catálogo CMR-R2 en la carpeta seleccionada');
   await activateCatalog(JSON.parse(await c.text()),{text:key=>files.get(key)?.text(),buffer:key=>files.get(key)?.arrayBuffer()});
  }
  const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
  async function importZip(file){
-  require(file&&file.name.toLowerCase().endsWith('.zip'),'Seleccioná un archivo ZIP');
+  session.clear();require(file&&file.name.toLowerCase().endsWith('.zip'),'Seleccioná un archivo ZIP');
   await discardJob();resetStudy();section.hidden=false;$('cmrNativeCancel').hidden=false;zipOpen.disabled=true;pollAbort=new AbortController();
   setStatus('Copiando el ZIP al procesador local…');
   const created=await fetch('/api/cmr/jobs',{method:'POST',headers:{'Content-Type':'application/zip'},body:file,signal:pollAbort.signal});
@@ -94,6 +71,17 @@ function start(){
    buffer:async key=>{const r=await fetch(`/api/cmr/jobs/${jobId}/data/${key}`,{cache:'no-store'});require(r.ok,'Falta un archivo preparado');return r.arrayBuffer();}
   };
   const raw=await source.text('catalogo_local_privado.json');await activateCatalog(JSON.parse(raw),source);
+ }
+ function publishStudy(assessment){
+  const record={owner:'cmr',title:'Estudio DICOM',source:'ZIP original · procesamiento local',
+   series:catalog.series.filter(x=>x.estado==='preparada').map(s=>({id:s.serie_local,label:s.familia_probable||s.serie_local,count:s.instancias})),
+   seriesId:active.serie_local,count:catalog.series.reduce((n,s)=>n+s.instancias,0),
+   eligible:assessment.groups.some(g=>g.volumeEligible),reasons:assessment.groups.flatMap(g=>g.reasons),
+   select:id=>{$('cmrNativeSeries').value=id;selectSeries().catch(e=>setStatus(e.message));},
+   release:()=>{if(pollAbort)pollAbort.abort();pollAbort=null;discardJob();resetStudy();section.hidden=true;},
+   openMode:mode=>{if(mode==='2d'){section.hidden=false;return;}const index=assessment.groups.findIndex(g=>g.volumeEligible);if(index<0)return;window.dispatchEvent(new CustomEvent('anatheos:open-eligible-volume',{detail:{data:{id:active.serie_local,frames:geometry.frames,decoded,mode:active.modo_seguro},groupIndex:index}}));if(mode==='mpr')session.snapshot.active?.openMode('mpr');}
+  };
+  if(session.snapshot.active?.owner==='cmr')session.update(record);else session.activate(record);
  }
  function currentGroup(){return orientations[Number($('cmrNativeOri').value)]?.planes||[];}
  function currentFrameIndex(){const plane=currentGroup()[Number($('cmrNativePlane').value)];return plane?.indices[Number($('cmrNativePhase').value)]??0;}
@@ -116,11 +104,12 @@ function start(){
   require(source,'No hay una fuente local activa');const g=JSON.parse(await source.text(`${id}/geometria_privada.json`)),d=decodeNpy(await source.buffer(`${id}/pixels_original_decoded.npy`));require(g.serie_local===id&&g.frames?.length===d.dims[0]&&d.dims[0]===active.instancias,'Geometría y píxeles no corresponden');
   if(generation!==seriesGeneration)return;
   geometry=g;decoded=d;orientations=organize(g.frames);
-  disposeWorkspace?.();let comparison=section.querySelector('#cmrSpatialCompare');if(!comparison){comparison=document.createElement('details');comparison.id='cmrSpatialCompare';const summary=document.createElement('summary');summary.textContent='Comparar series y orientaciones';comparison.append(summary);section.querySelector('.cmr-native-main').append(comparison);}comparison.querySelectorAll('div').forEach(x=>x.remove());const space=document.createElement('div');comparison.append(space);
+  disposeWorkspace?.();let comparison=section.querySelector('#cmrSpatialCompare');if(!comparison){comparison=document.createElement('section');comparison.id='cmrSpatialCompare';const summary=document.createElement('summary');summary.textContent='Comparar series y orientaciones';comparison.append(summary);section.querySelector('.cmr-native-main').append(comparison);}comparison.querySelectorAll('div').forEach(x=>x.remove());const space=document.createElement('div');comparison.append(space);
   const study=studyGeneration,origin=source,records=catalog.series;
-  const loadSeries=async seriesId=>{const record=records.find(x=>x.serie_local===seriesId&&x.estado==='preparada');require(record,'Serie no preparada');const meta=JSON.parse(await origin.text(`${seriesId}/geometria_privada.json`)),pixels=decodeNpy(await origin.buffer(`${seriesId}/pixels_original_decoded.npy`));require(study===studyGeneration&&meta.serie_local===seriesId&&meta.frames?.length===pixels.dims[0]&&pixels.dims[0]===record.instancias&&pixels.pixels.byteLength<=128*1024**2,'Datos incompatibles o memoria excedida');return {id:seriesId,frames:meta.frames,decoded:pixels,orientations:organize(meta.frames)};};
-  disposeWorkspace=createWorkspace(space,{catalog,loadSeries,initial:{id,decoded:d,frames:g.frames,orientations}});
+  const loadSeries=async seriesId=>{const record=records.find(x=>x.serie_local===seriesId&&x.estado==='preparada');require(record,'Serie no preparada');const meta=JSON.parse(await origin.text(`${seriesId}/geometria_privada.json`)),pixels=decodeNpy(await origin.buffer(`${seriesId}/pixels_original_decoded.npy`));require(study===studyGeneration&&meta.serie_local===seriesId&&meta.frames?.length===pixels.dims[0]&&pixels.dims[0]===record.instancias&&pixels.pixels.byteLength<=128*1024**2,'Datos incompatibles o memoria excedida');return {id:seriesId,frames:meta.frames,decoded:pixels,mode:record.modo_seguro,orientations:organize(meta.frames)};};
+  disposeWorkspace=createWorkspace(space,{catalog,loadSeries,initial:{id,decoded:d,frames:g.frames,mode:active.modo_seguro,orientations}});
   const assessment=eligibility(g.frames,d.dims[1],d.dims[2],{mode:active.modo_seguro});
+  publishStudy(assessment);
   report.textContent=`${catalog.series.length} series identificadas. Serie activa: ${assessment.groups.length} grupos geométricos. ${assessment.temporal}. Modelos derivados: requieren máscaras verificadas. `+assessment.groups.map((x,i)=>`Grupo ${i+1}: ${x.capabilities.join(', ')}; ${x.indices.length} imágenes; ${x.reasons.join('; ')}. ${x.sourceType}. ${x.validation}.`).join(' ');
   analysis.querySelectorAll('button').forEach(x=>x.remove());assessment.groups.forEach((group,groupIndex)=>{if(!group.volumeEligible)return;const button=document.createElement('button');button.type='button';button.textContent=`Grupo ${groupIndex+1} · Abrir volumen, MPR y máscaras`;button.onclick=()=>window.dispatchEvent(new CustomEvent('anatheos:open-eligible-volume',{detail:{data:{id,frames:g.frames,decoded:d,mode:active.modo_seguro},groupIndex}}));analysis.append(button);});
   const ori=$('cmrNativeOri');ori.textContent='';orientations.forEach((group,i)=>{const o=document.createElement('option');o.value=String(i);o.textContent=`${group.label} · orientación ${i+1} (${group.planes.length} posiciones)`;ori.appendChild(o)});
@@ -128,7 +117,8 @@ function start(){
   $('cmrNativePlay').disabled=!['cine_provisional','perfusion_temporal'].includes(active.modo_seguro)||!orientations.some(x=>x.planes.some(p=>p.indices.length>1));
  }
  picker.addEventListener('change',async()=>{try{await ingest([...picker.files]);}catch(e){section.hidden=false;setStatus('No se pudo abrir la carpeta CMR: '+e.message);}finally{picker.value='';}});
- zipPicker.addEventListener('change',async()=>{try{await importZip(zipPicker.files[0]);}catch(e){await discardJob();resetStudy();section.hidden=false;if(e.name!=='AbortError')setStatus('No se pudo importar el ZIP: '+e.message);}finally{zipPicker.value='';zipOpen.disabled=false;$('cmrNativeCancel').hidden=true;pollAbort=null;}});
+ async function importOriginal(file){try{await importZip(file);}catch(e){await discardJob();resetStudy();section.hidden=false;if(e.name!=='AbortError')setStatus('No se pudo importar el ZIP: '+e.message);}finally{zipPicker.value='';zipOpen.disabled=false;$('cmrNativeCancel').hidden=true;pollAbort=null;}}
+ zipPicker.addEventListener('change',()=>importOriginal(zipPicker.files[0]));window.addEventListener('anatheos:import-original-zip',e=>importOriginal(e.detail.file));
  zipOpen.addEventListener('click',()=>zipPicker.click());open.addEventListener('click',()=>picker.click());$('cmrNativeClose').addEventListener('click',close);
  $('cmrNativeCancel').addEventListener('click',()=>{if(pollAbort)pollAbort.abort();pollAbort=null;discardJob();resetStudy();$('cmrNativeCancel').hidden=true;zipOpen.disabled=false;setStatus('Importación cancelada; los temporales locales fueron descartados.');});
  $('cmrNativeSeries').addEventListener('change',async()=>{try{await selectSeries()}catch(e){setStatus(e.message)}});
@@ -141,6 +131,6 @@ function start(){
  $('cmrNativePlay').addEventListener('click',()=>{if(interval!==null){stop();return;}if($('cmrNativePlay').disabled)return;const g=currentGroup()[Number($('cmrNativePlane').value)];if(g?.indices.length<=1)return;interval=setInterval(()=>{$('cmrNativePhase').value=(Number($('cmrNativePhase').value)+1)%g.indices.length;render();},120);});
  fetch('/api/cmr/capabilities',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error();return r.json()}).then(c=>{require(c.original_zip&&c.local_only,'Servicio W1 incompatible')}).catch(()=>{zipOpen.disabled=true;zipOpen.title='Iniciá ANATHEOS con el servicio local W1 para abrir el ZIP original';});
  window.addEventListener('pagehide',stop);
- window.addEventListener('anatheos:eligible-volume-opened',()=>{stop();disposeWorkspace?.();disposeWorkspace=null;section.hidden=true;});
+ window.addEventListener('anatheos:eligible-volume-opened',()=>{stop();section.hidden=true;});
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();

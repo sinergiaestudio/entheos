@@ -1,6 +1,7 @@
 """Synthetic integration into existing volume, mask/surface controls and MPR."""
 import json,pathlib,tempfile,threading
 from playwright.sync_api import sync_playwright,expect
+from test_station import command
 from test_native import Handler,series,frame,SCHEMA
 from http.server import ThreadingHTTPServer
 
@@ -22,7 +23,7 @@ def main():
     expect(page.locator('#cmrNativePanel')).to_be_hidden()
     expect(page.locator('#volumeStatus')).to_contain_text('Volumen',timeout=30000)
     expect(page.locator('#segSave')).to_be_enabled()
-    page.locator('#eligibleMpr summary').click()
+    command(page,'Reconstrucción','MPR')
     expect(page.locator('#eligibleMpr canvas')).to_be_visible()
     page.select_option('#eligibleMpr select','1')
     assert page.locator('#eligibleMpr canvas').evaluate('e=>e.height')==4

@@ -1,3 +1,4 @@
+import {session} from './study-session.mjs';
 /* ANATHEOS B5 · presentation and startup only. No DICOM/segmentation rewrites.
  * The ONLY automatic network access is a same-origin HEAD/GET request for the
  * packaged research DESS through localhost. No telemetry or external endpoints.
@@ -22,6 +23,7 @@ function syncPresentation(){
  const title=$('studyTitle').textContent;
  const subtitle=$('studySubtitle').textContent;
  const loaded=title!=='Sin estudio cargado';
+ if(session.snapshot.active?.owner==='cmr'){document.body.dataset.b5View='slice';$('b5StudyType').textContent='Estudio DICOM activo';status('Exploración multiserie · elegibilidad por adquisición');$('b5SourceNote').textContent='Planos originales; volumen sólo en grupos elegibles.';return;}
  const leeds=loaded&&/RTKN0668|MR_DESS\.zip|incluida/i.test(subtitle);
  $('b5StudyType').textContent=loaded?(leeds?'RM Leeds · serie original':title):'Sin estudio';
  const source=$('surfaceSource').value;
@@ -95,4 +97,4 @@ async function autoOpenBundled(){
   if(!manualChoice)status('La RM incluida no esta disponible; abri un ZIP o una carpeta local.');
  }
 }
-void autoOpenBundled();
+status('Abrí un estudio o seleccioná la RM de ejemplo Leeds.');

@@ -25,6 +25,11 @@ jobs:
         run: |
           python -m compileall -q afe tests
           python -m unittest discover -s tests -v
+      - name: Cross-check Python physical affine against existing ANATHEOS JS and analytic reference
+        working-directory: research/anatheos-afe
+        run: |
+          python tests/make_crosscheck_fixtures.py /tmp/afe-crosscheck.json
+          node tests/crosscheck_existing.mjs /tmp/afe-crosscheck.json
       - name: Create source-only recovery archive and manifest
         shell: bash
         run: |

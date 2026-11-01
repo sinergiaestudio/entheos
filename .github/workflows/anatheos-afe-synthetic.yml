@@ -35,10 +35,22 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          tar --exclude='*/__pycache__' --exclude='*.pyc' -czf dist/afe-source.tar.gz research/anatheos-afe .github/workflows/anatheos-afe-synthetic.yml
+          tar --exclude='*/__pycache__' --exclude='*.pyc' -czf dist/afe-source.tar.gz research/anatheos-afe .github/workflows/anatheos-afe-synthetic.yml research/anatheos-cmr/r2/auditar_dicom_offline.py demos/anatheos-local-v0.5/spatial-reference.mjs
           if tar -tzf dist/afe-source.tar.gz | grep -E '(__pycache__/|\.pyc$)'; then echo 'Compiled cache leaked into source backup' >&2; exit 1; fi
           ( cd dist && sha256sum afe-source.tar.gz > SHA256SUMS.txt )
           printf '%s\n' "$GITHUB_SHA" > dist/COMMIT_SHA.txt
+      - name: Restore source archive and rerun full synthetic regression offline
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/restore
+          tar -xzf dist/afe-source.tar.gz -C dist/restore
+          ( cd dist/restore/research/anatheos-afe
+            python -m unittest discover -s tests -q
+            PYTHONPATH=. python tests/make_crosscheck_fixtures.py /tmp/afe-restored-interop.json
+            node tests/crosscheck_existing.mjs /tmp/afe-restored-interop.json
+          )
+          rm -rf dist/restore
       - name: Publish ephemeral source-only backup for private Drive transfer
         uses: actions/upload-artifact@v4
         with:

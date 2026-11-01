@@ -186,7 +186,7 @@ class AFEPointTests(unittest.TestCase):
             result=export_ply(pts,g,public,Path(tmp)/'public',
                               method='acquired_planes',stride=1)
             self.assertEqual(result['state_set'],['acquired_plane'])
-            with self.assertRaisesRegex(PointError,'POINT_METHOD_STATE_MISMATCH'):
+            with self.assertRaisesRegex(PointError,'MASK_GATE_REQUIRES_VERIFIED_SYNTHETIC_SCOPE'):
                 export_ply(pts,g,public,Path(tmp)/'false-method',
                            method='centers',stride=1)
 

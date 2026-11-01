@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import {buildOriginalPlaneScene,intersectOriginalPlanes,planeMesh,grayTexture,displayLps,LPS_DISPLAY_BASIS} from './original-planes.mjs';
+const f=(o,p,extra={})=>({study_instance_uid:'synthetic-study',series_instance_uid:'synthetic-survey',frame_of_reference_uid:'synthetic-for',image_orientation_patient_LPS:o,image_position_patient_LPS_mm:p,pixel_spacing_row_col_mm:[2,3],acquisition:{slice_thickness:2},rescale_slope:2,rescale_intercept:-4,photometric_interpretation:'MONOCHROME2',...extra});
+const data=frames=>({id:'synthetic',frames,decoded:{dims:[frames.length,3,4],pixels:new Uint16Array(frames.length*12).map((_,i)=>i)}});
+const A=[1,0,0,0,1,0],B=[0,1,0,0,0,1],C=[1,0,0,0,0,1];
+const frames=[f(A,[0,0,0]),f(A,[0,0,3]),f(B,[3,0,-2]),f(B,[6,0,-2]),f(C,[0,2,-2]),f(C,[0,5,-2])];
+const scene=buildOriginalPlaneScene(data(frames));assert.equal(scene.groups.length,3);assert.equal(scene.planes.length,6);assert.equal(scene.volumeEligible,false);
+assert.deepEqual(scene.planes[0].corners,[[-1.5,-1,0],[10.5,-1,0],[10.5,5,0],[-1.5,5,0]]);
+const mesh=planeMesh(scene.planes[0]);assert.equal(mesh.positions.length,18);assert.deepEqual([...mesh.uvs],[0,0,1,0,1,1,0,0,1,1,0,1]);
+assert.deepEqual(intersectOriginalPlanes(scene.planes[0],scene.planes[2]).sort((a,b)=>a[1]-b[1]),[[3,-1,0],[3,5,0]]);
+assert.deepEqual(intersectOriginalPlanes(scene.planes[0],scene.planes[1]),[]);
+assert.equal(scene.groups[0].intervals[0].nominalGapMm,1);
+assert.deepEqual([...grayTexture(scene.planes[0],6,20)].slice(0,3),[0,26,51]);
+const inverted=buildOriginalPlaneScene(data([f(A,[0,0,0],{photometric_interpretation:'MONOCHROME1'})]));assert.equal(grayTexture(inverted.planes[0],6,20)[0],255);
+const skewAngle=.41,cos=Math.cos(skewAngle),sin=Math.sin(skewAngle);
+const oblique=buildOriginalPlaneScene(data([f([cos,sin,0,-sin,cos,0],[11,22,33])]));
+// Independent DICOM forward equation: column then row; anisotropic, oblique, translated.
+assert.ok(Math.abs(oblique.planes[0].corners[0][0]-(11-1.5*cos+sin))<1e-10);
+assert.ok(Math.abs(oblique.planes[0].corners[0][1]-(22-1.5*sin-cos))<1e-10);
+for(const [a,b] of [[scene.planes[0],scene.planes[2]],[scene.planes[0],scene.planes[4]]])for(const p of intersectOriginalPlanes(a,b))for(const q of [a,b])assert.ok(Math.abs(p.reduce((n,v,k)=>n+(v-q.geometry.p[k])*q.normal[k],0))<1e-8);
+assert.deepEqual(displayLps([2,3,4]),[2,4,-3]);assert.equal(LPS_DISPLAY_BASIS[5],-1);
+assert.throws(()=>buildOriginalPlaneScene(data([frames[0],frames[0]])),/repetidas/);
+assert.throws(()=>buildOriginalPlaneScene(data([frames[0],{...frames[1],series_instance_uid:'other'}])),/una sola serie/);
+assert.throws(()=>buildOriginalPlaneScene(data([frames[0],{...frames[1],trigger_time_ms:40}])),/fases/);
+assert.throws(()=>buildOriginalPlaneScene(data([f(A,[0,0,0],{pixel_spacing_row_col_mm:[0,1]})])));
+assert.throws(()=>grayTexture(scene.planes[0],0,0));
+console.log('L0_FORWARD_ANISOTROPIC_OBLIQUE_FOOTPRINT_INTERSECTION_GAPS_PROVENANCE_REJECTIONS_PASS');

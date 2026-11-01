@@ -80,3 +80,13 @@ body.workstation #eligibleMpr .mpr-image canvas{flex:none;object-fit:fill;max-wi
 #uxN5Evidence .uxn5-evidence-item:has(#uxN5MeshState){display:grid;grid-template-columns:10px 1fr;gap:4px 6px}
 #uxN5Evidence #uxN5MeshState{grid-column:1/-1;display:block;width:100%;max-width:none;text-align:left;line-height:1.5}
 @media(max-width:1400px){body.workstation #uxN1Layout{grid-template-columns:200px minmax(0,1fr) 260px}body.workstation.hide-inspector #uxN1Layout{grid-template-columns:200px minmax(0,1fr) 0}}
+
+/* L0 uses the existing central viewport and inspector; no second station. */
+#originalPlaneScene{position:absolute;inset:0;z-index:30;background:#0b121a;overflow:hidden}
+#originalPlaneCanvas{width:100%;height:100%;display:block;touch-action:none;outline-offset:-3px}
+.l0-badge,.l0-status{position:absolute;left:12px;right:12px;margin:0;padding:6px 10px;background:#071118dd;color:#e6edf7;pointer-events:none;font-size:12px}
+.l0-badge{top:8px;border-left:3px solid #62c7ff}.l0-status{bottom:8px}.l0-axes span{position:absolute;font-size:12px;pointer-events:none;background:#081018bb;padding:2px}
+#stationL0Inspector fieldset{border:1px solid #35505a;padding:8px;margin:10px 0;min-width:0}#stationL0Inspector label{display:block;margin:7px 0}#stationL0Inspector input[type=range]{width:100%}#stationL0Inspector p{overflow-wrap:anywhere;font-size:12px;line-height:1.4}#stationL0Inspector button{margin:4px}
+body[data-station-mode=planes] #stationViewControls{display:none}
+
+body[data-station-mode=planes] #cmrNativePanel{visibility:hidden;pointer-events:none}

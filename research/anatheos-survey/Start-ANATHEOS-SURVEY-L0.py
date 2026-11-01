@@ -3,7 +3,7 @@ import hashlib,json,pathlib,sys,webbrowser
 from http.server import ThreadingHTTPServer,BaseHTTPRequestHandler
 from urllib.parse import unquote,urlsplit
 root=pathlib.Path(__file__).resolve().parent/'web'
-manifest=json.loads((root/'manifest.json').read_text())
+manifest=json.loads((root/'manifest.json').read_text(encoding='utf-8'))
 for key,digest in manifest.items():
  p=(root/key).resolve()
  if not p.is_relative_to(root.resolve()) or hashlib.sha256(p.read_bytes()).hexdigest()!=digest:raise RuntimeError('Prototype integrity failed')

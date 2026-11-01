@@ -2,11 +2,11 @@
 import argparse,pathlib,json,hashlib,shutil,zipfile,tempfile,collections
 def build(data,out,source_sha):
  here=pathlib.Path(__file__).resolve().parent;repo=here.parents[1];app=repo/'demos/anatheos-local-v0.5'
- catalog=json.loads((data/'catalogo_local_privado.json').read_text());assert len(catalog['series'])==1
+ catalog=json.loads((data/'catalogo_local_privado.json').read_text(encoding='utf-8'));assert len(catalog['series'])==1
  rec=catalog['series'][0];sid=rec['serie_local'];assert rec['modo_seguro']=='localizador_2d' and rec['instancias']==60 and sid.startswith('RM-') and len(sid)==6
- geo=json.loads((data/sid/'geometria_privada.json').read_text());assert len(geo['frames'])==60
+ geo=json.loads((data/sid/'geometria_privada.json').read_text(encoding='utf-8'));assert len(geo['frames'])==60
  groups=collections.Counter(tuple(round(v,6) for v in f['image_orientation_patient_LPS']) for f in geo['frames']);assert sorted(groups.values())==[20,20,20]
- integrity=json.loads((data/sid/'integridad_R2.json').read_text())
+ integrity=json.loads((data/sid/'integridad_R2.json').read_text(encoding='utf-8'))
  for name,key in [('geometria_privada.json','geometria_sha256'),('pixels_original_decoded.npy','pixels_sha256')]:assert hashlib.sha256((data/sid/name).read_bytes()).hexdigest()==integrity[key]
  out.parent.mkdir(parents=True,exist_ok=True)
  with tempfile.TemporaryDirectory() as temp:
@@ -14,7 +14,7 @@ def build(data,out,source_sha):
   for p in app.iterdir():
    if p.is_file() and p.suffix in ['.html','.mjs','.js','.css']:shutil.copy2(p,web/p.name)
   shutil.copy2(here/'prototype-bootstrap.mjs',web/'prototype-bootstrap.mjs')
-  index=web/'index.html';index.write_text(index.read_text().replace('</body>','<script type="module" src="prototype-bootstrap.mjs"></script></body>'))
+  index=web/'index.html';index.write_text(index.read_text(encoding='utf-8').replace('</body>','<script type="module" src="prototype-bootstrap.mjs"></script></body>'),encoding='utf-8')
   private=web/'survey-data';(private/sid).mkdir(parents=True)
   shutil.copy2(data/'catalogo_local_privado.json',private/'catalogo_local_privado.json')
   for name in ['geometria_privada.json','pixels_original_decoded.npy','integridad_R2.json']:shutil.copy2(data/sid/name,private/sid/name)

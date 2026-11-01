@@ -23,13 +23,14 @@ jobs:
       - name: Compile and test synthetic physical geometry (no PHI)
         working-directory: research/anatheos-afe
         run: |
-          python -m compileall -q afe tests
+          python -m compileall -q afe tests tools
           python -m unittest discover -s tests -v
       - name: Cross-check Python physical affine against existing ANATHEOS JS and analytic reference
         working-directory: research/anatheos-afe
         run: |
           PYTHONPATH=. python tests/make_crosscheck_fixtures.py /tmp/afe-crosscheck.json
           node tests/crosscheck_existing.mjs /tmp/afe-crosscheck.json
+          node tests/skew_sweep_existing.mjs
       - name: Create source-only recovery archive and manifest
         shell: bash
         run: |
@@ -49,6 +50,7 @@ jobs:
             python -m unittest discover -s tests -q
             PYTHONPATH=. python tests/make_crosscheck_fixtures.py /tmp/afe-restored-interop.json
             node tests/crosscheck_existing.mjs /tmp/afe-restored-interop.json
+            node tests/skew_sweep_existing.mjs
           )
           rm -rf dist/restore
       - name: Publish ephemeral source-only backup for private Drive transfer

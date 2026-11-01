@@ -1,5 +1,5 @@
 """Actual offline example -> existing GPU/CPU volume, controls, MPR, layouts."""
-import hashlib,io,threading,time,os,pathlib
+import hashlib,io,threading,time,os,pathlib,base64
 from http.server import ThreadingHTTPServer
 from PIL import Image,ImageStat
 from playwright.sync_api import sync_playwright,expect
@@ -35,6 +35,15 @@ def exercise(page):
  assert not errors,errors
  print('LEEDS_144_OFFLINE_REAL_VOLUME_ROTATION_CONTROLS_MPR_SHARED_LAYOUT_PASS; seconds='+str(round(time.monotonic()-started,2)),flush=True)
 
+def framebuffer_png(canvas):
+ # The existing WebGL context preserves its drawing buffer. Read the actual
+ # rendered image without depending on compositor screenshot stability in CI.
+ before=canvas.bounding_box();expect(canvas).to_be_visible()
+ png=base64.b64decode(canvas.evaluate("c=>c.toDataURL('image/png')").split(',',1)[1])
+ after=canvas.bounding_box();assert before and after
+ assert all(abs(before[k]-after[k])<1 for k in ['x','y','width','height']),'Canvas layout changed during readback'
+ return png
+
 def exercise_ct(page):
  command(page,'Archivo','TC de ejemplo · cinco capas expertas (offline)')
  expect(page.locator('#studySubtitle')).to_contain_text('130 instancias',timeout=120000)
@@ -46,9 +55,9 @@ def exercise_ct(page):
  expect(page.locator('#volumeStatus')).to_contain_text('512 × 512 × 130',timeout=60000)
  page.locator('#thoraxRef3DIsolate').check()
  for k in [1,2,4,5]:page.locator(f'#thoraxRefLayer{k}').uncheck()
- heart=page.locator('#volumeCanvas').screenshot();page.locator('#thoraxRefLayer3').uncheck();blank=page.locator('#volumeCanvas').screenshot()
+ heart=framebuffer_png(page.locator('#volumeCanvas'));page.locator('#thoraxRefLayer3').uncheck();blank=framebuffer_png(page.locator('#volumeCanvas'))
  assert hashlib.sha256(heart).digest()!=hashlib.sha256(blank).digest(),'Heart reference invisible'
- page.locator('#thoraxRefLayer3').check();page.locator('#thoraxRefAlpha3').fill('0');zero=page.locator('#volumeCanvas').screenshot();assert zero==blank,'Zero opacity must hide isolated reference'
+ page.locator('#thoraxRefLayer3').check();page.locator('#thoraxRefAlpha3').fill('0');zero=framebuffer_png(page.locator('#volumeCanvas'));assert zero==blank,'Zero opacity must hide isolated reference'
  command(page,'Archivo','Cerrar estudio');expect(page.locator('#thoraxRefStatus')).not_to_contain_text('Referencia vinculada');expect(page.locator('#studyTitle')).to_have_text('Sin estudio cargado')
  metrics=page.evaluate('window.textureQA');assert metrics['create']==metrics['drop'],metrics
  print('CT_130_FIVE_SAME_CASE_REFERENCES_COLOR_ALPHA_GPU_VOLUME_PASS; texture resources released='+str(metrics),flush=True)

@@ -93,6 +93,13 @@ class VolumeGeometry:
     sorted_source_indices: tuple[int, ...]
     modality: str
     source_kind: str
+    acquisition_thickness_mm: float = 0.
+    interplane_spacing_mm: float = 0.
+    gap_mm: float = 0.
+    sampling_continuous: bool = True
+    volume_eligible: bool = True
+    interpolation_required: bool = False
+    reasons: tuple[str, ...] = ()
 
     def voxel_to_lps(self, column: float, row: float, slice_index: float) -> tuple[float, float, float]:
         if not all(isfinite(v) for v in (column, row, slice_index)):
@@ -104,8 +111,15 @@ class VolumeGeometry:
     def lps_to_voxel(self, point: Sequence[float]) -> tuple[float, float, float]:
         p = _vector(point, 3, 'LPS point')
         delta = _sub(p, self.origin_lps_mm)
-        return tuple(_dot(delta, v)/_dot(v, v) for v in
-                     (self.column_vector_mm, self.row_vector_mm, self.slice_vector_mm))  # type: ignore[return-value]
+        # True 3x3 affine inverse, not the axis projection approximation.
+        # Slight DICOM IOP rounding means accepted axes need not be perfectly orthogonal.
+        a, b, c = self.column_vector_mm, self.row_vector_mm, self.slice_vector_mm
+        ca, cb, cc = _cross(b,c), _cross(c,a), _cross(a,b)
+        det = _dot(a, ca)
+        scale = _norm(a)*_norm(b)*_norm(c)
+        if not isfinite(scale) or scale <= 0 or not isfinite(det) or abs(det)/scale <= 1e-8:
+            raise GeometryError('SINGULAR_AFFINE: degenerate or ill-conditioned affine')
+        return (_dot(delta,ca)/det, _dot(delta,cb)/det, _dot(delta,cc)/det)
 
     @property
     def affine_lps(self) -> tuple[tuple[float, float, float, float], ...]:
@@ -115,7 +129,7 @@ class VolumeGeometry:
 
 
 def build_regular_grid(frames: Sequence[SliceGeometry]) -> VolumeGeometry:
-    """Rejects mixed phases, irregular positions, drift, gaps and inconsistent acquisition.
+    """Rejects mixed phases, irregular positions, drift and inconsistent acquisition.
 
     Does NOT resample, infer tissue, join different series, or validate motion.
     Input acquisition_key/temporal_key must be set only by a trusted upstream check.
@@ -125,7 +139,8 @@ def build_regular_grid(frames: Sequence[SliceGeometry]) -> VolumeGeometry:
     if len(frames) > 4096:
         raise GeometryError('stack exceeds configured slice limit')
     first = frames[0]
-    x_axis, y_axis, normal = first.axes()
+    x_axis, y_axis, raw_normal = first.axes()
+    normal = tuple(v/_norm(raw_normal) for v in raw_normal)
     origin = _vector(first.ipp_lps_mm, 3, 'ImagePositionPatient')
     positions = []
     for index, frame in enumerate(frames):
@@ -153,14 +168,20 @@ def build_regular_grid(frames: Sequence[SliceGeometry]) -> VolumeGeometry:
     step = (positions[-1][0]-positions[0][0])/(len(positions)-1)
     if any(abs(s-step)>max(_STEP_TOL_MM,step*_STEP_REL_TOL) for s in steps):
         raise GeometryError('irregular slice spacing/missing slice')
-    if step > first.slice_thickness_mm + max(_STEP_TOL_MM,step*0.05):
-        raise GeometryError('acquisition thickness gap: not a continuous grid')
+    # Physical regularity is distinct from inferred slab continuity.
+    # A constant interplane gap remains a geometrically regular grid but is
+    # NOT eligible for direct continuous-volume interpretation.
+    gap = max(0., step-first.slice_thickness_mm)
+    discontinuous = gap > max(_STEP_TOL_MM,step*0.05)
+    reasons = ('ACQUISITION_GAP_REQUIRES_INTERPOLATION',) if discontinuous else ()
     first_origin = _vector(frames[positions[0][1]].ipp_lps_mm, 3, 'ImagePositionPatient')
     dx = tuple(float(v*first.spacing_row_col_mm[1]) for v in x_axis)
     dy = tuple(float(v*first.spacing_row_col_mm[0]) for v in y_axis)
     dz = tuple(float(v*step) for v in normal)
     return VolumeGeometry(first_origin,dx,dy,dz,(first.columns,first.rows,len(frames)),
-                          tuple(i for _,i in positions),first.modality,first.source_kind)
+                          tuple(i for _,i in positions),first.modality,first.source_kind,
+                          first.slice_thickness_mm,step,gap,not discontinuous,
+                          not discontinuous,discontinuous,reasons)
 
 
 def lps_to_ras(p: Sequence[float]) -> tuple[float, float, float]:

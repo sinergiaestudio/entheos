@@ -83,7 +83,15 @@ class GeometryTests(unittest.TestCase):
 
     def test_thickness_gap(self):
         f=[replace(synthetic(z*2),slice_thickness_mm=1.) for z in range(4)]
-        self.bad(f,'thickness gap')
+        g=build_regular_grid(f)
+        self.assertEqual(g.dimensions_crs,(16,12,4))
+        self.assertEqual(g.interplane_spacing_mm,2.)
+        self.assertEqual(g.acquisition_thickness_mm,1.)
+        self.assertEqual(g.gap_mm,1.)
+        self.assertFalse(g.sampling_continuous)
+        self.assertFalse(g.volume_eligible)
+        self.assertTrue(g.interpolation_required)
+        self.assertIn('ACQUISITION_GAP_REQUIRES_INTERPOLATION',g.reasons)
 
     def test_mixed_phase(self):
         f=self.frames.copy();f[1]=replace(f[1],temporal_key='different-phase')
@@ -134,6 +142,50 @@ class GeometryTests(unittest.TestCase):
         for p in ((.4,2.6,1.25),(12,8,-.5)):
             q=g.lps_to_voxel(g.voxel_to_lps(*p))
             for v,w in zip(q,p):self.assertAlmostEqual(v,w,places=10)
+
+    def test_slight_nonorthogonal_iop_general_inverse(self):
+        # 6e-5 dot-product deviation is accepted by IOP tolerance.
+        f=[synthetic(z,iop=(1.,0.,0.,0.00006,1.,0.)) for z in range(4)]
+        g=build_regular_grid(f)
+        for p in ((5.2,7.8,1.4),(10.9,2.2,.2)):
+            x=g.voxel_to_lps(*p)
+            back=g.lps_to_voxel(x)
+            for actual,expect in zip(back,p):
+                self.assertAlmostEqual(actual,expect,places=10)
+        # Prior projection formula yields > 1e-4 voxel cross-axis leakage.
+        p=g.voxel_to_lps(9.,7.,1.)
+        projected=(sum((p[k]-g.origin_lps_mm[k])*g.column_vector_mm[k] for k in range(3))/
+                   sum(x*x for x in g.column_vector_mm))
+        self.assertGreater(abs(projected-9.),1e-4)
+
+    def test_degenerate_manual_affine_rejected(self):
+        from afe.geometry import VolumeGeometry
+        g=build_regular_grid(self.frames)
+        bad=replace(g,row_vector_mm=g.column_vector_mm)
+        with self.assertRaisesRegex(GeometryError,'SINGULAR_AFFINE'):
+            bad.lps_to_voxel((11.,21.,32.))
+
+    def test_scaled_ill_conditioned_affine_rejected(self):
+        g=build_regular_grid(self.frames)
+        bad=replace(g,row_vector_mm=(3.0,1e-10,0.))
+        with self.assertRaisesRegex(GeometryError,'SINGULAR_AFFINE'):
+            bad.lps_to_voxel((12.,22.,32.))
+
+    def test_large_coordinate_roundtrip(self):
+        f=[replace(synthetic(z),ipp_lps_mm=(30000.,-20000.,8000.+z)) for z in range(4)]
+        g=build_regular_grid(f)
+        q=(8.25,3.75,1.125)
+        back=g.lps_to_voxel(g.voxel_to_lps(*q))
+        for a,b in zip(back,q): self.assertLess(abs(a-b),1e-9)
+
+    def test_regular_contiguous_distinct_from_thickness(self):
+        g=build_regular_grid(self.frames)
+        self.assertTrue(g.sampling_continuous)
+        self.assertTrue(g.volume_eligible)
+        self.assertFalse(g.interpolation_required)
+        self.assertEqual(g.interplane_spacing_mm,1.)
+        self.assertEqual(g.acquisition_thickness_mm,1.)
+        self.assertEqual(g.reasons,())
 
 
 if __name__ == '__main__':

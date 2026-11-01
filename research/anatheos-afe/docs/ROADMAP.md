@@ -16,3 +16,10 @@ Work in closed loops; every gate has code/commit, command, failures, external QA
 | P2 | AFE-07 | Versioned read-only bridge to existing ANATHEOS | mock consumer contracts, error/compatibility tests, Director approval; no integration or deploy | Pending; needs architecture approval |
 
 **Risk order:** incorrect orientation/left-right > misregistration or temporal mixing > fabricated resolution > memory exhaustion > graphics/performance. Gates remain laboratory research only unless explicitly accepted elsewhere.
+
+
+## AFE-01B gate update (2026-11-01)
+
+- **Done as synthetic laboratory gate:** mathematical 3×3 affine inverse, singular/ill-conditioned rejection, separate regularity from acquisition gaps, normalized read-only CMR-R2 adapter with provenance consistency gates, in-memory Part10 examples read back through existing CMR parser, Python-vs-original-JS-vs-analytic cross-check. All 57 unittest cases and 20 spatial samples PASS on reviewed SHA `17d11e19799b14fbd71251032f2201cb9ea60371` (new HEAD after docs update requires fresh CI).
+- **Not done / blocks AFE-01 completion:** externally validated DICOM IOD conformance of phantom, end-to-end CMR original pixels + independent source trust, licensed public CT/MR dataset QA and SHA/license, independent 3D Slicer, physical Windows tests and acceptable thresholds against separate implementations. No AFE-02 construction.
+- **Recommendation:** retain AFE-01 open; progress next to controlled independent Slicer/Leeds or LCTSC comparison and stronger timing/provenance evidence before any point-cloud work. Do not equate 57 unit PASS with medical validation.

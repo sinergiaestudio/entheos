@@ -25,3 +25,18 @@ jobs:
         run: |
           python -m compileall -q afe tests
           python -m unittest discover -s tests -v
+      - name: Create source-only recovery archive and manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          tar -czf dist/afe-source.tar.gz research/anatheos-afe .github/workflows/anatheos-afe-synthetic.yml
+          ( cd dist && sha256sum afe-source.tar.gz > SHA256SUMS.txt )
+          printf '%s\n' "$GITHUB_SHA" > dist/COMMIT_SHA.txt
+      - name: Publish ephemeral source-only backup for private Drive transfer
+        uses: actions/upload-artifact@v4
+        with:
+          name: afe-source-${{ github.sha }}
+          path: dist/*
+          retention-days: 7
+          if-no-files-found: error

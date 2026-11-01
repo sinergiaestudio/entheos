@@ -1,3 +1,4 @@
+import {thoraxReference} from './thorax-reference.mjs';
 import {session} from './study-session.mjs';
 /**
  * ANATHEOS UX-N5 — contextual status ribbon from ACTUAL study/render/mesh state.
@@ -21,18 +22,18 @@ if(studyArea){
   const text=get('volumeStatus')?.textContent||'';
   const ready=/Volumen \d+|Volumen preparado|Volumen listo|Textura 3D/i.test(text);
   const preparing=/Preparando|Calculando|Decodificando/i.test(text);
-  if(session.snapshot.active?.owner==='cmr'){get('uxN5VolumeState').textContent=(session.snapshot.active.selectedAssessment||session.snapshot.active.assessment)?.groups.some(g=>g.volumeEligible)?'Elegible':'Planos originales';return;}
+  if(session.snapshot.active?.owner==='cmr'){get('uxN5VolumeState').textContent=(session.snapshot.active.selectedAssessment||session.snapshot.active.assessment)?.groups.some(g=>g.volumeEligible)?'Elegible':'Planos originales';get('uxN5MeshState').textContent='Máscaras manuales: 0 · Referencias expertas: 0';return;}
   get('uxN5VolumeState').textContent=ready?'Preparado':preparing?'Procesando':'Disponible al abrir 3D';
   get('uxN5VolumeLed').dataset.state=ready?'ready':preparing?'busy':'idle';
   const origin=get('surfaceLayers')?.dataset.origin||'';
   const rows=get('surfaceLayers')?.querySelectorAll('.surface-row').length||0;
   const same=origin==='same-study-manual'&&rows>0;
-  let painted=0;
+  let painted=0,regions=0;
   for(let i=1;i<=3;i++){
    const number=(get('segCount'+i)?.textContent||'').replace(/\./g,'').match(/\d+/);
-   if(number)painted+=Number(number[0]);
+   if(number){painted+=Number(number[0]);if(Number(number[0])>0)regions++;}
   }
-  get('uxN5MeshState').textContent=same?'Malla del estudio':painted>0?'Máscara sin malla':'Sin máscaras';
+  get('uxN5MeshState').textContent=`Máscaras manuales: ${regions} · Referencias expertas: ${thoraxReference.verified?5:0}${same?' · Malla del estudio':''}`;
   get('uxN5MeshLed').dataset.state=same?'ready':painted>0?'busy':'idle';
  };
  const observer=new MutationObserver(update);
@@ -41,7 +42,7 @@ if(studyArea){
   const node=get(id);
   if(node)observer.observe(node,{subtree:true,childList:true,characterData:true,attributes:id==='surfaceLayers',attributeFilter:id==='surfaceLayers'?['data-origin']:undefined});
  }
- update();session.subscribe(update);
+ update();session.subscribe(update);window.addEventListener('anatheos:reference-state',update);
 }
 // Actual state and source are always displayed via original right panel.
 // This final polish deliberately does not add non-existing bone/cartilage

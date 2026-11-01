@@ -68,15 +68,16 @@ function confirmExactDICOM(ct,series){
 }
 export const thoraxReference={
  colors:palette.map(x=>x.slice()),alphas:[1,1,1,1,1],series:null,redraw:null,ct:null,mask:null,canvas:null,ctx:null,lastKey:'',opacity:.55,visible:31,serial:0,verified:false,isolate3d:false,onVolumeChange:null,
- notify(){this.redraw?.();this.onVolumeChange?.();},
+ notify(){window.dispatchEvent(new Event('anatheos:reference-state'));this.redraw?.();this.onVolumeChange?.();},
  initialize(){
+  if(this.panel)return;
   const root=document.getElementById('segmentationPanel');if(!root)return;
   const section=document.createElement('section');section.setAttribute('aria-label','Referencia torácica externa');
   section.id='thoraxReferencePanel';section.className='segmentationPanel';
   const top=document.createElement('div');top.className='segTop';
-  const title=document.createElement('strong');title.textContent='T2-B3 · Referencia torácica externa (5 capas)';top.append(title);
+  const title=document.createElement('strong');title.textContent='Referencias expertas · TC (5)';top.append(title);
   const explain=document.createElement('p');explain.textContent='Contornos RT de procedencia externa, no identificación automática. Sólo se superponen si coinciden geometría LPS Y TODOS los vóxeles de la TC DICOM.';
-  const controls=document.createElement('div');controls.className='segActions';
+  const controls=document.createElement('details');controls.className='segActions';const importTitle=document.createElement('summary');importTitle.textContent='Importar pareja CT y referencias';controls.append(importTitle);
   const uploadCT=document.createElement('input');uploadCT.type='file';uploadCT.accept='.nrrd';uploadCT.id='thoraxRefCT';uploadCT.setAttribute('aria-label','Importar CT HU NRRD');
   const uploadMask=document.createElement('input');uploadMask.type='file';uploadMask.accept='.nrrd';uploadMask.id='thoraxRefMask';uploadMask.setAttribute('aria-label','Importar NRRD bitmask cinco capas');
   const status=document.createElement('p');status.id='thoraxRefStatus';status.setAttribute('role','status');status.textContent='Cargá la TC DICOM y luego su pareja CT_HU_LPS.nrrd + máscara bitmask-v1.';
@@ -84,7 +85,7 @@ export const thoraxReference={
   for(let i=0;i<5;i++){
    const label=document.createElement('label');const box=document.createElement('input');box.type='checkbox';box.checked=true;box.id=`thoraxRefLayer${i+1}`;
    box.addEventListener('change',()=>{this.visible=box.checked?this.visible|(1<<i):this.visible&~(1<<i);this.lastKey='';this.notify()});
-   const text=document.createElement('span');text.textContent=' '+names[i]+' · referencia externa';const color=document.createElement('input');color.type='color';color.id=`thoraxRefColor${i+1}`;color.value='#'+this.colors[i].map(x=>x.toString(16).padStart(2,'0')).join('');color.setAttribute('aria-label','Color '+names[i]);color.oninput=()=>{this.colors[i]=color.value.slice(1).match(/../g).map(x=>parseInt(x,16));this.lastKey='';this.notify();};
+   box.setAttribute('aria-label','Mostrar '+names[i]);const text=document.createElement('span');text.textContent=names[i];const color=document.createElement('input');color.type='color';color.id=`thoraxRefColor${i+1}`;color.value='#'+this.colors[i].map(x=>x.toString(16).padStart(2,'0')).join('');color.setAttribute('aria-label','Color '+names[i]);color.oninput=()=>{this.colors[i]=color.value.slice(1).match(/../g).map(x=>parseInt(x,16));this.lastKey='';this.notify();};
    const alpha=document.createElement('input');alpha.type='range';alpha.id=`thoraxRefAlpha${i+1}`;alpha.min=0;alpha.max=100;alpha.value=100;alpha.setAttribute('aria-label','Opacidad '+names[i]);alpha.oninput=()=>{this.alphas[i]=Number(alpha.value)/100;this.lastKey='';this.notify();};label.append(box,text,color,alpha);layers.append(label);
   }
   const opacity=document.createElement('input');opacity.type='range';opacity.id='thoraxRefOpacity';opacity.min=0;opacity.max=100;opacity.value=55;
@@ -95,7 +96,7 @@ export const thoraxReference={
    const isolateLabel=document.createElement('label');isolateLabel.append(isolate,document.createTextNode(' Aislar órganos externos en 3D (sin volumen de fondo)'));
    const clear=document.createElement('button');clear.type='button';clear.id='thoraxRefClear';clear.textContent='Retirar referencia';
   clear.addEventListener('click',()=>this.reset());
-  section.append(top,explain,controls,layers,opacityLabel,isolateLabel,clear,status);root.append(section);
+  const provenance=document.createElement('details'),caption=document.createElement('summary');caption.textContent='Procedencia y validación';provenance.append(caption,explain,controls,clear,status);section.append(top,layers,opacityLabel,isolateLabel,provenance);this.panel=section;if(this.series)(document.getElementById('stationReferenceHost')||root).append(section);
   const ingest=async(which,file)=>{
    const token=this.serial;
    try{
@@ -120,7 +121,12 @@ export const thoraxReference={
   uploadCT.addEventListener('change',e=>{const file=e.target.files?.[0];e.target.value='';ingest('ct',file);});
   uploadMask.addEventListener('change',e=>{const file=e.target.files?.[0];e.target.value='';ingest('mask',file);});
  },
- bind(series,redraw){this.series=series;this.redraw=redraw;this.ct=null;this.mask=null;this.verified=false;this.lastKey='';this.canvas=null;this.serial++;const el=document.getElementById('thoraxRefStatus');if(el)el.textContent='Nueva serie DICOM: cargá únicamente NRRD originales de ESTE estudio.';},
+ bind(series,redraw){this.series=series;this.redraw=redraw;this.ct=null;this.mask=null;this.verified=false;this.lastKey='';this.canvas=null;this.ctx=null;this.serial++;this.visible=31;this.opacity=.55;this.isolate3d=false;this.colors=palette.map(x=>x.slice());this.alphas=[1,1,1,1,1];
+  const panel=this.panel;if(panel){for(const input of panel.querySelectorAll('input')){if(input.type==='file')input.value='';else if(input.type==='checkbox')input.checked=input.id!=='thoraxRef3DIsolate';else if(input.type==='range')input.value=input.id==='thoraxRefOpacity'?'55':'100';else if(input.type==='color'){const k=Number(input.id.replace('thoraxRefColor',''))-1;input.value='#'+this.colors[k].map(x=>x.toString(16).padStart(2,'0')).join('');}}
+   panel.querySelector('#thoraxRefStatus').textContent='Sin referencias verificadas. Importá únicamente la pareja NRRD del mismo caso.';
+   if(series?.items?.[0]?.modality==='CT')(document.getElementById('stationReferenceHost')||document.getElementById('segmentationPanel')).append(panel);else panel.remove();
+  }window.dispatchEvent(new Event('anatheos:reference-state'));
+ },
  reset(){this.bind(null,this.redraw);for(const id of ['thoraxRefCT','thoraxRefMask']){const x=document.getElementById(id);if(x)x.value='';}this.notify();},
  paint(ctx,frame,z){
   if(!this.verified||!this.ct||!this.mask||!this.series||!this.visible||this.opacity===0)return;

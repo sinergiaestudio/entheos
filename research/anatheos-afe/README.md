@@ -43,3 +43,7 @@ The Node test imports the **existing unchanged** `demos/anatheos-local-v0.5/spat
 - Mandatory: distinction between 3D Slicer real DICOM import and external VTK-only numeric matrix oracle. VTK success is NOT Slicer success.
 - Public original hash/metadata audit and external Slicer comparison scripts: tools/prepare_public_case.py and tools/slicer_compare.py; instructions, fixed thresholds, licenses and honest per-source execution matrix in docs/PUBLIC_CASES.md. They are not a second DICOM importer or integrated into ANATHEOS.
 - Current gate: original public DICOM and Slicer NOT RUN in this environment. All anatomical reconstruction and AFE-02 blocked.
+
+
+## AFE-01D · Execute official native Slicer and public originals
+Runnable experiment CI (no installed viewer): .github/workflows/anatheos-afe01d-real-slicer.yml; Linux ubuntu-24.04, native official 3D Slicer 5.12.4 SHA512 official and xvfb. DICOM URLs pinned with ZIP byte size and SHA256, copies transient and license-limited. Matrix comparator research/anatheos-afe/tools/slicer_compare.py reads native MRML, 27 corners/interiors, inverse and norms. Metadata QA uses existing CMR-R1 MR parser and existing ANATHEOS T2-B1 pydicom QA dependency for CT; neither alters CMR-R3 or production. See docs/REAL_SLICER_AFE01D.md, ADR0009/0010. Real execution PASSED in run 41316484907. Temporal evidence still absent; retain spatial-only status.

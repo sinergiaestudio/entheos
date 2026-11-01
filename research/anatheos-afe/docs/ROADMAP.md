@@ -27,3 +27,7 @@ Work in closed loops; every gate has code/commit, command, failures, external QA
 
 ## AFE-01C · Evaluación del gate independiente
 Ejecutado: pruebas repetidas matemáticas Gauss-Jordan, VTK 9.6.2, barrido JS y harness de originales sintéticos; scripts Slicer y de originales públicos preparados y versionados. El gate sigue **BLOCKED**: falta 3D Slicer instalado, originales Leeds/LCTSC realmente extraídos y comparación numérica nativa. No promover a AFE-02.
+
+
+## AFE-01D · Native Slicer physical source gate achieved; formal acceptance pending
+Both verified public originals Leeds and LCTSC processed through real 3D Slicer 5.12.4 in Github Actions (run 41316484907). 27 points per case PASS with pre-registered numerical thresholds and true MRML IJK↔RAS matrices. Earlier AFE-01C block 'Slicer not available / originals not accessible' is resolved. Still pending Directorate acceptance of full AFE-01 and temporal/clinical boundary review; AFE-02 remains BLOCKED. See docs/REAL_SLICER_AFE01D.md and new ADRs.

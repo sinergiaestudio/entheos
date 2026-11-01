@@ -143,6 +143,12 @@ def main():
             'interplane_spacing_mm':geo.interplane_spacing_mm,
             'acquisition_thickness_mm':geo.acquisition_thickness_mm,
             'gap_mm':geo.gap_mm,'volume_eligible':geo.volume_eligible and time_valid,
+            'max_source_ipp_residual_mm':max(
+                sum((frames[idx].ipp_lps_mm[r]-geo.voxel_to_lps(0,0,k)[r])**2
+                    for r in range(3))**0.5
+                for k,idx in enumerate(geo.sorted_source_indices)),
+            'sorted_source_indices':list(geo.sorted_source_indices),
+            'unique_verified_source_instance_count':len(sops),
             'interpolation_required':geo.interpolation_required,
             'dicom_members':members,'sha256_by_member':hashes}
     # This private output contains only relative filenames, physical values

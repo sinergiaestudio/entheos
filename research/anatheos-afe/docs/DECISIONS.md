@@ -65,3 +65,17 @@
 - Decisión: comparar la matriz MRML obtenida de Slicer desde DICOM originales, contra affine AFE construida por el parser CMR preexistente, con ZIP/per-file SHA verificados. Rechazo seguro si la serie/identidad es ambigua, sin inferir fases. Umbrales previos: mundo 0.01 mm, inverso 1e-4 voxel, espaciado 0.001 mm; objetivos de doble precisión sintética 1e-8 mm/voxel.
 - Estado: scripts preparados; Slicer y originales Leeds/LCTSC NO ejecutados en este entorno. Umbrales de ingeniería sujetos a revisión de dirección, no equivalen a precisión clínica.
 - Consecuencia: AFE-01 continúa abierto y AFE-02 bloqueado hasta revisión de ambos originales y Slicer realmente ejecutado.
+
+
+## AFE-ADR-0009 — Aceptación espacial limitada sin demostrar la misma fase
+- Fecha: 2026-11-01. Los originales públicos DESS Leeds y CT LCTSC presentan geometría IPP/IOP/PixelSpacing comprobable, pero carecen de marcadores temporales explícitos que acrediten equivalencia temporal.
+- Alternativas: rechazar TODA geometría, inferir fase de índices/nombres, separar contrato espacial limitado de elegibilidad volumétrica.
+- Decisión: el preflight de investigación conserva affine espacial con estado ACCEPTED_SPATIAL_ONLY; temporal_context_verified=false y volume_eligible=false. La comparación geométrica nativa Slicer puede evaluar posiciones físicas sin declarar fusión de fases, ausencia de movimiento ni continuidad anatómica validada. No se relaja AFE core ni se modifica el importador productivo.
+- Tolerancias espaciales predeclaradas no modificadas: 0.01 mm mundo, 1e-4 voxel inverso, 0.001 mm spacing. Aceptar geometría no atribuye precisión clínica.
+- Revisión: Dirección debe aprobar explícitamente contratos temporales y pruebas de adquisición antes de usar estas series para volumen diagnóstico o AFE-02.
+
+## AFE-ADR-0010 — Fuente pública real, parser CT existente y Slicer binario oficial
+- Fecha: 2026-11-01. El parser metadata-only CMR-R1 de investigación detiene lectura ante secuencias DICOM indefinidas frecuentes en los 130 CT LCTSC; no es evidencia de fuente inválida.
+- Decisión: ejecutar metadatos CT en el harness AFE con pydicom 3.0.1, la MISMA dependencia libre ya empleada por research/anatheos-t2b1/inspect_lctsc.py. No se crea importer DICOM del producto ni se leen píxeles en AFE. Se verifican ZIP SHA256 y hashes por instancia. Slicer oficial 5.12.4 34645, SHA512 Linux verificado, realiza su propia importación DICOM/MRML. Fuente de referencia independiente real. Sólo reportes sanitizados.
+- Evidencia: GitHub Actions run 41316484907 SUCCESS, 27 puntos por serie; ambas PASS frente a límites geométricos previos. Errores y bibliotecas faltantes en runs históricos documentados.
+- Riesgo: fidelidad de intensidad de píxeles y equivalencia temporal siguen fuera de alcance; no es validación médica. No modificar visor/PR74, CMR-R3 ni producción.

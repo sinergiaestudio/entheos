@@ -50,3 +50,18 @@
 - **Decision:** leave JS unchanged, measure against independent analytic forward coordinates and AFE, publish reproducible fixtures and explicit tolerance. In exact-orthonormal samples JS inverse error is 7.105e-15 vox; accepted-skew sample up to 0.0062 vox (edge classification can differ). Forward LPS result equals analytic within printed double precision on this fixture.
 - **Consequences:** do not share that inverse behavior as an agreed future contract without direction/revalidation. This is not evidence of a clinical misregistration or an authorized change to UI.
 - **Review:** architecture/integration gate and independent Slicer before declaring issue closed.
+
+
+## AFE-ADR-0007 — Limitación de la inversa JavaScript bajo matrices anisótropas
+- Fecha: 2026-11-01; problema: el residual AFE-01B de 0.0062 voxel puede escalar con dimensiones/anisotropía.
+- Alternativas: ignorarlo, tocar el JS protegido, acotar entradas, registrar y exigir una decisión posterior.
+- Decisión: preservar el motor JS de ANATHEOS/PR #74. Medirlo contra una solución independiente del sistema de Gram 2x2 (no AFE) bajo orientaciones, matrices y espaciamientos variables. Para contrato futuro exigir inversa general o límite de dirección justificado antes de mezclar geometrías.
+- Evidencia: 320 configuraciones × 5 puntos = 1600. Error JS máximo 2.2568176657265795 voxel, media 0.07663439360902945, p95 0.4145201884441576. Esto es una discrepancia sintética, no medición clínica.
+- Consecuencias: impide alegar equivalencia numérica universal entre las dos inversas; no autoriza cambio a código de producción.
+
+## AFE-ADR-0008 — Gate Slicer y DICOM originales públicos bajo umbrales previos
+- Fecha: 2026-11-01; problema: VTK y oráculos analíticos no prueban la importación independiente de DICOM en 3D Slicer ni la conservación de píxeles reales.
+- Alternativas: simular Slicer a partir de AFE (rechazado), usar VTK como sustituto (rechazado), importar mismos originales y medir MRML (elegido).
+- Decisión: comparar la matriz MRML obtenida de Slicer desde DICOM originales, contra affine AFE construida por el parser CMR preexistente, con ZIP/per-file SHA verificados. Rechazo seguro si la serie/identidad es ambigua, sin inferir fases. Umbrales previos: mundo 0.01 mm, inverso 1e-4 voxel, espaciado 0.001 mm; objetivos de doble precisión sintética 1e-8 mm/voxel.
+- Estado: scripts preparados; Slicer y originales Leeds/LCTSC NO ejecutados en este entorno. Umbrales de ingeniería sujetos a revisión de dirección, no equivalen a precisión clínica.
+- Consecuencia: AFE-01 continúa abierto y AFE-02 bloqueado hasta revisión de ambos originales y Slicer realmente ejecutado.

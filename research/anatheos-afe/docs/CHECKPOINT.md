@@ -23,3 +23,7 @@
 - **Drive:** NEW post-final-HEAD ZIP backup + SHA-256 and restoration test required before declaring AFE-01B complete. Record exact link and hash in PR #75 checkpoint/Drive supplemental note.
 - **Plan Maestro:** AFE-00 incremental entry appended with revision guard and verified, no edits to other fronts. AFE-01B status intentionally stays in own PR/checkpoint until audited.
 - **Open gates:** external DICOM conformance, real licensed Leeds/LCTSC independent QA, 3D Slicer, Windows physical, source-authenticated timing/motion, integration approval; AFE-02 not started.
+
+
+## AFE-01C (2026-11-01) · Checkpoint de ejecución parcial, pendiente de Slicer
+Dirección aprobó AFE-01B en SHA 3524462f16b4e7f9db802969d2e74c0cbefe0427. AFE-01C incorporó Gauss-Jordan (100 matrices/1000 puntos), VTK opcional local (15 matrices/60 puntos), barrido JS (320 configuraciones/1600 puntos), verificador público de ZIP original/hash y script Slicer DICOM/MRML; sin tocar visor ni CMR. Nueva discrepancia máxima JS 2.2568 voxel bajo anisotropía+IOP skew aceptada. ADR 0007/0008 documentadas. Resultado original Leeds: NOT RUN; LCTSC: NOT RUN; Slicer: NOT RUN. Se requiere seguir este checkpoint con SHA final/CI/ZIP privado verificable; no declarar cierre AFE-01 ni iniciar AFE-02.

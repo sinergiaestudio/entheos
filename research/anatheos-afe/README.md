@@ -36,3 +36,10 @@ node tests/crosscheck_existing.mjs /tmp/afe-crosscheck.json
 ```
 
 The Node test imports the **existing unchanged** `demos/anatheos-local-v0.5/spatial-reference.mjs`; execution must be in the repository checkout. Synthetic Part10 test uses the existing CMR-R1 metadata-only parser; no second DICOM importer. Full AFE-01B synthetic suite: 57 unit tests + 5 analytic/JS comparison scenarios with 20 measured points, run and verified in GitHub Actions on SHA `17d11e19799b14fbd71251032f2201cb9ea60371`. Updated status on PR #75 after subsequent commits. See docs/TEST_MATRIX.md and numbered ADRs. Independent external-tool Slicer and public-source dataset QA have NOT RUN.
+
+
+## AFE-01C · QA independently constrained
+- Run: python -m unittest discover -s tests -v ; node tests/skew_sweep_existing.mjs
+- Mandatory: distinction between 3D Slicer real DICOM import and external VTK-only numeric matrix oracle. VTK success is NOT Slicer success.
+- Public original hash/metadata audit and external Slicer comparison scripts: tools/prepare_public_case.py and tools/slicer_compare.py; instructions, fixed thresholds, licenses and honest per-source execution matrix in docs/PUBLIC_CASES.md. They are not a second DICOM importer or integrated into ANATHEOS.
+- Current gate: original public DICOM and Slicer NOT RUN in this environment. All anatomical reconstruction and AFE-02 blocked.

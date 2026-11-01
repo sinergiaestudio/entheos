@@ -35,3 +35,11 @@ Reject invalid geometry loudly; preserve source frame order index mapping; never
 - First interop CI iteration on `5ff263a...` FAIL: runner script did not add project directory to PYTHONPATH. Corrected in `17d11e1...`; rerun AFE CI and general CI SUCCESS. No public or private DICOM data involved.
 - Safety negatives: invalid/missing geometry and hashes, mixed identity/phase/contrast, dynamic mode, invalid/missing markers, duplicate positions, irregular sample spacing, off-normal drift, singular and ill-conditioned affine, unjustified MR→HU. Regular gap returns an explicit non-eligible grid, not a fabricated continuous volume.
 - **No source-independent DICOM conformance**, Slicer, public Leeds/LCTSC or Windows physical test in this loop. All numerical tolerances are research engineering thresholds. See PR #75 for final HEAD and CI after documentation-only update.
+
+
+## AFE-01C — Pruebas y límites registrados (2026-11-01)
+- Gauss-Jordan independiente, 100 matrices oblicuas/anisótropas y 1000 puntos sintéticos: ejecutado local PASS, max error voxel 1.95399252334e-13; max mundo 5.68434188608e-14 mm; criterios registrados antes de ensayo 1e-8 voxel/mm.
+- VTK 9.6.2 de biblioteca **no Slicer**, 15 matrices/60 puntos: ejecutado local PASS; inverso 2.84217094304e-14 voxel, mundo 7.10542735760e-15 mm. Test opcional: en GitHub Actions sin VTK será SKIP, no PASS de Slicer.
+- Barrido original JS por Gram: 320 configuraciones/1600 puntos; máximo 2.2568176657265795 voxel, medio 0.07663439360902945, p95 0.4145201884441576. Reproducción de desviación, no aprobado como equivalencia geométrica.
+- Public original audit CLI: usa exclusivamente el parser CMR-R1 de metadatos; prueba sintética 4 cortes/4×4, SHA falsificado y fase mixta (rechazos); no es importador DICOM nuevo. Sin imágenes clínicas reales en GitHub.
+- Prueba futura Slicer: importación DICOM original y MRML IJK↔RAS + 27 puntos, fuentes y SHA exactos; PREPARADA pero **NO EJECUTADA**. Leeds y LCTSC originales: hashes/licencias corroborados, pero **NO EJECUTADOS EN AFE-01C**. Fuente detallada docs/PUBLIC_CASES.md.

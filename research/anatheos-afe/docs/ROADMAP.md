@@ -23,3 +23,7 @@ Work in closed loops; every gate has code/commit, command, failures, external QA
 - **Done as synthetic laboratory gate:** mathematical 3×3 affine inverse, singular/ill-conditioned rejection, separate regularity from acquisition gaps, normalized read-only CMR-R2 adapter with provenance consistency gates, in-memory Part10 examples read back through existing CMR parser, Python-vs-original-JS-vs-analytic cross-check. All 57 unittest cases and 20 spatial samples PASS on reviewed SHA `17d11e19799b14fbd71251032f2201cb9ea60371` (new HEAD after docs update requires fresh CI).
 - **Not done / blocks AFE-01 completion:** externally validated DICOM IOD conformance of phantom, end-to-end CMR original pixels + independent source trust, licensed public CT/MR dataset QA and SHA/license, independent 3D Slicer, physical Windows tests and acceptable thresholds against separate implementations. No AFE-02 construction.
 - **Recommendation:** retain AFE-01 open; progress next to controlled independent Slicer/Leeds or LCTSC comparison and stronger timing/provenance evidence before any point-cloud work. Do not equate 57 unit PASS with medical validation.
+
+
+## AFE-01C · Evaluación del gate independiente
+Ejecutado: pruebas repetidas matemáticas Gauss-Jordan, VTK 9.6.2, barrido JS y harness de originales sintéticos; scripts Slicer y de originales públicos preparados y versionados. El gate sigue **BLOCKED**: falta 3D Slicer instalado, originales Leeds/LCTSC realmente extraídos y comparación numérica nativa. No promover a AFE-02.

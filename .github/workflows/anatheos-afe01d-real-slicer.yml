@@ -107,6 +107,9 @@ jobs:
           mkdir -p /tmp/slicer-native
           tar -xzf /tmp/Slicer-5.12.4-linux-amd64.tar.gz -C /tmp/slicer-native
           test -x /tmp/slicer-native/Slicer-5.12.4-linux-amd64/Slicer
+          echo 'AFE01D_SLICER_LOADER_MISSING_START'
+          ( ldd /tmp/slicer-native/Slicer-5.12.4-linux-amd64/Slicer | grep 'not found' || true )
+          echo 'AFE01D_SLICER_LOADER_MISSING_END'
           echo 'AFE01D_SLICER_OFFICIAL_SHA512_VERIFIED version=5.12.4 revision=34645 linux-amd64'
       - name: Run OFFICIAL 3D Slicer DICOM import and MRML physical comparison (two original cases)
         shell: bash
@@ -139,7 +142,12 @@ jobs:
           PY
             else
               echo "AFE01D_SLICER_NO_REPORT rc=$rc"
-              grep -E 'AFE01D_|Error|failed|libQt|xcb|libGL' /tmp/afe01d-slicer-local.log | tail -n 12 || true
+              if [ "$rc" -eq 127 ]; then
+                echo 'AFE01D_SLICER_LOADER_DIAGNOSTIC'
+                sed -n '1,10p' /tmp/afe01d-slicer-local.log | cut -c1-180
+              else
+                grep -E 'AFE01D_|Error|failed|libQt|xcb|libGL' /tmp/afe01d-slicer-local.log | tail -n 12 || true
+              fi
             fi
             if [ "$rc" -ne 0 ]; then echo "AFE01D_SLICER_CASE_FAILED $c rc=$rc";exit 1; fi
           done

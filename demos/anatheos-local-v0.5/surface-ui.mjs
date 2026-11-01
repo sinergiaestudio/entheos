@@ -1,3 +1,4 @@
+import {session} from './study-session.mjs';
 import {loadSurface,MAX_SCENE_TRIANGLES} from './surface-core.mjs';
 import {SurfaceRenderer,surfaceOrbitDrag} from './surface-renderer.mjs';
 import {verifyOriginalSPLMesh,SPL_MESH_MANIFEST} from './spl-provenance.mjs';
@@ -78,7 +79,7 @@ function showMode(kind='external'){
   :'Sin modelos importados';
  syncSurfaceUI();
  if(!renderer.meshes.length)status(emptyHint);
- renderer.draw();
+ session.mode('surface');renderer.draw();
 }
 function leaveMode(){
  if(!active)return;

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import sys
 import json
 import pathlib
 import tempfile
@@ -17,6 +18,8 @@ ROOT = HERE.parents[2]
 R2_TEST = ROOT / "research" / "anatheos-cmr" / "r2" / "tests" / "test_r2_e2e.py"
 PREPARER = ROOT / "research" / "anatheos-cmr" / "r2" / "preparar_todas_las_series.py"
 APP = ROOT / "demos" / "anatheos-local-v0.5"
+sys.path.insert(0,str(ROOT/"research/anatheos-cmr/r3"))
+from test_station import command
 
 spec = importlib.util.spec_from_file_location("r2_fixture", R2_TEST)
 fixture = importlib.util.module_from_spec(spec)
@@ -56,16 +59,20 @@ def main():
                 page.on("pageerror", lambda error: errors.append(str(error)))
                 page.goto(f"http://127.0.0.1:{server.server_port}/", wait_until="domcontentloaded")
                 assert page.request.get(f"http://127.0.0.1:{server.server_port}/api/spl/status").json()["ready"] is False
-                assert page.request.get(f"http://127.0.0.1:{server.server_port}/atlas/femur-95.stl").status == 404
-                assert page.request.get(f"http://127.0.0.1:{server.server_port}/datasets/RTKN0668_MR_DESS.zip").status == 404
+                assert page.request.get(f"http://127.0.0.1:{server.server_port}/atlas/femur-95.stl").status == (200 if (APP/"ATLAS_SPL/femur-95.stl").exists() else 404)
+                assert page.request.get(f"http://127.0.0.1:{server.server_port}/datasets/RTKN0668_MR_DESS.zip").status == (200 if (APP/"datasets/RTKN0668_MR_DESS.zip").exists() else 404)
                 assert page.request.get(f"http://127.0.0.1:{server.server_port}/surface-ui.mjs").status == 200
-                expect(page.locator("#cmrNativeZipOpen")).to_be_visible(timeout=20_000)
-                page.set_input_files("#cmrNativeZip", str(source))
+                expect(page.locator("#stationToolbar")).to_be_visible(timeout=20_000)
+                page.set_input_files("#zipInput", str(source))
                 expect(page.locator("#cmrNativeSeries option")).to_have_count(2, timeout=60_000)
-                expect(page.locator("#cmrNativeCanvas")).to_be_visible()
+                expect(page.locator(".spatial-pane canvas").first).to_be_visible()
                 assert page.locator("#cmrNativeCanvas").evaluate("element => element.width") == 22
                 assert "listo" not in page.locator("#cmrNativeStatus").inner_text().lower() or not errors
-                page.locator("#cmrNativeClose").click()
+                # Start two imports back-to-back; only the last generation may activate.
+                page.set_input_files("#cmrNativeZip", str(source))
+                page.set_input_files("#cmrNativeZip", str(source))
+                expect(page.locator("#cmrNativeSeries option")).to_have_count(2, timeout=60_000)
+                command(page,'Archivo','Cerrar estudio')
                 for _ in range(40):
                     if not server.jobs:
                         break

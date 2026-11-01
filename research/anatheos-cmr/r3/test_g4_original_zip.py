@@ -2,6 +2,7 @@
 import sys,pathlib,tempfile,threading,io,zipfile
 import pydicom
 from playwright.sync_api import sync_playwright,expect
+from test_station import command
 ROOT=pathlib.Path(__file__).resolve().parents[3]
 sys.path.insert(0,str(ROOT/'research/anatheos-cmr/w1'))
 from test_w1_original_zip import fixture,AppServer,Handler,APP,PREPARER
@@ -17,11 +18,11 @@ with tempfile.TemporaryDirectory() as temp:
   with sync_playwright() as p:
    browser=p.chromium.launch(args=['--no-sandbox','--enable-webgl','--use-gl=angle','--use-angle=swiftshader']);page=browser.new_page();page.goto(f'http://127.0.0.1:{s.server_port}/')
    for attempt in range(2):
-    page.set_input_files('#cmrNativeZip',str(archive));expect(page.locator('#cmrNativeSeries option')).to_have_count(1,timeout=60000)
+    page.set_input_files('#zipInput',str(archive));expect(page.locator('#cmrNativeSeries option')).to_have_count(1,timeout=60000)
     expect(page.locator('#cmrReconstructionAnalysis button')).to_have_count(1)
     if attempt==0:
-     page.locator('#cmrNativeClose').click();expect(page.locator('#cmrNativeSeries option')).to_have_count(0);expect(page.locator('#cmrReconstructionAnalysis button')).to_have_count(0)
-   page.locator('#cmrReconstructionAnalysis summary').click();page.locator('#cmrReconstructionAnalysis button').click()
+     command(page,'Archivo','Cerrar estudio');expect(page.locator('#cmrNativeSeries option')).to_have_count(0);expect(page.locator('#cmrReconstructionAnalysis button')).to_have_count(0)
+   command(page,'Reconstrucción','Elegibilidad y motivos');command(page,'Reconstrucción','Volumen 3D')
    expect(page.locator('#volumeStatus')).to_contain_text('Volumen',timeout=30000);expect(page.locator('#eligibleMpr')).to_have_count(1)
    browser.close()
   print('ORIGINAL_JPEG2000_ZIP_CLOSE_REIMPORT_EXISTING_VOLUME_MPR_PASS')

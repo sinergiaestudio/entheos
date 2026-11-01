@@ -36,8 +36,8 @@ export function reformat(series,axis,index){
 }
 
 /** Normalize the existing uncompressed reader without inventing missing acquisition tags. */
-export function legacyEligibility(items){
- const frames=items.map(f=>f.originalFrame||{
+export function legacyFrames(items){
+ return items.map(f=>f.originalFrame||{
  study_instance_uid:f.studyUid,series_instance_uid:f.seriesUid,frame_of_reference_uid:f.forUid,
  modality:f.modality,image_type:f.imageType,image_orientation_patient_LPS:f.iop,
  image_position_patient_LPS_mm:f.ipp,pixel_spacing_row_col_mm:f.spacing,
@@ -45,5 +45,7 @@ export function legacyEligibility(items){
  trigger_time_ms:f.triggerTime,temporal_position_identifier:f.temporalPosition,
  acquisition:{scan_sequence:f.scanSequence,sequence_variant:f.sequenceVariant,tr:f.tr,te:f.te,ti:f.ti,
  slice_thickness:f.sliceThickness,kvp:f.kvp,convolution_kernel:f.kernel}});
- return eligibility(frames,items[0].rows,items[0].columns);
+}
+export function legacyEligibility(items){
+ return eligibility(legacyFrames(items),items[0].rows,items[0].columns);
 }

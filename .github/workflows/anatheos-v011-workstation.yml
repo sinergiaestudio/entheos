@@ -1,0 +1,90 @@
+name: ANATHEOS 0.11 unified workstation
+on:
+  pull_request:
+    branches: [anatheos/v010-spatial-integration]
+permissions:
+  contents: read
+concurrency:
+  group: anatheos-v011-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  workstation-regressions:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject medical/media/model binaries in public source before fetching examples
+        run: |
+          python - <<'PY_QA'
+          import pathlib,subprocess
+          roots=['demos/anatheos-local-v0.5','research/anatheos-cmr']
+          files=subprocess.check_output(['git','ls-files','--',*roots],text=True).splitlines()
+          blocked=('.dcm','.dicom','.nrrd','.nii','.nii.gz','.stl','.obj','.npy','.npz','.exe','.zip','.png','.jpg','.jpeg','.avi','.mp4')
+          assert not any(p.lower().endswith(blocked) for p in files),'Binary clinical/model/media payload in public source'
+          print('PUBLIC_SOURCE_BINARY_HYGIENE_PASS')
+          PY_QA
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install numpy==2.2.6 Pillow==11.3.0 playwright==1.56.0 pydicom==3.0.1 scipy==1.16.3 scikit-image==0.25.2
+      - run: python -m playwright install --with-deps chromium
+      - name: Synthetic geometry and original engines
+        run: |
+          node demos/anatheos-local-v0.5/test_spatial_reference.mjs
+          node demos/anatheos-local-v0.5/test_eligible_volume.mjs
+          node demos/anatheos-local-v0.5/test_segmentation.mjs
+          node demos/anatheos-local-v0.5/test_surfaces.mjs
+          node demos/anatheos-local-v0.5/test_mask_to_surface.mjs
+          node demos/anatheos-local-v0.5/test_continuous_mask_surface.mjs
+          node demos/anatheos-local-v0.5/test_assisted_3d.mjs
+          node demos/anatheos-local-v0.5/test_volume_core.mjs
+          node demos/anatheos-local-v0.5/test_render_styles.mjs
+          node demos/anatheos-local-v0.5/test_surface_camera.mjs
+      - name: Shared study and viewport interaction
+        run: |
+          python research/anatheos-cmr/r3/test_station.py
+          python research/anatheos-cmr/r3/test_station_editors.py
+          python research/anatheos-cmr/r3/test_mapping.py
+          python research/anatheos-cmr/r3/test_g4.py
+          python research/anatheos-cmr/r3/test_g4_original_zip.py
+          python research/anatheos-cmr/w1/test_w1_original_zip.py
+      - name: Verified offline public examples and real render controls
+        run: |
+          python packaging/windows/prepare_examples.py
+          python research/anatheos-cmr/r3/test_station_public.py
+  windows-update:
+    runs-on: windows-2022
+    timeout-minutes: 35
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install numpy==2.2.6 Pillow==11.3.0 pyinstaller==6.16.0 playwright==1.56.0 pydicom==3.0.1 scipy==1.16.3 scikit-image==0.25.2
+      - run: python -m playwright install chromium
+      - run: choco install nsis --version=3.11 -y --no-progress
+      - name: Exact released 0.9 and 0.10 baselines
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          curl.exe --fail --location --retry 2 --header "Authorization: Bearer $env:GH_TOKEN" --output baseline09.zip "https://api.github.com/repos/sinergiaestudio/entheos/actions/artifacts/13050280635/zip"
+          if($LASTEXITCODE -ne 0){throw 'Cannot retrieve 0.9 baseline'}
+          curl.exe --fail --location --retry 2 --header "Authorization: Bearer $env:GH_TOKEN" --output baseline10.zip "https://api.github.com/repos/sinergiaestudio/entheos/actions/artifacts/13056264060/zip"
+          if($LASTEXITCODE -ne 0){throw 'Cannot retrieve 0.10 baseline'}
+          python -c "import pathlib,zipfile,hashlib;pathlib.Path('baseline').mkdir();pairs=[('09','0.9.0','9c48ee60cacfcc9349b754d31344f9aee952c250484f8bb676596500d8dae98a'),('10','0.10.0','f56ddce17f5bc3998678bfe6ad457afc08d70eb4ee0d6d8929599b48d17b6d64')];[(lambda data,name,digest:(hashlib.sha256(data).hexdigest()==digest or (_ for _ in ()).throw(AssertionError('baseline hash')),pathlib.Path('baseline',name).write_bytes(data)))(zipfile.ZipFile('baseline'+k+'.zip').read('ANATHEOS-Setup-'+v+'-beta.exe'),'ANATHEOS-Setup-'+v+'-beta.exe',sha) for k,v,sha in pairs]"
+      - run: powershell -NoProfile -File demos/anatheos-local-v0.5/verificar_modulos_locales.ps1
+      - run: ./packaging/windows/build.ps1
+      - run: python packaging/windows/test_install.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ANATHEOS-Setup-0.11.0-beta
+          path: |
+            dist/ANATHEOS-Setup-0.11.0-beta.exe
+            dist/SHA256SUMS.txt
+          retention-days: 14

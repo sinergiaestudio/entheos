@@ -1,3 +1,4 @@
+import {session} from './study-session.mjs';
 /**
  * ANATHEOS UX-N5 — contextual status ribbon from ACTUAL study/render/mesh state.
  * Presentation only. No new image/model, no clinical inference or network calls.
@@ -20,6 +21,7 @@ if(studyArea){
   const text=get('volumeStatus')?.textContent||'';
   const ready=/Volumen \d+|Volumen preparado|Volumen listo|Textura 3D/i.test(text);
   const preparing=/Preparando|Calculando|Decodificando/i.test(text);
+  if(session.snapshot.active?.owner==='cmr'){get('uxN5VolumeState').textContent=(session.snapshot.active.selectedAssessment||session.snapshot.active.assessment)?.groups.some(g=>g.volumeEligible)?'Elegible':'Planos originales';return;}
   get('uxN5VolumeState').textContent=ready?'Preparado':preparing?'Procesando':'Disponible al abrir 3D';
   get('uxN5VolumeLed').dataset.state=ready?'ready':preparing?'busy':'idle';
   const origin=get('surfaceLayers')?.dataset.origin||'';
@@ -39,7 +41,7 @@ if(studyArea){
   const node=get(id);
   if(node)observer.observe(node,{subtree:true,childList:true,characterData:true,attributes:id==='surfaceLayers',attributeFilter:id==='surfaceLayers'?['data-origin']:undefined});
  }
- update();
+ update();session.subscribe(update);
 }
 // Actual state and source are always displayed via original right panel.
 // This final polish deliberately does not add non-existing bone/cartilage

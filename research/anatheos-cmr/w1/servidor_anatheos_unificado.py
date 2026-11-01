@@ -198,8 +198,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def _serve_static(self, path):
         relative = "index.html" if path == "/" else path.lstrip("/")
-        if relative == "datasets/RTKN0668_MR_DESS.zip":
-            self._file(self.server.app_root / relative, "application/zip"); return
+        examples={"datasets/RTKN0668_MR_DESS.zip":"application/zip", "datasets/LCTSC_DICOM_TestData.zip":"application/zip", "datasets/CT_EXAMPLE_HASHES.json":"application/json", "datasets/CT_EXAMPLE/CT_HU_LPS.nrrd":"application/octet-stream", "datasets/CT_EXAMPLE/LCTSC_RT_5_ORGANOS_LPS.nrrd":"application/octet-stream"}
+        if relative in examples:
+            self._file(self.server.app_root / relative, examples[relative]); return
         if "/" in relative or pathlib.Path(relative).suffix not in STATIC_EXT:
             self._send(HTTPStatus.NOT_FOUND); return
         target = (self.server.app_root / relative).resolve()

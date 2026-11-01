@@ -29,6 +29,10 @@ $files = @{
  '/continuous-mask-surface.mjs' = 'continuous-mask-surface.mjs'
  '/assisted-segmentation-3d.mjs' = 'assisted-segmentation-3d.mjs'
  '/ux-shell.css' = 'ux-shell.css'
+ '/frame-index.mjs' = 'frame-index.mjs'
+ '/study-session.mjs' = 'study-session.mjs'
+ '/workstation.mjs' = 'workstation.mjs'
+ '/workstation.css' = 'workstation.css'
  '/style.css' = 'style.css'
  '/datasets/RTKN0668_MR_DESS.zip' = 'datasets\RTKN0668_MR_DESS.zip'
 }

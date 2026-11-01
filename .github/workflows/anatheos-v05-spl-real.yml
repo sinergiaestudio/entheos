@@ -14,6 +14,8 @@ permissions:
   contents: read
 jobs:
   spl-real-private-runner:
+    # Replaced on 0.11 by the consolidated workstation gate; see V011_QA_MIGRATION.md.
+    if: github.head_ref != 'anatheos/v011-unified-workstation'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:

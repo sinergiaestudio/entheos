@@ -1,6 +1,9 @@
+import {createWorkspace} from './spatial-workspace.mjs';
+import {organize} from './frame-index.mjs';
+import {session} from './study-session.mjs';
 import {thoraxReference} from './thorax-reference.mjs';
 import {planarDistanceMm} from './image-tools.mjs';
-import {eligibleVolume,reformat,legacyEligibility} from './eligible-volume.mjs';
+import {eligibleVolume,reformat,legacyEligibility,legacyFrames} from './eligible-volume.mjs';
 import { inspectVolumeGeometry, prepareVolumeTexture, VolumeRenderer } from './volumetric.js';
 import { createMask, paintDisk, growRegion2D, eraseRegion, countRegions, toNrrd, fromNrrd, REGION_COLORS } from './segmentation.mjs';
 import {makeMaskSurfaceSTLs} from './mask-to-surface.mjs';
@@ -96,6 +99,7 @@ function readDicom(buffer,name){
   }
   offset+=length;
  }
+ if(pixelOffset<0&&meta.modality==='RTSTRUCT')return null;
  if(pixelOffset<0)throw Error('No se encontró Pixel Data (7FE0,0010)');
  if(!['1.2.840.10008.1.2.1','1.2.840.10008.1.2'].includes(meta.syntax))throw Error('Transfer Syntax '+(meta.syntax||'desconocida')+' no compatible con Demo v0.1');
  if(meta.frames&&Number(meta.frames)>1)throw Error('Instancia multiframe: todavía no compatible con esta demo local');
@@ -154,7 +158,7 @@ async function unpackMember(buffer,entry){
 function vecCross(a,b){return[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
 function dot(a,b){return a.reduce((sum,v,i)=>sum+v*b[i],0);}
 function orientCheck(a,b){return a.iop.every((v,k)=>Math.abs(v-b.iop[k])<0.0003);}
-function clean(){thoraxReference.reset();state.annotationMode='none';state.measureStart=null;state.annotations=[];state.tissueTypes=['','',''];state.b7Picking=false;state.b7Seed=null;state.b7Draft=null;state.b7DraftVersion++;$('b7SeedStatus').textContent='Sin semilla seleccionada.';$('b7Accept').disabled=true;$('b7Discard').disabled=true;$('b7Discard').disabled=true;window.dispatchEvent(new Event('anatheos:study-reset'));stopVolume();state.mode='2d';state.mixed=false;switchModeButtons();state.segMask=null;state.segVersion++;state.segCount=[0,0,0,0];state.segOverlayKey='';state.segEdit=false;$('segEdit').checked=false;state.current=null;state.series=[];state.index=0;state.imageKey='';state.lastPixels=null;state.source='';state.panX=0;state.panY=0;state.zoom=1;updateControls();render();}
+function clean(releasing=false){closeNativeWorkspace();if(!releasing&&session.snapshot.active?.owner==='native'){session.clear('native');return;}thoraxReference.reset();state.annotationMode='none';state.measureStart=null;state.annotations=[];state.tissueTypes=['','',''];state.b7Picking=false;state.b7Seed=null;state.b7Draft=null;state.b7DraftVersion++;$('b7SeedStatus').textContent='Sin semilla seleccionada.';$('b7Accept').disabled=true;$('b7Discard').disabled=true;$('b7Discard').disabled=true;window.dispatchEvent(new Event('anatheos:study-reset'));stopVolume();state.mode='2d';state.mixed=false;switchModeButtons();state.segMask=null;state.segVersion++;state.segCount=[0,0,0,0];state.segOverlayKey='';state.segEdit=false;$('segEdit').checked=false;state.current=null;state.series=[];state.index=0;state.imageKey='';state.lastPixels=null;state.source='';nativeSeriesEdits.clear();state.panX=0;state.panY=0;state.zoom=1;updateControls();render();}
 function cancelCurrent(){state.loadGeneration++;$('loading').hidden=true;}
 function showLoad(detail,progress=0){$('loading').hidden=false;$('loadingDetail').textContent=detail;$('loadingProgress').style.width=progress+'%';}
 function toast(msg){const el=$('toast');el.textContent=msg;el.classList.add('visible');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('visible'),4200);}
@@ -165,7 +169,7 @@ async function loadBuffer(buffer,source,gen){
  let files=[];const errors=[];let notes=[];const entries=listZip(buffer);
  let selected=entries;
  const nested=entries.filter(e=>/\.zip$/i.test(e.name));
- const dicoms=entries.filter(e=>!e.name.includes('__MACOSX')&&!e.name.endsWith('.txt')&&!e.name.endsWith('.zip'));
+ const dicoms=entries.filter(e=>!e.name.includes('__MACOSX')&&!e.name.endsWith('.txt')&&!e.name.endsWith('.zip')&&!/^(LICEN[CS]E(?:\..*)?|README(?:\..*)?|DICOMDIR|\.DS_Store)$/i.test(e.name.split('/').pop())&&!e.name.split('/').pop().startsWith('._'));
  if(nested.length&&!dicoms.length){
   const target=nested.find(e=>/MR_DESS\.zip$/i.test(e.name));
   if(!target)throw Error('Contenedor con ZIP: no se encontró RTKN*_MR_DESS.zip');
@@ -181,7 +185,7 @@ async function loadBuffer(buffer,source,gen){
   if(gen!==state.loadGeneration)return;
   const e=selected[i];
   if(e.uncompressed>100*1024*1024){errors.push(e.name+': archivo excesivamente grande');continue;}
-  try{const raw=await unpackMember(buffer,e);const record=readDicom(raw.buffer,e.name);files.push(record);}catch(ex){if(errors.length<150)errors.push(e.name.split('/').pop()+': '+ex.message);}
+  try{const raw=await unpackMember(buffer,e);const record=readDicom(raw.buffer,e.name);if(record)files.push(record);else notes.push('RTSTRUCT no es una imagen: los contornos requieren importación de máscara con procedencia y geometría verificadas.');}catch(ex){if(/encapsulada|comprimida|Transfer Syntax/.test(ex.message)){const next=Error('Requiere decoder original');next.originalDecoder=true;throw next;}if(errors.length<150)errors.push(e.name.split('/').pop()+': '+ex.message);}
   total++;if(i%6===0){showLoad('Leyendo instancias DICOM… '+total+' de '+selected.length,Math.round(total/selected.length*95));await yieldUI();}
  }
  if(gen!==state.loadGeneration)return;
@@ -217,36 +221,66 @@ function commitRecords(files,source,errors,notes,gen){
  if(volumeDecision(state.current))notes.push(state.current.eligibility.groups[0].sourceType+' · '+state.current.eligibility.groups[0].validation);
  if(!volumeDecision(state.current))notes.push('Reconstrucción no habilitada: '+state.current.eligibility.groups.flatMap(g=>g.reasons).join('; '));
  warningsDisplay(errors,notes);thoraxReference.bind(state.current,render);updateControls();render();$('loading').hidden=true;
- showEligibleMpr(state.current);
+ publishNative();showEligibleMpr(state.current);
  toast(`Serie cargada: ${state.current.items.length} cortes reales · sin transmisión externa`);
 }
-async function loadFiles(fileList){
+async function loadFiles(fileList){session.clear();
  const gen=++state.loadGeneration;clean();showLoad('Leyendo archivos de la carpeta…',0);const errors=[],notes=[],records=[];
  try{
-  const list=Array.from(fileList).filter(f=>!f.name.startsWith('.')&&!f.name.endsWith('.txt'));
+  const list=Array.from(fileList).filter(f=>!f.name.startsWith('.')&&!f.name.endsWith('.txt')&&!/^(LICEN[CS]E(?:\..*)?|README(?:\..*)?|DICOMDIR)$/i.test(f.name));
   if(list.length>2500)throw Error('Demasiados archivos en la carpeta');
   for(let i=0;i<list.length;i++){
    if(gen!==state.loadGeneration)return;
-   try{records.push(readDicom(await list[i].arrayBuffer(),list[i].name));}catch(e){if(errors.length<150)errors.push(list[i].name+': '+e.message);}
+   try{const record=readDicom(await list[i].arrayBuffer(),list[i].name);if(record)records.push(record);else notes.push('RTSTRUCT no es una imagen: requiere máscara verificada.');}catch(e){if(errors.length<150)errors.push(list[i].name+': '+e.message);}
    if(i%6===0){showLoad('Leyendo carpeta… '+(i+1)+' de '+list.length,Math.round((i+1)/list.length*100));await yieldUI();}
   }
   commitRecords(records,'Carpeta local',errors,notes,gen);
  }catch(e){if(gen===state.loadGeneration){$('loading').hidden=true;warningsDisplay([e.message],[]);toast(e.message);}}
 }
-async function loadZipFile(file){const gen=++state.loadGeneration;clean();showLoad('Abriendo ZIP local…',2);try{const b=await file.arrayBuffer();if(gen!==state.loadGeneration)return;await loadBuffer(b,file.name,gen);}catch(e){if(gen===state.loadGeneration){$('loading').hidden=true;warningsDisplay([e.message],[]);toast(e.message);}}}
-async function loadIncluded(){const gen=++state.loadGeneration;clean();showLoad('Leyendo DESS incluida desde localhost…',3);
+async function loadZipFile(file){session.clear();const gen=++state.loadGeneration;clean();showLoad('Abriendo ZIP local…',2);try{const b=await file.arrayBuffer();if(gen!==state.loadGeneration)return;await loadBuffer(b,file.name,gen);}catch(e){if(gen===state.loadGeneration){$('loading').hidden=true;if(e.originalDecoder){window.dispatchEvent(new CustomEvent('anatheos:import-original-zip',{detail:{file}}));}else{warningsDisplay([e.message],[]);toast(e.message);}}}}
+async function loadIncluded(){session.clear();const gen=++state.loadGeneration;clean();showLoad('Leyendo DESS incluida desde localhost…',3);
  try{const controller=new AbortController();loadIncluded.controller=controller;const r=await fetch('datasets/RTKN0668_MR_DESS.zip',{signal:controller.signal,cache:'no-store'});if(!r.ok)throw Error('No se encontró la DESS incluida en el paquete local');const b=await r.arrayBuffer();if(gen!==state.loadGeneration)return;await loadBuffer(b,'RTKN0668_MR_DESS.zip · incluida',gen);}catch(e){if(gen===state.loadGeneration){$('loading').hidden=true;warningsDisplay([e.message],[]);toast(e.message);}}}
+window.addEventListener('anatheos:open-ct-example',async()=>{
+ session.clear();const gen=++state.loadGeneration;clean();showLoad('Abriendo TC pública y sus cinco referencias expertas…',0);
+ try{
+  const manifest=await (await fetch('datasets/CT_EXAMPLE_HASHES.json',{cache:'no-store'})).json();
+  const read=async name=>{const response=await fetch('datasets/'+name,{cache:'no-store'});if(!response.ok)throw Error('Falta ejemplo TC offline');const b=await response.arrayBuffer(),sha=[...new Uint8Array(await crypto.subtle.digest('SHA-256',b))].map(x=>x.toString(16).padStart(2,'0')).join('');if(sha!==manifest[name])throw Error('Integridad del ejemplo TC incorrecta');return b;};
+  const zip=await read('LCTSC_DICOM_TestData.zip');if(gen!==state.loadGeneration)return;await loadBuffer(zip,'TC LCTSC · ejemplo público con cinco referencias expertas',gen);
+  for(const [name,which] of [['CT_EXAMPLE/CT_HU_LPS.nrrd','ct'],['CT_EXAMPLE/LCTSC_RT_5_ORGANOS_LPS.nrrd','mask']]){const bytes=await read(name);if(gen!==state.loadGeneration)return;await thoraxReference.ingest(which,new File([bytes],name));}
+  if(!thoraxReference.verified)throw Error('La referencia no corresponde al CT');
+ }catch(e){if(gen===state.loadGeneration){warningsDisplay([e.message],[]);toast(e.message);}}finally{if(gen===state.loadGeneration)$('loading').hidden=true;}
+});
 function clamp(n,low,high){return Math.max(low,Math.min(high,n));}
 function currentFrame(){return state.current?.items[state.index];}
 window.addEventListener('anatheos:open-eligible-volume',event=>{
  try{const series=eligibleVolume(event.detail.data,event.detail.groupIndex);const gen=++state.loadGeneration;clean();commitRecords(series.items,'Serie elegible · '+event.detail.data.id,[],['Transferencia interna desde DICOM original; sin resampling.'],gen);window.dispatchEvent(new Event('anatheos:eligible-volume-opened'));$('threeDButton').click();
  }catch(e){toast('Reconstrucción rechazada: '+e.message);}
 });
+let disposeNativeWorkspace=null;const nativeSeriesEdits=new Map();
+function closeNativeWorkspace(){disposeNativeWorkspace?.();disposeNativeWorkspace=null;$('nativeComparison')?.remove();document.body.classList.remove('native-comparison');}
+function nativeData(s,index){const frames=legacyFrames(s.items),h=s.items[0].rows,w=s.items[0].columns;return {id:String(index),frames,orientations:organize(frames),decoded:{dims:[s.items.length,h,w],pixels:{byteLength:s.items.reduce((n,f)=>n+f.values.byteLength,0),subarray:(start,end)=>{const k=Math.floor(start/(w*h));if(end-start!==w*h||start!==k*w*h)throw Error('Acceso de plano inválido');return s.items[k].values;}}}};}
+function nativeLayout(n){
+ if(!disposeNativeWorkspace){const host=document.createElement('div');host.id='nativeComparison';$('viewerRoot').append(host);const series=state.series.slice();disposeNativeWorkspace=createWorkspace(host,{catalog:{series:series.map((s,i)=>({estado:'preparada',serie_local:String(i),label:s.description}))},initial:nativeData(state.current,series.indexOf(state.current)),loadSeries:async id=>nativeData(series[Number(id)],Number(id)),openVolume:(data,mode)=>{const id=data.id;closeNativeWorkspace();session.snapshot.active?.select(id);session.snapshot.active?.openMode(mode);}});}
+ $('nativeComparison').workspace.layout(n);document.body.classList.add('native-comparison');session.mode('compare');
+}
+function publishNative(){
+ if(!state.current)return;
+ const study={owner:'native',title:state.current.description,source:state.source,
+  series:state.series.map((s,i)=>({id:String(i),label:s.description,count:s.items.length})),
+  seriesId:String(state.series.indexOf(state.current)),count:state.current.items.length,
+  eligible:volumeDecision(state.current),assessment:state.current.eligibility,reasons:state.current.eligibility.groups.flatMap(g=>g.reasons),
+  layout:nativeLayout,zoom:factor=>{if(state.volumeRenderer){state.volumeRenderer.zoom=clamp(state.volumeRenderer.zoom*factor,.4,5);state.volumeRenderer.draw();}else{state.zoom=clamp(state.zoom*factor,.3,10);render();}},
+  select:id=>{const next=state.series[Number(id)];if(!next||next===state.current)return;nativeSeriesEdits.set(state.current.uid,{segMask:state.segMask,segCount:state.segCount,annotations:state.annotations,index:state.index,tissueTypes:state.tissueTypes});stopVolume();state.mode='2d';state.mixed=false;state.current=next;const saved=nativeSeriesEdits.get(next.uid);state.segMask=saved?.segMask||createMask(next.items[0].columns,next.items[0].rows,next.items.length);state.segCount=saved?.segCount||[0,0,0,0];state.annotations=saved?.annotations||[];state.tissueTypes=saved?.tissueTypes||['','',''];state.b7Seed=null;state.b7Draft=null;state.index=saved?.index||0;state.imageKey='';state.segVersion++;thoraxReference.bind(next,render);switchModeButtons();updateControls();render();showEligibleMpr(next);publishNative();},
+  release:()=>{if(state.current){state.loadGeneration++;clean(true);}},
+  openMode:mode=>{closeNativeWorkspace();session.update({selectedSeriesId:String(state.series.indexOf(state.current)),selectedAssessment:null});if(mode==='mpr'){stopVolume();state.mode='2d';state.mixed=false;switchModeButtons();const p=$('eligibleMpr');if(p){p.open=true;session.mode('mpr');}}else $(mode==='volume'?'threeDButton':mode==='mixed'?'mixedButton':mode==='triple'?'tripleButton':'twoDButton').click();}
+ };
+ if(session.snapshot.active?.owner==='native')session.update(study);else session.activate(study);
+}
 function volumeDecision(series){const a=series.eligibility;return a?.groups.length===1&&a.invalidFrames===0&&a.groups[0].volumeEligible;}
 function showEligibleMpr(series){
  document.getElementById('eligibleMpr')?.remove();
  if(!volumeDecision(series))return;
-  let panel=document.getElementById('eligibleMpr');panel?.remove();panel=document.createElement('details');panel.id='eligibleMpr';const summary=document.createElement('summary');summary.textContent='MPR de la pila elegible · ejes de adquisición';panel.append(summary);
+  let panel=document.getElementById('eligibleMpr');panel?.remove();panel=document.createElement('section');panel.id='eligibleMpr';const summary=document.createElement('summary');summary.textContent='MPR de la pila elegible · ejes de adquisición';panel.append(summary);
   const axis=document.createElement('select'),slice=document.createElement('input'),image=document.createElement('canvas'),note=document.createElement('p');for(let k=0;k<3;k++)axis.add(new Option(['Columna fija','Fila fija','Corte original'][k],k));slice.type='range';slice.min=0;
   let displayKey='';const draw=(force=true)=>{const key=[axis.value,slice.value,state.wlCenter,state.wlWidth,state.brightness,state.contrast].join('|');if(!force&&(!panel.open||key===displayKey))return;displayKey=key;if(!state.current||state.current.uid!==series.uid)return;const fixed=Number(axis.value),limits=[series.items[0].columns,series.items[0].rows,series.items.length];slice.max=limits[fixed]-1;slice.value=Math.min(Number(slice.value),limits[fixed]-1);const p=reformat(series,fixed,Number(slice.value));image.width=p.width;image.height=p.height;image.style.width=Math.min(700,p.width*p.spacing[1]*3)+'px';image.style.height=(Math.min(700,p.width*p.spacing[1]*3)*p.height*p.spacing[0]/(p.width*p.spacing[1]))+'px';image.style.maxWidth='100%';const ctx=image.getContext('2d'),pixels=ctx.createImageData(p.width,p.height);for(let i=0;i<p.values.length;i++){let v=clamp((p.values[i]-state.wlCenter+state.wlWidth/2)/Math.max(1,state.wlWidth),0,1);v=clamp((v-.5)*state.contrast/100+.5+state.brightness/100,0,1);v=(series.items[0].photo==='MONOCHROME1'?1-v:v)*255;pixels.data.set([v,v,v,255],i*4);}ctx.putImageData(pixels,0,0);note.textContent=p.provenance+' · '+series.eligibility.groups[0].sourceType+' · escala física conservada; cotejo Slicer pendiente';};
   panel.redraw=()=>draw(false);axis.onchange=()=>{slice.value=0;draw();};slice.oninput=draw;panel.append(axis,slice,image,note);$('viewerRoot').after(panel);draw();
@@ -376,7 +410,7 @@ let dragging=false,lastX=0,lastY=0;canvas.onpointerdown=e=>{if(!currentFrame())r
   return;
  }
  if(state.segEdit){paintFromPointer(e);canvas.setPointerCapture(e.pointerId);return;}dragging=true;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture(e.pointerId);};canvas.onpointermove=e=>{if(state.segEdit&&paintingSeg){paintFromPointer(e);return;}if(!dragging)return;state.panX+=e.clientX-lastX;state.panY+=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;render();};canvas.onpointerup=()=>{dragging=false;if(paintingSeg)finishPaint();};canvas.onpointercancel=()=>{dragging=false;if(paintingSeg)finishPaint();};
-window.addEventListener('resize',()=>render());document.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowUp'].includes(e.key)){if(currentFrame()){e.preventDefault();chooseSlice(state.index-1);}}else if(['ArrowRight','ArrowDown'].includes(e.key)){if(currentFrame()){e.preventDefault();chooseSlice(state.index+1);}}});
+window.addEventListener('resize',()=>render());document.addEventListener('keydown',e=>{if(e.target.closest('input,select,button,[role=menu]'))return;if(['ArrowLeft','ArrowUp'].includes(e.key)){if(currentFrame()){e.preventDefault();chooseSlice(state.index-1);}}else if(['ArrowRight','ArrowDown'].includes(e.key)){if(currentFrame()){e.preventDefault();chooseSlice(state.index+1);}}});
 updateControls();render();
 
 /* ANATHEOS v0.2 true volumetric rendering from the uploaded DICOM pixels. */
@@ -397,6 +431,7 @@ function switchModeButtons(){
  $('volumeStatus').textContent=is3d?'Volumen activo · representación no diagnóstica':'';
  const mm=currentFrame()?.projection,caption=currentFrame()?'Corte '+(state.index+1)+(Number.isFinite(mm)?' · '+mm.toFixed(2)+' mm':''):'—';
   for(const id of ['triptychSlice2d','triptychSliceVolume','triptychSliceMesh'])$(id).textContent=caption;
+  if(session.snapshot.active?.owner==='native')session.mode(is3d?(mixed?'mixed':'volume'):'2d');
   $('viewerRoot').dataset.uxMode=triple?'triple':mixed?'mixed':is3d?'volume':'slice';window.dispatchEvent(new Event(triple?'anatheos:triptych-activated':'anatheos:triptych-left'));
 }
 function stopVolume(){
@@ -769,7 +804,7 @@ function syncThoraxVolume3D(){
  const renderer=state.volumeRenderer;if(!renderer)return;
  const ref=thoraxReference;
  const verified=ref.verified&&ref.series===state.current&&ref.ct&&ref.mask;
- renderer.setThoraxReference5(verified?ref.mask:null,ref.visible,ref.opacity,ref.isolate3d);
+ renderer.setThoraxReference5(verified?ref.mask:null,ref.visible,ref.opacity,ref.isolate3d,ref.colors,ref.alphas);
 }
 thoraxReference.onVolumeChange=syncThoraxVolume3D;
 $('triptychTissueCategory').addEventListener('change',event=>{
@@ -780,3 +815,5 @@ updateProvisionalTissue();
 
 // Initialize the independent five-organ reference panel at module load.
 thoraxReference.initialize();
+
+for(const id of ['segEdit','b7PickSeed'])$(id).addEventListener(id==='segEdit'?'change':'click',()=>{closeNativeWorkspace();session.mode('2d');});

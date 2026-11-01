@@ -1,9 +1,9 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'">
-<title>ANATHEOS 3D · UX-N5 · estación médica refinada</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="ux-shell.css"><link rel="stylesheet" href="ux-clean.css"><link rel="stylesheet" href="ux-n5.css"><link rel="stylesheet" href="cmr-native.css"></head>
+<title>ANATHEOS 3D · 0.11.0 beta</title><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="ux-shell.css"><link rel="stylesheet" href="ux-clean.css"><link rel="stylesheet" href="ux-n5.css"><link rel="stylesheet" href="cmr-native.css"><link rel="stylesheet" href="workstation.css"></head>
 <body>
-<header class="topbar"><div class="brand"><span class="logo">A<span>3</span></span><div><strong>ANATHEOS <em>3D</em></strong><small>UX-N5 · RECONSTRUCCIÓN LOCAL · EXPERIMENTAL</small></div></div><div class="topright"><span class="dot"></span><span>100 % local · sin nube</span><span class="pill">NO DIAGNÓSTICO</span></div></header>
+<header class="topbar"><div class="brand"><span class="logo">A<span>3</span></span><div><strong>ANATHEOS <em>3D</em></strong><small>0.11.0 beta · ESTACIÓN EXPERIMENTAL</small></div></div><div class="topright"><span class="dot"></span><span>Servidor local · experimental</span><span class="pill">NO DIAGNÓSTICO</span></div></header>
 <div class="layout" id="uxN1Layout">
  <aside class="sidebar" aria-label="Panel de estudio">
   <section class="sideblock"><div class="overline">01 / ESTUDIO</div><h2>Explorador DICOM</h2><p class="dim">Abrí la serie DESS incluida o importá una carpeta/ZIP desde tu equipo.</p>
@@ -94,7 +94,7 @@
   <div class="ux-side-head"><span class="ux-kicker">03 / ESTRUCTURAS</span><h2>Capas</h2><p id="uxLayerContext">Capas del estudio activo</p></div>
   <div class="ux-layer-scene">
     <div id="uxLayerDicom" class="ux-native-layer">
-      <div class="ux-layer-item"><span class="ux-layer-swatch ux-layer-swatch-image" aria-hidden="true"></span><span class="ux-layer-name">Imagen RM original</span><span class="ux-layer-tag" id="uxDicomTag">Sin cargar</span></div>
+      <div class="ux-layer-item"><span class="ux-layer-swatch ux-layer-swatch-image" aria-hidden="true"></span><span class="ux-layer-name">Imágenes DICOM</span><span class="ux-layer-tag" id="uxDicomTag">Sin cargar</span></div>
       <p class="ux-layer-explain" id="uxDicomDescription">El volumen utiliza los vóxeles del estudio DICOM. No hay segmentación anatómica automática.</p>
       <div id="uxVolumeOpacityControl" hidden><label for="uxVolumeOpacity">Opacidad del volumen <output id="uxVolumeOpacityValue">150 %</output></label><input id="uxVolumeOpacity" type="range" min="10" max="200" step="5" value="150"><small>Opacidad de intensidades, no de un hueso identificado.</small></div>
       <div id="uxRenderMaterials" class="ux-material-controls">
@@ -119,4 +119,5 @@
 <div id="toast" role="status" aria-live="polite"></div>
 <div id="loading" class="loading" hidden><div class="loadingCard"><div class="spinner"></div><h2>Procesando la serie</h2><p id="loadingDetail">Leyendo datos DICOM…</p><div class="progressTrack"><div id="loadingProgress"></div></div><button id="cancelLoad">Cancelar carga</button></div></div>
 <script type="module" src="app.js"></script><script type="module" src="cmr-native.mjs"></script><script type="module" src="surface-ui.mjs"></script><script type="module" src="workflow-b5.mjs"></script><script type="module" src="ux-n1.mjs"></script><script type="module" src="ux-clean.mjs"></script><script type="module" src="ux-n5.mjs"></script>
+<script type="module" src="workstation.mjs"></script>
 </body></html>

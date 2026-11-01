@@ -5,6 +5,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parent))
 from test_native import Handler
 from http.server import ThreadingHTTPServer
 from playwright.sync_api import sync_playwright,expect
+from test_station import command
 s=ThreadingHTTPServer(('127.0.0.1',0),Handler);threading.Thread(target=s.serve_forever,daemon=True).start()
 try:
  with sync_playwright() as p:
@@ -18,9 +19,9 @@ try:
    page.set_input_files('#zipInput',path)
    expect(page.locator('#studySubtitle')).to_contain_text(str(n)+' instancias',timeout=120000)
    expect(page.locator('#eligibleMpr')).to_have_count(1)
-   page.locator('#eligibleMpr summary').click()
+   command(page,'Reconstrucción','MPR')
    expect(page.locator('#eligibleMpr canvas')).to_be_visible()
-   page.locator('#threeDButton').click()
+   command(page,'Reconstrucción','Volumen 3D')
    expect(page.locator('#volumeStatus')).to_contain_text('Volumen',timeout=60000)
    expect(page.locator('#segSave')).to_be_enabled()
    print(name+'_PUBLIC_ORIGINAL_ZIP_ELIGIBILITY_MPR_VOLUME_MASK_CONTROLS_PASS',flush=True)

@@ -14,6 +14,8 @@ permissions:
   contents: read
 jobs:
   build-portable:
+    # Replaced on 0.11 by the consolidated workstation gate; see V011_QA_MIGRATION.md.
+    if: github.head_ref != 'anatheos/v011-unified-workstation'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -72,6 +74,8 @@ jobs:
           if-no-files-found: error
           retention-days: 14
   windows-smoke:
+    # Replaced on 0.11 by the consolidated workstation gate; see V011_QA_MIGRATION.md.
+    if: github.head_ref != 'anatheos/v011-unified-workstation'
     runs-on: windows-latest
     timeout-minutes: 12
     steps:

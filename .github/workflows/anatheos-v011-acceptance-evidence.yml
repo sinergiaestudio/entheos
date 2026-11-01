@@ -1,0 +1,41 @@
+name: ANATHEOS 0.11 frozen installer visual evidence
+on:
+  push:
+    branches: [anatheos/v011-acceptance-evidence]
+    paths:
+      - research/anatheos-acceptance/**
+      - .github/workflows/anatheos-v011-acceptance-evidence.yml
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: anatheos-v011-acceptance-evidence
+  cancel-in-progress: false
+jobs:
+  frozen-windows-visual-evidence:
+    runs-on: windows-2022
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install Pillow==11.3.0 playwright==1.56.0
+      - run: python -m playwright install chromium
+      - name: Retrieve existing immutable installers, no build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          curl.exe --fail --location --retry 2 --header "Authorization: Bearer $env:GH_TOKEN" --output frozen.zip "https://api.github.com/repos/sinergiaestudio/entheos/actions/artifacts/13067719501/zip"
+          if($LASTEXITCODE -ne 0){throw 'Cannot retrieve frozen 0.11'}
+          curl.exe --fail --location --retry 2 --header "Authorization: Bearer $env:GH_TOKEN" --output baseline.zip "https://api.github.com/repos/sinergiaestudio/entheos/actions/artifacts/13056264060/zip"
+          if($LASTEXITCODE -ne 0){throw 'Cannot retrieve exact 0.10'}
+          python -c "import zipfile;zipfile.ZipFile('frozen.zip').extractall('frozen');zipfile.ZipFile('baseline.zip').extractall('baseline')"
+      - name: Install existing EXE, capture public studies at both sizes, recover 0.10
+        run: python research/anatheos-acceptance/capture.py --windows
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ANATHEOS-0.11-frozen-Windows-visual-evidence
+          path: acceptance-output
+          retention-days: 30

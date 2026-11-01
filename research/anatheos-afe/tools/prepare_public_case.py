@@ -28,6 +28,38 @@ SOURCES={
 }
 MAX_FILES=4096;MAX_UNPACKED=4*1024**3;MAX_MEMBER=32*1024**2
 
+
+def _ct_metadata_with_existing_qa_reader(raw:bytes)->dict:
+    """Research-only pydicom metadata path already used by ANATHEOS CT QA.
+
+    CMR-R1's restricted parser stops at undefined-length sequences in the
+    original LCTSC CT. pydicom 3.0.1 is already an ANATHEOS research dependency.
+    This does not import pixels or modify any production ingestion contract.
+    """
+    import io
+    import pydicom
+    from pydicom.multival import MultiValue
+    ds=pydicom.dcmread(io.BytesIO(raw),stop_before_pixels=True)
+    def v(name):
+        val=getattr(ds,name,None)
+        if val is None:return None
+        if isinstance(val,(list,tuple,MultiValue)):
+            return '\\'.join(str(x) for x in val)
+        return str(val)
+    fields={
+        'modality':'Modality','study':'StudyInstanceUID','series':'SeriesInstanceUID',
+        'for_uid':'FrameOfReferenceUID','sop':'SOPInstanceUID',
+        'image_type':'ImageType','scan_sequence':'ScanningSequence',
+        'sequence_variant':'SequenceVariant','tr':'RepetitionTime',
+        'te':'EchoTime','ti':'InversionTime','kvp':'KVP',
+        'convolution_kernel':'ConvolutionKernel','slope':'RescaleSlope',
+        'intercept':'RescaleIntercept','photo':'PhotometricInterpretation',
+        'trigger':'TriggerTime','temporal_pos':'TemporalPositionIdentifier',
+        'ipp':'ImagePositionPatient','iop':'ImageOrientationPatient',
+        'spacing':'PixelSpacing','slice_thickness':'SliceThickness',
+        'rows':'Rows','cols':'Columns','acq_type':'AcquisitionType'}
+    return {key:v(tag) for key,tag in fields.items()}
+
 def main():
     p=argparse.ArgumentParser()
     p.add_argument('--zip',required=True,type=Path)
@@ -57,7 +89,7 @@ def main():
                 raise ValueError('UNSAFE_ZIP_MEMBER')
             raw=z.read(inf)
             if len(raw)<132 or raw[128:132]!=b'DICM':continue
-            f=cmr.parse_dicom(raw)
+            f=_ct_metadata_with_existing_qa_reader(raw) if opt.case_id=='LCTSC-CT' else cmr.parse_dicom(raw)
             if f.get('modality') not in ('MR','CT'):continue
             if f.get('modality')!=assertopt[1]:raise ValueError('MIXED_MODALITY')
             ids=(f.get('study'),f.get('series'),f.get('for_uid'))

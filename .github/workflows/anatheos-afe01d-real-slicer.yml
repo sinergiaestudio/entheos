@@ -19,7 +19,7 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update -qq
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq xvfb libxcb-cursor0 libopengl0 libgl1 libxkbcommon-x11-0
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq xvfb libxcb-cursor0 libopengl0 libgl1 libxkbcommon-x11-0 libxcb-icccm4 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 libxcb-randr0 libxcb-shape0 libxcb-xfixes0 libxcb-util1 libnss3 libasound2t64 libpulse0 libegl1 libglu1-mesa
       - name: Download official pinned public Leeds and LCTSC original ZIPs
         shell: bash
         run: |
@@ -53,6 +53,8 @@ jobs:
                       with z.open(entry) as inp,dest.open("xb") as out:shutil.copyfileobj(inp,out)
               print("AFE01D_PUBLIC_SOURCE_SHA256_VERIFIED",name,count,expected,flush=True)
           PY
+      - name: Reuse pinned pydicom research QA reader for CT metadata sequences
+        run: python3 -m pip install --quiet --disable-pip-version-check pydicom==3.0.1
       - name: AFE metadata-only physical preflight on ACTUAL public DICOM
         shell: bash
         run: |

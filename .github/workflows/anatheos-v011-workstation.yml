@@ -1,7 +1,7 @@
 name: ANATHEOS 0.11 unified workstation
 on:
   pull_request:
-    branches: [anatheos/v010-spatial-integration]
+    branches: [anatheos/v010-spatial-integration, anatheos/v011-unified-workstation]
 permissions:
   contents: read
 concurrency:
@@ -36,6 +36,7 @@ jobs:
           node demos/anatheos-local-v0.5/test_spatial_reference.mjs
           node demos/anatheos-local-v0.5/test_eligible_volume.mjs
           node demos/anatheos-local-v0.5/test_segmentation.mjs
+          node demos/anatheos-local-v0.5/test_spl_provenance.mjs
           node demos/anatheos-local-v0.5/test_surfaces.mjs
           node demos/anatheos-local-v0.5/test_mask_to_surface.mjs
           node demos/anatheos-local-v0.5/test_continuous_mask_surface.mjs
@@ -55,6 +56,7 @@ jobs:
         run: |
           python packaging/windows/prepare_examples.py
           python research/anatheos-cmr/r3/test_station_public.py
+          python research/anatheos-cmr/r3/test_acceptance_hotfix.py --output hotfix-evidence-linux
   windows-update:
     runs-on: windows-2022
     timeout-minutes: 35
@@ -78,13 +80,28 @@ jobs:
           curl.exe --fail --location --retry 2 --header "Authorization: Bearer $env:GH_TOKEN" --output baseline10.zip "https://api.github.com/repos/sinergiaestudio/entheos/actions/artifacts/13056264060/zip"
           if($LASTEXITCODE -ne 0){throw 'Cannot retrieve 0.10 baseline'}
           python -c "import pathlib,zipfile,hashlib;pathlib.Path('baseline').mkdir();pairs=[('09','0.9.0','9c48ee60cacfcc9349b754d31344f9aee952c250484f8bb676596500d8dae98a'),('10','0.10.0','f56ddce17f5bc3998678bfe6ad457afc08d70eb4ee0d6d8929599b48d17b6d64')];[(lambda data,name,digest:(hashlib.sha256(data).hexdigest()==digest or (_ for _ in ()).throw(AssertionError('baseline hash')),pathlib.Path('baseline',name).write_bytes(data)))(zipfile.ZipFile('baseline'+k+'.zip').read('ANATHEOS-Setup-'+v+'-beta.exe'),'ANATHEOS-Setup-'+v+'-beta.exe',sha) for k,v,sha in pairs]"
+      - name: Exact original 0.11 baseline
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          curl.exe --fail --location --retry 2 --header "Authorization: Bearer $env:GH_TOKEN" --output baseline11.zip "https://api.github.com/repos/sinergiaestudio/entheos/actions/artifacts/13067719501/zip"
+          if($LASTEXITCODE -ne 0){throw 'Cannot retrieve 0.11 baseline'}
+          python -c "import zipfile,pathlib,hashlib;z=zipfile.ZipFile('baseline11.zip');d=z.read('ANATHEOS-Setup-0.11.0-beta.exe');assert hashlib.sha256(d).hexdigest()=='0765a2f6d29d4f71a829143ea2fc6164daa38d33525df0b4ee465c208ebb09cb';pathlib.Path('baseline/ANATHEOS-Setup-0.11.0-beta.exe').write_bytes(d)"
       - run: powershell -NoProfile -File demos/anatheos-local-v0.5/verificar_modulos_locales.ps1
       - run: ./packaging/windows/build.ps1
       - run: python packaging/windows/test_install.py
+        env:
+          ANATHEOS_PUBLIC_QA_DIR: hotfix-evidence/volume
       - uses: actions/upload-artifact@v4
         with:
-          name: ANATHEOS-Setup-0.11.0-beta
+          name: ANATHEOS-Setup-0.11.1-beta
           path: |
-            dist/ANATHEOS-Setup-0.11.0-beta.exe
+            dist/ANATHEOS-Setup-0.11.1-beta.exe
             dist/SHA256SUMS.txt
           retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ANATHEOS-0.11.1-Windows-acceptance-evidence
+          path: hotfix-evidence
+          retention-days: 30

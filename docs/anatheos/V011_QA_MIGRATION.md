@@ -27,3 +27,11 @@ Replacement coverage:
 No private study enters GitHub, public runners, artifacts or screenshots.
 Windows CI runs on Server 2022; owner PC/GPU acceptance and independent Slicer
 comparison remain separate gates. No clinical validation or cardiac 4D claim.
+
+Acceptance hotfix 0.11.1 uses the same consolidated gate on its child PR to the
+frozen 0.11 branch. The explicit skip condition covers both branches. The
+hotfix adds original-SPL-provenance units and targeted red/green P0 checks;
+it does not retroactively mark historical UI suites as passed. Exact original
+0.11 and patched installer screenshots test close-state cleanup, CT text
+contrast, source/plane readings, physical MPR aspect and available-area fit.
+See V011_ACCEPTANCE_HOTFIX.md. No source or CI data from the private study.

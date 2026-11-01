@@ -22,7 +22,9 @@ def exercise(page):
  command(page,'Capas','Propiedades de volumen');page.locator('#volumeOpacity').fill('65');page.locator('#volumeClip').fill('65')
  assert hashlib.sha256(before).digest()!=hashlib.sha256(canvas.screenshot()).digest(),'Volume controls unchanged'
  if os.environ.get('ANATHEOS_PUBLIC_QA_DIR'):
-  folder=pathlib.Path(os.environ['ANATHEOS_PUBLIC_QA_DIR']);folder.mkdir(parents=True,exist_ok=True);page.screenshot(path=str(folder/'leeds-volume.png'))
+  folder=pathlib.Path(os.environ['ANATHEOS_PUBLIC_QA_DIR']);folder.mkdir(parents=True,exist_ok=True)
+  for w,h in [(1366,768),(1920,1080)]:
+   page.set_viewport_size({'width':w,'height':h});page.screenshot(path=str(folder/f'leeds-volume-{w}x{h}.png'),timeout=30000)
  for width,height in [(1366,768),(1920,1080)]:
   page.set_viewport_size({'width':width,'height':height})
   command(page,'Reconstrucción','MPR');expect(page.locator('#eligibleMpr canvas')).to_be_visible()
@@ -53,12 +55,16 @@ def exercise_ct(page):
  expect(page.locator('#thoraxRefColor3')).to_be_visible();page.locator('#thoraxRefColor3').fill('#00ff00');page.locator('#thoraxRefAlpha3').fill('70')
  command(page,'Reconstrucción','Volumen 3D');expect(page.locator('#loading')).to_be_hidden(timeout=120000)
  expect(page.locator('#volumeStatus')).to_contain_text('512 × 512 × 130',timeout=60000)
+ if os.environ.get('ANATHEOS_PUBLIC_QA_DIR'):
+  folder=pathlib.Path(os.environ['ANATHEOS_PUBLIC_QA_DIR']);folder.mkdir(parents=True,exist_ok=True)
+  for w,h in [(1366,768),(1920,1080)]:
+   page.set_viewport_size({'width':w,'height':h});page.screenshot(path=str(folder/f'ct-volume-{w}x{h}.png'),timeout=30000)
  page.locator('#thoraxRef3DIsolate').check()
  for k in [1,2,4,5]:page.locator(f'#thoraxRefLayer{k}').uncheck()
  heart=framebuffer_png(page.locator('#volumeCanvas'));page.locator('#thoraxRefLayer3').uncheck();blank=framebuffer_png(page.locator('#volumeCanvas'))
  assert hashlib.sha256(heart).digest()!=hashlib.sha256(blank).digest(),'Heart reference invisible'
  page.locator('#thoraxRefLayer3').check();page.locator('#thoraxRefAlpha3').fill('0');zero=framebuffer_png(page.locator('#volumeCanvas'));assert zero==blank,'Zero opacity must hide isolated reference'
- command(page,'Archivo','Cerrar estudio');expect(page.locator('#thoraxRefStatus')).not_to_contain_text('Referencia vinculada');expect(page.locator('#studyTitle')).to_have_text('Sin estudio cargado')
+ command(page,'Archivo','Cerrar estudio');expect(page.locator('#thoraxReferencePanel')).to_have_count(0);expect(page.locator('#studyTitle')).to_have_text('Sin estudio cargado')
  metrics=page.evaluate('window.textureQA');assert metrics['create']==metrics['drop'],metrics
  print('CT_130_FIVE_SAME_CASE_REFERENCES_COLOR_ALPHA_GPU_VOLUME_PASS; texture resources released='+str(metrics),flush=True)
 

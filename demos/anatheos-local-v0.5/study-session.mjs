@@ -9,6 +9,6 @@ export const session={
  update(patch){if(!active)return;active={...active,...patch};revision++;this.notify();},
  view(index){selectedView=index;this.notify();},
  mode(value){mode=value;this.notify();},
- clear(owner){if(owner&&active?.owner!==owner)return;const previous=active;active=null;mode='2d';revision++;previous?.release?.();this.notify();},
+ clear(owner){if(owner&&active?.owner!==owner)return;const previous=active;active=null;mode='2d';selectedView=0;revision++;previous?.release?.();this.notify();},
  notify(){for(const fn of listeners)fn(this.snapshot);}
 };

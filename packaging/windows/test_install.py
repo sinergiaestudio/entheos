@@ -19,10 +19,10 @@ sentinel.write_text('keep')
 subprocess.run([str(pathlib.Path('baseline/ANATHEOS-Setup-0.9.0-beta.exe').resolve()),'/S'],check=True)
 baseline=pathlib.Path('baseline/ANATHEOS-Setup-0.10.0-beta.exe').resolve()
 subprocess.run([str(baseline),'/S'],check=True)
-setup = pathlib.Path('dist/ANATHEOS-Setup-0.11.0-beta.exe').resolve()
+setup = pathlib.Path('dist/ANATHEOS-Setup-0.11.1-beta.exe').resolve()
 for _ in range(2):
     subprocess.run([str(setup), '/S'], check=True)
-    exe = root / 'versions/0.11.0-beta/ANATHEOS.exe'
+    exe = root / 'versions/0.11.1-beta/ANATHEOS.exe'
     subprocess.run([str(exe), '--self-test'], check=True)
     assert sentinel.read_text() == 'keep'
 spec = importlib.util.spec_from_file_location('fixture', 'research/anatheos-cmr/r2/tests/test_r2_e2e.py')
@@ -105,10 +105,10 @@ print('FROZEN_ORIGINAL_JPEG2000_ZIP_IMPORT_PASS')
 assert sentinel.read_text() == 'keep'
 assert (root / 'versions/0.9.0-beta/ANATHEOS.exe').is_file()
 assert (root / 'versions/0.10.0-beta/ANATHEOS.exe').is_file()
-subprocess.run([str(root / 'versions/0.11.0-beta/ANATHEOS.exe'), '--self-test'], check=True)
+subprocess.run([str(root / 'versions/0.11.1-beta/ANATHEOS.exe'), '--self-test'], check=True)
 subprocess.run([str(root / 'versions/0.10.0-beta/ANATHEOS.exe'), '--self-test'], check=True)
 with winreg.OpenKey(winreg.HKEY_CURRENT_USER,r'Software\ANATHEOS') as key:
-    assert winreg.QueryValueEx(key,'CurrentVersion')[0]=='0.11.0-beta'
+    assert winreg.QueryValueEx(key,'CurrentVersion')[0]=='0.11.1-beta'
     assert winreg.QueryValueEx(key,'PreviousVersion')[0]=='0.10.0-beta'
 # A deliberately corrupt test update must not activate; it is never distributed.
 manifest=pathlib.Path('dist/ANATHEOS/version.json')
@@ -121,14 +121,14 @@ finally:
 rejected=pathlib.Path('dist/ANATHEOS-Setup-0.11.0-rejected-test.exe').resolve()
 assert subprocess.run([str(rejected),'/S']).returncode != 0
 with winreg.OpenKey(winreg.HKEY_CURRENT_USER,r'Software\ANATHEOS') as key:
-    assert winreg.QueryValueEx(key,'CurrentVersion')[0]=='0.11.0-beta'
+    assert winreg.QueryValueEx(key,'CurrentVersion')[0]=='0.11.1-beta'
     assert winreg.QueryValueEx(key,'PreviousVersion')[0]=='0.10.0-beta'
 subprocess.run([str(exe),'--self-test'],check=True)
 assert sentinel.read_text()=='keep'
 rejected.unlink()
 print('FAILED_UPDATE_REJECTED_CURRENT_AND_PREVIOUS_PRESERVED_PASS')
 # Restart both the active app and its retained predecessor as actual localhost servers.
-for version,port in [('0.11.0-beta',18966),('0.10.0-beta',18967)]:
+for version,port in [('0.11.1-beta',18966),('0.10.0-beta',18967)]:
     running=subprocess.Popen([str(root/f'versions/{version}/ANATHEOS.exe'),'--port',str(port)])
     try:
         ready=False
@@ -148,5 +148,49 @@ subprocess.run([str(root / 'Uninstall.exe'), '/S'], check=True)
 time.sleep(3)
 assert sentinel.read_text() == 'keep'
 subprocess.run([str(setup), '/S'], check=True)
-assert (root / 'versions/0.11.0-beta/ANATHEOS.exe').is_file()
+assert (root / 'versions/0.11.1-beta/ANATHEOS.exe').is_file()
 print('WINDOWS_INSTALL_REINSTALL_DATA_PRESERVATION_PASS')
+
+# Acceptance-specific matrix: exact original 0.11, then the same one hotfix EXE.
+# This does not rebuild an installer or change original baselines.
+from test_acceptance_hotfix import checks
+subprocess.run([str(baseline),'/S'],check=True)
+released11=pathlib.Path('baseline/ANATHEOS-Setup-0.11.0-beta.exe').resolve()
+subprocess.run([str(released11),'/S'],check=True)
+with sync_playwright() as pw:
+ browser=pw.chromium.launch(args=['--enable-webgl','--use-gl=angle','--use-angle=swiftshader'])
+ page=browser.new_page(viewport={'width':1366,'height':768})
+ for version,port,is_baseline in [('0.11.0-beta',18968,True),('0.11.1-beta',18969,False)]:
+  if not is_baseline:subprocess.run([str(setup),'/S'],check=True)
+  running=subprocess.Popen([str(root/f'versions/{version}/ANATHEOS.exe'),'--port',str(port)])
+  try:
+   for _ in range(120):
+    try:
+     conn=http.client.HTTPConnection('127.0.0.1',port,timeout=1);conn.request('GET','/');res=conn.getresponse();res.read();conn.close()
+     if res.status==200:break
+    except OSError:time.sleep(.25)
+   page.goto(f'http://127.0.0.1:{port}/')
+   if not is_baseline:expect(page.locator('.brand small')).to_contain_text('0.11.1')
+   folder=pathlib.Path('hotfix-evidence')/('before' if is_baseline else 'after');folder.mkdir(parents=True,exist_ok=True)
+   result=checks(page,is_baseline,folder);(folder/'p0-results.json').write_text(json.dumps(result,indent=2))
+  finally:running.terminate();running.wait(timeout=15)
+ browser.close()
+assert sentinel.read_text()=='keep'
+with winreg.OpenKey(winreg.HKEY_CURRENT_USER,r'Software\ANATHEOS') as key:
+ assert winreg.QueryValueEx(key,'CurrentVersion')[0]=='0.11.1-beta'
+ assert winreg.QueryValueEx(key,'PreviousVersion')[0]=='0.11.0-beta'
+# Verify both retained recovery targets start after applying the patch.
+for version,port in [('0.10.0-beta',18970),('0.11.0-beta',18971)]:
+ shortcut=pathlib.Path(os.environ['APPDATA'])/f'Microsoft/Windows/Start Menu/Programs/ANATHEOS/Recuperar {version[:-5]}.lnk'
+ assert shortcut.is_file(),shortcut
+ running=subprocess.Popen([str(root/f'versions/{version}/ANATHEOS.exe'),'--port',str(port)])
+ try:
+  ready=False
+  for _ in range(100):
+   try:
+    conn=http.client.HTTPConnection('127.0.0.1',port,timeout=1);conn.request('GET','/');r=conn.getresponse();r.read();conn.close();ready=r.status==200
+    if ready:break
+   except OSError:time.sleep(.2)
+  assert ready
+ finally:running.terminate();running.wait(timeout=15)
+print('HOTFIX_010_TO_0111_AND_0110_TO_0111_DATA_ROLLBACK_EXPECTED_RED_GREEN_PASS')

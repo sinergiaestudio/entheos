@@ -50,3 +50,33 @@ body.workstation #uxAppearanceDetails{display:none!important}
 /* External model scenes suspend the study view; they never overlay its anatomy. */
 body.workstation[data-station-mode=surface] #cmrNativePanel,body.workstation[data-station-mode=surface] #nativeComparison,body.workstation[data-station-mode=surface] #stationViewControls,body.workstation[data-station-mode=surface] #stationEligibility{display:none!important}
 body.workstation[data-study-owner=cmr][data-station-mode=surface] #surfaceCanvas{display:block!important}
+/* Acceptance hotfix: lifecycle is handled in JS; these styles only present mounted tools. */
+#stationInspector>details[hidden]{display:none!important}
+body.workstation[data-station-mode=mpr] .sliceBar{display:none!important}
+body.workstation #eligibleMpr{padding:10px;align-items:stretch;gap:6px}
+#eligibleMpr .mpr-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex:none;font-size:12px}
+#eligibleMpr .mpr-toolbar select{padding:6px;background:#162b37;color:#e9f3f7;border:1px solid #597584;border-radius:4px}
+#eligibleMpr .mpr-toolbar input{width:160px;max-width:25%}
+#eligibleMpr .mpr-image{flex:1;min-height:0;width:100%;display:flex;align-items:center;justify-content:center;overflow:hidden}
+body.workstation #eligibleMpr .mpr-image canvas{flex:none;object-fit:fill;max-width:none;max-height:none;image-rendering:auto}
+#eligibleMpr #mprSource,#eligibleMpr>p{font-size:11px;margin:0;flex:none;color:#b9ccd5}
+#stationInspector #thoraxReferencePanel{padding:6px;margin:0;border:0;background:transparent}
+#stationInspector #thoraxReferencePanel .segTop{margin:0;padding:0;font-size:13px}
+#stationInspector #thoraxReferencePanel .segLayers{gap:5px}
+#stationInspector #thoraxReferencePanel .segLayers>label{display:grid;grid-template-columns:18px minmax(0,1fr) 28px;gap:4px 6px;align-items:center;padding:7px;margin:0;background:#172c38;color:#eef6fa;border:1px solid #496270;border-radius:5px;font-size:12px;line-height:1.25}
+#thoraxReferencePanel .segLayers>label span{color:#eef6fa;grid-column:2;overflow-wrap:anywhere}
+#stationInspector #thoraxReferencePanel input[type=color]{width:28px;height:24px;padding:0;grid-column:3;grid-row:1;cursor:pointer}
+#stationInspector #thoraxReferencePanel .segLayers input[type=range]{grid-column:2/4;margin:0;width:100%}
+#stationInspector #thoraxReferencePanel>label{display:block;margin:8px 0;line-height:1.4}
+#stationInspector #thoraxReferencePanel details{font-size:11px}
+#stationInspector #thoraxReferencePanel details[open] .segActions{display:block}
+#stationManualEditor{width:100%}
+#stationInspector #volumeControls .volumeSliders label{display:block;text-align:left;line-height:1.7}
+#stationInspector #volumeControls output{display:inline-block;float:right;padding-left:8px}
+#uxN5MeshState{white-space:normal;line-height:1.5}
+.workstation .spatial-pane p{height:38px;line-height:1.35;cursor:help}
+.station-menu button:focus-visible,#stationToolbar>button:focus-visible,.spatial-pane-heading:focus-visible{outline:2px solid #9cdef0;outline-offset:-2px;background:#264752}
+@media(max-width:1400px){body.workstation #uxN1Layout{grid-template-columns:180px minmax(0,1fr) 260px}body.workstation.hide-explorer #uxN1Layout{grid-template-columns:0 minmax(0,1fr) 260px}body.workstation.hide-inspector #uxN1Layout{grid-template-columns:180px minmax(0,1fr) 0}#stationToolbar>button{padding:6px 8px}}
+#uxN5Evidence .uxn5-evidence-item:has(#uxN5MeshState){display:grid;grid-template-columns:10px 1fr;gap:4px 6px}
+#uxN5Evidence #uxN5MeshState{grid-column:1/-1;display:block;width:100%;max-width:none;text-align:left;line-height:1.5}
+@media(max-width:1400px){body.workstation #uxN1Layout{grid-template-columns:200px minmax(0,1fr) 260px}body.workstation.hide-inspector #uxN1Layout{grid-template-columns:200px minmax(0,1fr) 0}}

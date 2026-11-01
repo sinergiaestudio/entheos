@@ -277,15 +277,27 @@ function publishNative(){
  if(session.snapshot.active?.owner==='native')session.update(study);else session.activate(study);
 }
 function volumeDecision(series){const a=series.eligibility;return a?.groups.length===1&&a.invalidFrames===0&&a.groups[0].volumeEligible;}
+function removeEligibleMpr(){const p=$('eligibleMpr');p?.dispose?.();p?.remove();}
 function showEligibleMpr(series){
- document.getElementById('eligibleMpr')?.remove();
- if(!volumeDecision(series))return;
-  let panel=document.getElementById('eligibleMpr');panel?.remove();panel=document.createElement('section');panel.id='eligibleMpr';const summary=document.createElement('summary');summary.textContent='MPR de la pila elegible · ejes de adquisición';panel.append(summary);
-  const axis=document.createElement('select'),slice=document.createElement('input'),image=document.createElement('canvas'),note=document.createElement('p');for(let k=0;k<3;k++)axis.add(new Option(['Columna fija','Fila fija','Corte original'][k],k));slice.type='range';slice.min=0;
-  let displayKey='';const draw=(force=true)=>{const key=[axis.value,slice.value,state.wlCenter,state.wlWidth,state.brightness,state.contrast].join('|');if(!force&&(!panel.open||key===displayKey))return;displayKey=key;if(!state.current||state.current.uid!==series.uid)return;const fixed=Number(axis.value),limits=[series.items[0].columns,series.items[0].rows,series.items.length];slice.max=limits[fixed]-1;slice.value=Math.min(Number(slice.value),limits[fixed]-1);const p=reformat(series,fixed,Number(slice.value));image.width=p.width;image.height=p.height;image.style.width=Math.min(700,p.width*p.spacing[1]*3)+'px';image.style.height=(Math.min(700,p.width*p.spacing[1]*3)*p.height*p.spacing[0]/(p.width*p.spacing[1]))+'px';image.style.maxWidth='100%';const ctx=image.getContext('2d'),pixels=ctx.createImageData(p.width,p.height);for(let i=0;i<p.values.length;i++){let v=clamp((p.values[i]-state.wlCenter+state.wlWidth/2)/Math.max(1,state.wlWidth),0,1);v=clamp((v-.5)*state.contrast/100+.5+state.brightness/100,0,1);v=(series.items[0].photo==='MONOCHROME1'?1-v:v)*255;pixels.data.set([v,v,v,255],i*4);}ctx.putImageData(pixels,0,0);note.textContent=p.provenance+' · '+series.eligibility.groups[0].sourceType+' · escala física conservada; cotejo Slicer pendiente';};
-  panel.redraw=()=>draw(false);axis.onchange=()=>{slice.value=0;draw();};slice.oninput=draw;panel.append(axis,slice,image,note);$('viewerRoot').after(panel);draw();
+ removeEligibleMpr();if(!volumeDecision(series))return;
+ const panel=document.createElement('section');panel.id='eligibleMpr';panel.setAttribute('aria-label','Reformateo multiplanar de la serie activa');
+ const toolbar=document.createElement('div');toolbar.className='mpr-toolbar';
+ const axis=document.createElement('select'),slice=document.createElement('input'),image=document.createElement('canvas'),note=document.createElement('p'),position=document.createElement('output'),source=document.createElement('p'),stage=document.createElement('div');
+ const axes=['Columna fija','Fila fija','Corte original'];for(let k=0;k<3;k++)axis.add(new Option(axes[k],k));axis.setAttribute('aria-label','Eje MPR de adquisición');slice.setAttribute('aria-label','Índice del plano MPR');slice.type='range';slice.min=0;slice.value=0;position.id='mprPosition';position.setAttribute('aria-live','polite');source.id='mprSource';stage.className='mpr-image';image.setAttribute('aria-label','Plano MPR de intensidades originales');image.setAttribute('role','img');
+ let displayKey='',physical=null;
+ const fit=()=>{if(!physical||!stage.clientWidth||!stage.clientHeight)return;const scale=Math.min((stage.clientWidth-12)/physical[0],(stage.clientHeight-12)/physical[1]);image.style.width=(physical[0]*scale)+'px';image.style.height=(physical[1]*scale)+'px';};
+ const draw=(force=true)=>{const key=[axis.value,slice.value,state.index,state.wlCenter,state.wlWidth,state.brightness,state.contrast].join('|');if(!force&&(!panel.open||key===displayKey))return;displayKey=key;if(!state.current||state.current.uid!==series.uid)return;
+  const fixed=Number(axis.value),limits=[series.items[0].columns,series.items[0].rows,series.items.length];slice.max=limits[fixed]-1;slice.value=Math.min(Number(slice.value),limits[fixed]-1);
+  const p=reformat(series,fixed,Number(slice.value));image.width=p.width;image.height=p.height;physical=[p.width*p.spacing[1],p.height*p.spacing[0]];
+  const ctx=image.getContext('2d'),pixels=ctx.createImageData(p.width,p.height);for(let i=0;i<p.values.length;i++){let v=clamp((p.values[i]-state.wlCenter+state.wlWidth/2)/Math.max(1,state.wlWidth),0,1);v=clamp((v-.5)*state.contrast/100+.5+state.brightness/100,0,1);v=(series.items[0].photo==='MONOCHROME1'?1-v:v)*255;pixels.data.set([v,v,v,255],i*4);}ctx.putImageData(pixels,0,0);
+  position.textContent=`MPR · ${axes[fixed]} · índice ${Number(slice.value)+1} / ${limits[fixed]}`;slice.setAttribute('aria-valuetext',position.textContent);source.textContent=`Corte 2D recordado: ${state.index+1} / ${series.items.length} · independiente del índice MPR`;
+  note.textContent=p.provenance+' · '+series.eligibility.groups[0].sourceType+' · proporción física conservada; cotejo Slicer pendiente';fit();
+ };
+ panel.redraw=()=>draw(false);panel.fit=fit;panel.step=delta=>{slice.value=clamp(Number(slice.value)+delta,0,Number(slice.max));draw();};axis.onchange=()=>{slice.value=0;draw();};slice.oninput=draw;
+ toolbar.append(axis,slice,position);stage.append(image);panel.append(toolbar,stage,source,note);$('viewerRoot').append(panel);
+ const resize=new ResizeObserver(fit);resize.observe(stage);panel.dispose=()=>resize.disconnect();draw();
 }
-window.addEventListener('anatheos:study-reset',()=>document.getElementById('eligibleMpr')?.remove());
+window.addEventListener('anatheos:study-reset',removeEligibleMpr);
 function updateControls(){const active=currentFrame(),has=!!active;
  $('threeDButton').disabled=!has||!volumeDecision(state.current);
  $('mixedButton').disabled=!has||!volumeDecision(state.current);$('tripleButton').disabled=!has||!volumeDecision(state.current);

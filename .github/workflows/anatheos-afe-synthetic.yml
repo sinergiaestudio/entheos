@@ -1,0 +1,73 @@
+name: ANATHEOS AFE · synthetic geometry
+on:
+  push:
+    branches: ['experiment/anatheos-afe-engine']
+    paths:
+      - 'research/anatheos-afe/**'
+      - '.github/workflows/anatheos-afe-synthetic.yml'
+  pull_request:
+    paths:
+      - 'research/anatheos-afe/**'
+      - '.github/workflows/anatheos-afe-synthetic.yml'
+  workflow_dispatch:
+jobs:
+  synthetic-geometry:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile and test synthetic physical geometry (no PHI)
+        working-directory: research/anatheos-afe
+        run: |
+          python -m compileall -q afe tests tools
+          python -m unittest discover -s tests -v
+      - name: Cross-check Python physical affine against existing ANATHEOS JS and analytic reference
+        working-directory: research/anatheos-afe
+        run: |
+          PYTHONPATH=. python tests/make_crosscheck_fixtures.py /tmp/afe-crosscheck.json
+          node tests/crosscheck_existing.mjs /tmp/afe-crosscheck.json
+          node tests/skew_sweep_existing.mjs
+      - name: AFE-02A independent analytic point phantom benchmarks and eight synthetic PLY examples
+        working-directory: research/anatheos-afe
+        run: |
+          python tools/run_point_phantoms.py --out /tmp/afe02a-synthetic
+      - name: Upload SYNTHETIC point-cloud evidence only (no patient/DICOM)
+        uses: actions/upload-artifact@v4
+        with:
+          name: afe02a-synthetic-points-${{ github.sha }}
+          path: /tmp/afe02a-synthetic/*
+          if-no-files-found: error
+          retention-days: 7
+      - name: Create source-only recovery archive and manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          tar --exclude='*/__pycache__' --exclude='*.pyc' -czf dist/afe-source.tar.gz research/anatheos-afe .github/workflows/anatheos-afe-synthetic.yml research/anatheos-cmr/r2/auditar_dicom_offline.py demos/anatheos-local-v0.5/spatial-reference.mjs .github/workflows/anatheos-afe01d-real-slicer.yml
+          if tar -tzf dist/afe-source.tar.gz | grep -E '(__pycache__/|\.pyc$)'; then echo 'Compiled cache leaked into source backup' >&2; exit 1; fi
+          ( cd dist && sha256sum afe-source.tar.gz > SHA256SUMS.txt )
+          printf '%s\n' "$GITHUB_SHA" > dist/COMMIT_SHA.txt
+      - name: Restore source archive and rerun full synthetic regression offline
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/restore
+          tar -xzf dist/afe-source.tar.gz -C dist/restore
+          ( cd dist/restore/research/anatheos-afe
+            python -m unittest discover -s tests -q
+            PYTHONPATH=. python tests/make_crosscheck_fixtures.py /tmp/afe-restored-interop.json
+            node tests/crosscheck_existing.mjs /tmp/afe-restored-interop.json
+            node tests/skew_sweep_existing.mjs
+          )
+          rm -rf dist/restore
+      - name: Publish ephemeral source-only backup for private Drive transfer
+        uses: actions/upload-artifact@v4
+        with:
+          name: afe-source-${{ github.sha }}
+          path: dist/*
+          retention-days: 7
+          if-no-files-found: error

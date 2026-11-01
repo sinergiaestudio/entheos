@@ -30,7 +30,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          tar -czf dist/afe-source.tar.gz research/anatheos-afe .github/workflows/anatheos-afe-synthetic.yml
+          tar --exclude='*/__pycache__' --exclude='*.pyc' -czf dist/afe-source.tar.gz research/anatheos-afe .github/workflows/anatheos-afe-synthetic.yml
+          if tar -tzf dist/afe-source.tar.gz | grep -E '(__pycache__/|\.pyc$)'; then echo 'Compiled cache leaked into source backup' >&2; exit 1; fi
           ( cd dist && sha256sum afe-source.tar.gz > SHA256SUMS.txt )
           printf '%s\n' "$GITHUB_SHA" > dist/COMMIT_SHA.txt
       - name: Publish ephemeral source-only backup for private Drive transfer

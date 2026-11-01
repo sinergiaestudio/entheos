@@ -1,5 +1,6 @@
 """AFE-02A synthetic only: analytic shape checks and hard provenance/geometry gates."""
 import hashlib,math,tempfile,unittest,json
+from dataclasses import replace
 from pathlib import Path
 from afe.geometry import VolumeGeometry,lps_to_ras
 from afe.points import PointSource,PointError,extract_mask,acquired_plane_samples,fingerprint
@@ -120,3 +121,85 @@ class AFEPointTests(unittest.TestCase):
             self.assertEqual(json.loads(stem.with_suffix('.json').read_text())['point_count'],len(pts))
             with self.assertRaisesRegex(PointError,'NO_OVERWRITE_EXISTING_EXPORT'):
                 export_ply(pts,g,e,stem,method='faces',stride=1)
+
+    def test_export_adversarial_forged_fields_fail_before_write(self):
+        g=grid(5,True);m=bytearray(125);m[62]=1;e=evidence(g,m)
+        p=extract_mask(g,m,e,method='centers')[0]
+        invalid=(
+            (replace(p,lps_mm=(p.lps_mm[0]+100.,p.lps_mm[1],p.lps_mm[2])),
+             'POINT_AFFINE_LPS_MISMATCH'),
+            (replace(p,source_frame_index=999),'SOURCE_FRAME_INDEX_MISMATCH'),
+            (replace(p,state='acquired_plane',sample_kind='acquired_plane'),
+             'POINT_METHOD_STATE_MISMATCH'),
+            (replace(p,voxel_crs=(p.voxel_crs[0]+.25,*p.voxel_crs[1:])),
+             'POINT_NOT_ON_DECLARED_LATTICE'),
+            (replace(p,voxel_crs=(9.,*p.voxel_crs[1:])),
+             'POINT_OUTSIDE_SOURCE_GRID'),
+            (replace(p,face_id=0),'FACE_ID_MISMATCH'),
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            for n,(forged,error) in enumerate(invalid):
+                with self.subTest(n=n,error=error):
+                    stem=Path(tmp)/f'invalid-{n}'/'result'
+                    with self.assertRaisesRegex(PointError,error):
+                        export_ply([forged],g,e,stem,method='centers',stride=1)
+                    self.assertFalse(stem.parent.exists(),
+                                     'invalid export must not create output directories')
+
+    def test_export_face_boundary_and_original_frame_checks(self):
+        g=grid(5,True);m=bytearray(125);m[0]=m[124]=1;e=evidence(g,m)
+        pts=extract_mask(g,m,e,method='faces')
+        self.assertTrue(any(q.voxel_crs[0]==-.5 for q in pts))
+        with tempfile.TemporaryDirectory() as tmp:
+            stem=Path(tmp)/'valid-faces'
+            export_ply(pts,g,e,stem,method='faces',stride=1)
+            lines=stem.with_suffix('.ply').read_text().split('end_header\n',1)[1].splitlines()
+            self.assertEqual(len(lines),len(pts))
+            self.assertEqual([int(s.split()[-2]) for s in lines],
+                             [p.source_frame_index for p in pts])
+            for idx,(line,p) in enumerate(zip(lines,pts)):
+                with self.subTest(point=idx):
+                    numbers=[float(x) for x in line.split()[:6]]
+                    self.assertLess(math.dist(numbers[:3],p.lps_mm),1e-10)
+                    self.assertLess(math.dist(numbers[3:],p.voxel_crs),1e-10)
+            wrong_face=replace(pts[0],voxel_crs=(pts[0].voxel_crs[0]+.2,
+                                                *pts[0].voxel_crs[1:]))
+            with self.assertRaisesRegex(PointError,'POINT_NOT_ON_DECLARED_LATTICE'):
+                export_ply([wrong_face],g,e,Path(tmp)/'invalid-face',
+                           method='faces',stride=1)
+            wrong_frame=replace(pts[0],source_frame_index=g.sorted_source_indices[4])
+            with self.assertRaisesRegex(PointError,'SOURCE_FRAME_INDEX_MISMATCH'):
+                export_ply([wrong_frame],g,e,Path(tmp)/'invalid-frame',
+                           method='faces',stride=1)
+
+    def test_export_positive_centers_adaptive_and_acquired_planes(self):
+        g=grid(5);m=bytearray(125);m[0]=m[62]=m[124]=1;e=evidence(g,m)
+        with tempfile.TemporaryDirectory() as tmp:
+            for method in ('centers','adaptive'):
+                pts=extract_mask(g,m,e,method=method,stride=2)
+                result=export_ply(pts,g,e,Path(tmp)/method,method=method,stride=2)
+                self.assertEqual(result['point_count'],len(pts))
+                self.assertEqual(result['state_set'],['synthetic'])
+            public=PointSource(hashlib.sha256(b'original').hexdigest(),
+                               'public_sha_verified',fingerprint(g),'ACCEPTED_SPATIAL_ONLY')
+            pts=acquired_plane_samples(g,public,[(0,0,0),(4,4,4)])
+            result=export_ply(pts,g,public,Path(tmp)/'public',
+                              method='acquired_planes',stride=1)
+            self.assertEqual(result['state_set'],['acquired_plane'])
+            with self.assertRaisesRegex(PointError,'POINT_METHOD_STATE_MISMATCH'):
+                export_ply(pts,g,public,Path(tmp)/'false-method',
+                           method='centers',stride=1)
+
+    def test_export_rejects_invalid_method_and_stride(self):
+        g=grid(5);m=bytearray(125);m[62]=1;e=evidence(g,m)
+        pts=extract_mask(g,m,e)
+        with tempfile.TemporaryDirectory() as tmp:
+            for method,stride,error in (
+                ('invented',1,'UNSUPPORTED_EXPORT_METHOD'),
+                ('centers',0,'INVALID_STRIDE'),
+                ('centers',True,'INVALID_STRIDE'),
+                ('centers',4097,'INVALID_STRIDE'),
+            ):
+                with self.subTest(method=method,stride=stride):
+                    with self.assertRaisesRegex(PointError,error):
+                        export_ply(pts,g,e,Path(tmp)/'invalid',method=method,stride=stride)

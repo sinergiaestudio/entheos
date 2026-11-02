@@ -130,7 +130,7 @@ function start(){
   require(await hash(rawGeo)===integrity.geometria_sha256&&await hash(rawPixels)===integrity.pixels_sha256,'Integridad del paquete SURVEY incompatible');
   const g=JSON.parse(new TextDecoder().decode(rawGeo));require(g.source_zip_sha256===integrity.source_zip_sha256,'Procedencia del paquete no coincide');
   const cached={text:async key=>key===id+'/geometria_privada.json'?new TextDecoder().decode(rawGeo):origin.text(key),buffer:async key=>key===id+'/pixels_original_decoded.npy'?rawPixels:origin.buffer(key)};
-  await activateCatalog(c,cached);document.querySelector('#cmrSpatialCompare>div')?.workspace?.[event.detail?.level==='L1'?'openSurvey':'openPlanes']();
+  await activateCatalog(c,cached);document.querySelector('#cmrSpatialCompare>div')?.workspace?.[event.detail?.level==='VT'?'openVisual':event.detail?.level==='L1'?'openSurvey':'openPlanes']();
  }catch(e){resetStudy();session.clear('cmr');section.hidden=false;setStatus(e.message);}});
  picker.addEventListener('change',async()=>{try{await ingest([...picker.files]);}catch(e){section.hidden=false;setStatus('No se pudo abrir la carpeta CMR: '+e.message);}finally{picker.value='';}});
  async function importOriginal(file){const generation=++importGeneration;try{await importZip(file,generation);}catch(e){if(generation!==importGeneration)return;await discardJob();resetStudy();section.hidden=false;if(e.name!=='AbortError')setStatus('No se pudo importar el ZIP: '+e.message);}finally{if(generation!==importGeneration)return;zipPicker.value='';zipOpen.disabled=false;$('cmrNativeCancel').hidden=true;pollAbort=null;}}

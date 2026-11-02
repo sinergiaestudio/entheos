@@ -15,7 +15,7 @@ permissions:
 jobs:
   source-and-synthetic-browser:
     # Replaced on 0.11 by the consolidated workstation gate; see V011_QA_MIGRATION.md.
-    if: github.head_ref != 'anatheos/v011-unified-workstation' && github.head_ref != 'anatheos/v011-acceptance-hotfix' && github.head_ref != 'anatheos/survey-base-l0' && github.head_ref != 'anatheos/survey-base-l1'
+    if: github.head_ref != 'anatheos/v011-unified-workstation' && github.head_ref != 'anatheos/v011-acceptance-hotfix' && github.head_ref != 'anatheos/survey-base-l0' && github.head_ref != 'anatheos/survey-base-l1' && github.head_ref != 'anatheos/visual-target-01'
     runs-on: ubuntu-24.04
     timeout-minutes: 22
     steps:

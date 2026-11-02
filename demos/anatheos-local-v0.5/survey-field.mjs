@@ -11,10 +11,10 @@ export function surveyPile(data,groupId=0){
  for(const p of group.planes){
   ensure([...p.geometry.r,...p.geometry.c].every((v,k)=>Math.abs(v-[...r,...c][k])<=1e-6),'orientación variable; no remuestreo correctivo autorizado');
   const d=sub(p.geometry.p,g.p),z=dot(d,n);ensure(Math.hypot(...d.map((v,k)=>v-z*n[k]))<=.001,'desplazamiento lateral > 0,001 mm; rechazar, no corregir');
-  ensure(Number.isFinite(p.frame.acquisition?.slice_thickness)&&p.frame.acquisition.slice_thickness>0,'espesor nominal ausente/inválido');
+  ensure(Number.isFinite(Number(p.frame.acquisition?.slice_thickness))&&Number(p.frame.acquisition.slice_thickness)>0,'espesor nominal ausente/inválido');
   ensure(Number.isFinite(p.frame.rescale_slope??1)&&Number.isFinite(p.frame.rescale_intercept??0),'rescale inválido');
  }
- const slices=group.planes.map(p=>({...p,z:dot(sub(p.geometry.p,g.p),n),thickness:p.frame.acquisition.slice_thickness}));
+ const slices=group.planes.map(p=>({...p,z:dot(sub(p.geometry.p,g.p),n),thickness:Number(p.frame.acquisition.slice_thickness)}));
  const at=(i,j,z)=>g.p.map((v,k)=>v+i*g.s[1]*r[k]+j*g.s[0]*c[k]+z*n[k]);
  return {groupId,group,rows:scene.rows,cols:scene.cols,slices,at,originLps:g.p.slice(),basis:[r.slice(),c.slice(),n.slice()],spacing:g.s.slice(),fusion:false};
 }

@@ -2,8 +2,8 @@
 import http.client,json,os,pathlib,subprocess,sys,tempfile,time
 exe=pathlib.Path('dist/ANATHEOS/ANATHEOS.exe').resolve()
 with tempfile.TemporaryDirectory() as t:
- env=os.environ.copy();env['LOCALAPPDATA']=t
- proc=subprocess.Popen([str(exe),'--port','18964'],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+ env=os.environ.copy();app_env=env.copy();app_env['LOCALAPPDATA']=t
+ proc=subprocess.Popen([str(exe),'--port','18964'],env=app_env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
  try:
   ready=False
   for _ in range(120):

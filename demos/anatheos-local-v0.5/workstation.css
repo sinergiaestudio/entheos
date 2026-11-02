@@ -90,3 +90,10 @@ body.workstation #eligibleMpr .mpr-image canvas{flex:none;object-fit:fill;max-wi
 body[data-station-mode=planes] #stationViewControls{display:none}
 
 body[data-station-mode=planes] #cmrNativePanel{visibility:hidden;pointer-events:none}
+
+#surveyFieldScene{position:absolute;inset:0;z-index:30;background:#0b121a;overflow:hidden}
+#surveyFieldCanvas{width:100%;height:100%;display:block;touch-action:none;outline-offset:-3px}
+body[data-station-mode=survey] #cmrNativePanel{visibility:hidden;pointer-events:none}
+body[data-station-mode=survey] #stationViewControls{display:none}
+.l1-legend{position:absolute;top:50px;left:14px;right:14px;padding:5px;margin:0;background:#071118df;color:#c8e6ec;font-size:11px;pointer-events:none}
+#surveyFieldInspector label{display:block;margin:7px 0;font-size:12px}#surveyFieldInspector input[type=range],#surveyFieldInspector select{width:100%}#surveyFieldInspector p{font-size:11px;overflow-wrap:anywhere}#surveyFieldInspector button{margin:5px}

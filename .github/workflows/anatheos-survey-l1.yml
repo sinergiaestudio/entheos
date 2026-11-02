@@ -1,0 +1,67 @@
+name: ANATHEOS SURVEY L1 isolated intensity field
+on:
+  pull_request:
+    branches: [anatheos/survey-base-l0]
+permissions:
+  contents: read
+concurrency:
+  group: survey-l1-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  synthetic-public-only:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Reject clinical or binary payloads in prototype source
+        run: |
+          python - <<'PY'
+          import subprocess
+          paths=subprocess.check_output(['git','ls-files','--','demos/anatheos-local-v0.5','research/anatheos-survey','research/anatheos-survey-l1'],text=True).splitlines()
+          blocked=('.dcm','.dicom','.nrrd','.nii','.stl','.obj','.npy','.npz','.exe','.zip','.png','.jpg','.mp4')
+          assert not any(p.lower().endswith(blocked) for p in paths)
+          print('PUBLIC_SOURCE_BINARY_HYGIENE_PASS')
+          PY
+      - run: python -m pip install numpy==2.2.6 Pillow==11.3.0 playwright==1.56.0 pydicom==3.0.1
+      - if: runner.os == 'Linux'
+        run: python -m playwright install --with-deps chromium
+      - if: runner.os == 'Windows'
+        run: python -m playwright install chromium
+      - name: Spatial and original engine regressions
+        run: |
+          node demos/anatheos-local-v0.5/test_original_planes.mjs
+          node demos/anatheos-local-v0.5/test_survey_field.mjs
+          node demos/anatheos-local-v0.5/test_surface_camera.mjs
+          node demos/anatheos-local-v0.5/test_surfaces.mjs
+          node demos/anatheos-local-v0.5/test_volume_core.mjs
+          node demos/anatheos-local-v0.5/test_eligible_volume.mjs
+          node demos/anatheos-local-v0.5/test_spatial_reference.mjs
+          python research/anatheos-cmr/r3/test_station.py
+      - name: Real launcher and interactive render with synthetic/public fixtures only
+        run: python research/anatheos-survey/test_l0.py
+        env:
+          L0_QA_OUTPUT: survey-public-evidence
+      - name: L1 field and points on real loopback launcher
+        run: python research/anatheos-survey-l1/test_l1.py
+        env:
+          L1_QA_OUTPUT: survey-l1-public-evidence
+      - uses: actions/upload-artifact@v4
+        with:
+          name: survey-l1-synthetic-public-${{ runner.os }}
+          path: |
+            survey-public-evidence
+            survey-l1-public-evidence
+          retention-days: 14

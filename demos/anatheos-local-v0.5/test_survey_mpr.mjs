@@ -1,3 +1,4 @@
+import {visualTargetViewport} from './volumetric.js';
 import assert from 'node:assert/strict';
 import {buildSurveyField,fieldVoxel} from './survey-field.mjs';
 import {sectionPlane,keptByPlane,mprGeometry,mprSample,cursorLocal,normalizedCursor,localBounds,localToWorld,dragDistanceMm} from './survey-mpr.mjs';
@@ -10,4 +11,5 @@ const first=mprGeometry(f,c,2);assert.equal(first.originalSourceIndex,9);assert.
 let missing=0;for(let k=0;k<f.z.length;k++){const test=[...c];test[2]=k;const sample=mprSample(f,test,2,q[0],q[1],{acquiredOnly:true});if(!f.surveyL1.originalLayers.includes(k)){assert.equal(sample.support,0);assert.ok(Number.isNaN(sample.value));missing++;}}
 assert.ok(missing>0);const distance=dragDistanceMm([30,12],[1,0,0],.5,.3,800,500,1.8,450);assert.ok(Number.isFinite(distance));assert.equal(dragDistanceMm([5,0],[0,0,1],0,0,800,500,1.8,450),null);
 assert.throws(()=>mprGeometry(f,[-1,2,3],0));assert.equal(f.pile.fusion,false);assert.deepEqual(localBounds(f).span,f.geo.spanMm);
+for(const [w,h] of [[888,440],[1430,810],[1366,768],[1920,1080]])for(const preview of [false,true]){const v=visualTargetViewport(w,h,1.25,preview);assert.ok(v.w<=720&&v.h<=480);assert.ok(Math.abs((v.w/v.h)/(w/h)-1)<.005);}
 console.log(JSON.stringify({result:'PASS',mpr_axes:3,crosshair_forward_LPS:'PASS',source_vs_derived:'PASS',reprojection_error:repro,metric_halfspaces_and_oblique:'PASS',acquired_only_keeps_holes:'PASS',degenerate_drag_rejected:'PASS',new_interpolation:false,fusion:false}));

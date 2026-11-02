@@ -5,6 +5,9 @@
  * NOT certified clinical patient-facing L/R labels. No external dependencies.
  */
 function ensure(test,reason){if(!test)throw new Error(reason);}
+export function visualTargetViewport(width,height,dpr=1,preview=false){
+ ensure([width,height,dpr].every(v=>Number.isFinite(v)&&v>0),'Viewport VISUAL-TARGET inválido');const scale=Math.min(dpr,1.25)*(preview?.58:1),fit=Math.min(1,720/(width*scale),480/(height*scale));return {w:Math.max(1,Math.round(width*scale*fit)),h:Math.max(1,Math.round(height*scale*fit))};
+}
 export const VOLUME_STYLES=Object.freeze({
  original:0, relief:1, amber:2
 });
@@ -322,7 +325,7 @@ export class VolumeRenderer {
  }
  draw(){if(this.surveyMode==='points'&&this.pointCloud){this.drawSurveyPoints();return;}const gl=this.gl;if(!gl){this.drawSoftware();return;}if(gl.isContextLost())return;
   const rect=this.canvas.getBoundingClientRect(),scale=Math.min(devicePixelRatio||1,1.25)*(this.preview?.58:1);
-  const w=Math.max(100,Math.min(this.prepared.surveyL1?720:1360,Math.round(rect.width*scale))),h=Math.max(100,Math.min(this.prepared.surveyL1?480:900,Math.round(rect.height*scale)));
+  let w=Math.max(100,Math.min(this.prepared.surveyL1?720:1360,Math.round(rect.width*scale))),h=Math.max(100,Math.min(this.prepared.surveyL1?480:900,Math.round(rect.height*scale)));if(this.visualTarget?.enabled&&rect.width>0&&rect.height>0)({w,h}=visualTargetViewport(rect.width,rect.height,devicePixelRatio||1,this.preview));
   if(this.canvas.width!==w||this.canvas.height!==h){this.canvas.width=w;this.canvas.height=h;}
   gl.viewport(0,0,w,h);gl.disable(gl.DEPTH_TEST);gl.disable(gl.BLEND);gl.useProgram(this.program);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_3D,this.texture);
   const yaw=this.yaw,pitch=this.pitch,v=[Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),Math.cos(yaw)*Math.cos(pitch)];

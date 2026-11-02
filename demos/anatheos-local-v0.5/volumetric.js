@@ -84,6 +84,9 @@ uniform float uThorax5Opacity;
 uniform int uThorax5Isolate;
 uniform vec3 uThorax5Colors[5];
 uniform float uThorax5Alpha[5];
+uniform int uHasSurvey,uSurveyEstimate,uSurveyNominal,uSurveyConfidence,uSurveyMaskOnly,uSurveyDepth,uSurveyOriginal;
+uniform sampler3D uSurveySupport;
+uniform sampler2D uSurveyZ;
 uniform vec3 uHalf;
 uniform vec3 uView;
 uniform vec3 uRight;
@@ -106,6 +109,9 @@ vec2 hitBox(vec3 o,vec3 d,vec3 halfs){
  vec3 near=min(t0,t1),far=max(t0,t1);
  return vec2(max(max(near.x,near.y),near.z),min(min(far.x,far.y),far.z));
 }
+float surveyZ(int k){return texelFetch(uSurveyZ,ivec2(k,0),0).r;}
+int surveyLayer(float z){int lo=0,hi=uSurveyDepth-1;for(int j=0;j<9;j++){if(hi-lo<=1)break;int m=(lo+hi)/2;if(surveyZ(m)<=z)lo=m;else hi=m;}return abs(z-surveyZ(lo))<=abs(z-surveyZ(hi))?lo:hi;}
+vec3 supportColor(int state){return state==1?vec3(.25,.86,.95):state==2?vec3(1.,.72,.22):vec3(.93,.36,.86);}
 void main(){
  vec3 rd=-normalize(uView);
  vec3 origin=uView*2.2+(uRight*uv.x*uAspect+uUp*uv.y)*1.25/uZoom;
@@ -121,10 +127,24 @@ void main(){
   vec3 p=origin+rd*(t+(float(i)+.5)*rayLength/float(steps));
   vec3 coords=p/(2.*uHalf)+vec3(.5);
   if(coords.z > uClip) continue;
-  float value=texture(uVolume,coords).r;
+  vec3 sampled=coords;int state=1;
+  if(uHasSurvey==1){
+   int layer=surveyLayer(coords.z);sampled.z=(float(layer)+.5)/float(uSurveyDepth);
+   // One original plane analytically intersected, with untouched source pixels.
+   if(uSurveyOriginal>=0&&abs(rd.z)>1e-8){
+    float zOriginal=surveyZ(uSurveyOriginal),planeT=((zOriginal-.5)*2.*uHalf.z-origin.z)/rd.z;
+    float ta=t+float(i)*rayLength/float(steps),tb=t+float(i+1)*rayLength/float(steps);
+    if(planeT>=ta&&planeT<tb&&zOriginal<=uClip){vec3 q=(origin+rd*planeT)/(2.*uHalf)+vec3(.5);q.z=(float(uSurveyOriginal)+.5)/float(uSurveyDepth);
+     if(q.x>=0.&&q.x<=1.&&q.y>=0.&&q.y<=1.&&int(texture(uSurveySupport,q).r*255.+.5)==1){float original=texture(uVolume,q).r;rgb+=(1.-accumulated)*.75*vec3(original);accumulated+=(1.-accumulated)*.75;}}
+   }
+   state=int(texture(uSurveySupport,sampled).r*255.+.5);
+   if(state==0||(state==3&&uSurveyEstimate==0)||(state==2&&uSurveyNominal==0))continue;
+  }
+  float value=texture(uVolume,sampled).r;
   // Window/Level operate on the fixed display-intensity mapping (0..1).
   float visible=clamp((value-uWindowLow)/max(uWindowHigh-uWindowLow,.005),0.,1.);
   float response=clamp((visible-uThreshold)/max(1.-uThreshold,.04),0.,1.);
+  if(uHasSurvey==1&&uSurveyMaskOnly==1)response=1.;
   float a=clamp(response*uOpacity*10.0/float(steps),0.,.09);
   float luminance=.60+.40*visible;
   vec3 tissue=uPalette==0 ? vec3(1.) : mix(vec3(.62,.70,.77),vec3(.95,.88,.79),visible);
@@ -145,6 +165,7 @@ void main(){
     float shade=mix(1.,.50+.72*diffuse,uLighting*edge);
     luminance*=shade;
   }
+  if(uHasSurvey==1&&uSurveyConfidence==1){tissue=mix(tissue,supportColor(state),uSurveyMaskOnly==1?1.:.60);}
   int thoraxBits=0;
   if(uHasThorax5==1){
    thoraxBits=int(floor(texture(uThorax5,coords).r*255.0+.5)) & uThorax5Show;
@@ -179,6 +200,7 @@ function createProgram(gl){const p=gl.createProgram();ensure(p,'No se pudo crear
 export class VolumeRenderer {
  constructor(canvas,prepared){
   this.canvas=canvas;this.prepared=prepared;this.yaw=.55;this.pitch=.32;this.zoom=1.55;this.preview=false;
+  this.surveyEstimate=true;this.surveyNominal=true;this.surveyConfidence=true;this.surveyMaskOnly=false;this.surveyOriginal=-1;this.surveyMode='volume';this.surveyGroups=false;this.pointSize=3;
   this.threshold=.07;this.opacity=1.5;this.steps=220;this.low=0;this.high=1;this.clip=1;this.palette=0;this.style=0;this.lighting=.65;
   this.mask=null;this.maskTexture=null;this.labelVisibility=7;this.labelOpacity=.75;
   this.thorax5=null;this.thorax5Texture=null;this.thorax5Visibility=31;
@@ -187,6 +209,7 @@ export class VolumeRenderer {
   this.gl=gl;
   this.backend=gl?'WebGL2 (GPU)':'CPU (respaldo local)';
   if(!gl){
+   ensure(!prepared.surveyL1,'SURVEY L1 requiere WebGL2 para respetar NO_DATA; no se usa un respaldo sin procedencia.');
    this.cpu=canvas.getContext('2d',{alpha:false});
    ensure(this.cpu,'El navegador no ofrece Canvas 2D ni WebGL2.');
    const m=Math.max(...prepared.geo.spanMm);
@@ -201,14 +224,22 @@ export class VolumeRenderer {
   const loc=gl.getAttribLocation(this.program,'aPosition');gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
   this.texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_3D,this.texture);
   gl.pixelStorei(gl.UNPACK_ALIGNMENT,1);
-  gl.texParameteri(gl.TEXTURE_3D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_3D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_3D,gl.TEXTURE_MIN_FILTER,prepared.surveyL1?gl.NEAREST:gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_3D,gl.TEXTURE_MAG_FILTER,prepared.surveyL1?gl.NEAREST:gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_3D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_3D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_3D,gl.TEXTURE_WRAP_R,gl.CLAMP_TO_EDGE);
   gl.texImage3D(gl.TEXTURE_3D,0,gl.R8,geo.x,geo.y,geo.z,0,gl.RED,gl.UNSIGNED_BYTE,output);
   ensure(gl.getError()===gl.NO_ERROR,'No se pudo transferir el volumen a la GPU.');
-  this.locations={};for(const name of ['uLabels','uHasLabels','uLabelShow','uLabelOpacity','uThorax5','uHasThorax5','uThorax5Show','uThorax5Opacity','uThorax5Isolate','uThorax5Colors','uThorax5Alpha','uVolume','uHalf','uView','uRight','uUp','uAspect','uZoom','uThreshold','uOpacity','uWindowLow','uWindowHigh','uSteps' ,'uClip','uPalette','uStyle','uTexel','uLighting'])this.locations[name]=gl.getUniformLocation(this.program,name);
+  this.locations={};for(const name of ['uHasSurvey','uSurveyEstimate','uSurveyNominal','uSurveyConfidence','uSurveyMaskOnly','uSurveyDepth','uSurveyOriginal','uSurveySupport','uSurveyZ','uLabels','uHasLabels','uLabelShow','uLabelOpacity','uThorax5','uHasThorax5','uThorax5Show','uThorax5Opacity','uThorax5Isolate','uThorax5Colors','uThorax5Alpha','uVolume','uHalf','uView','uRight','uUp','uAspect','uZoom','uThreshold','uOpacity','uWindowLow','uWindowHigh','uSteps' ,'uClip','uPalette','uStyle','uTexel','uLighting'])this.locations[name]=gl.getUniformLocation(this.program,name);
+  if(prepared.surveyL1){
+   const t=gl.createTexture();this.surveySupportTexture=t;gl.activeTexture(gl.TEXTURE3);gl.bindTexture(gl.TEXTURE_3D,t);gl.pixelStorei(gl.UNPACK_ALIGNMENT,1);
+   for(const a of [gl.TEXTURE_MIN_FILTER,gl.TEXTURE_MAG_FILTER])gl.texParameteri(gl.TEXTURE_3D,a,gl.NEAREST);for(const a of [gl.TEXTURE_WRAP_S,gl.TEXTURE_WRAP_T,gl.TEXTURE_WRAP_R])gl.texParameteri(gl.TEXTURE_3D,a,gl.CLAMP_TO_EDGE);
+   gl.texImage3D(gl.TEXTURE_3D,0,gl.R8,geo.x,geo.y,geo.z,0,gl.RED,gl.UNSIGNED_BYTE,prepared.surveyL1.support);
+   this.surveyZTexture=gl.createTexture();gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,this.surveyZTexture);for(const a of [gl.TEXTURE_MIN_FILTER,gl.TEXTURE_MAG_FILTER])gl.texParameteri(gl.TEXTURE_2D,a,gl.NEAREST);
+   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.texImage2D(gl.TEXTURE_2D,0,gl.R32F,geo.z,1,0,gl.RED,gl.FLOAT,prepared.surveyL1.zNormalized);
+   ensure(gl.getError()===gl.NO_ERROR,'Textura de procedencia/LUT física rechazada');
+  }
   const m=Math.max(...geo.spanMm);this.half=geo.spanMm.map(v=>.5*v/m);
   this.draw();
  }
@@ -264,14 +295,16 @@ export class VolumeRenderer {
   }
   this.draw();
  }
- draw(){const gl=this.gl;if(!gl){this.drawSoftware();return;}if(gl.isContextLost())return;
+ draw(){if(this.surveyMode==='points'&&this.pointCloud){this.drawSurveyPoints();return;}const gl=this.gl;if(!gl){this.drawSoftware();return;}if(gl.isContextLost())return;
   const rect=this.canvas.getBoundingClientRect(),scale=Math.min(devicePixelRatio||1,1.25)*(this.preview?.58:1);
-  const w=Math.max(100,Math.min(1360,Math.round(rect.width*scale))),h=Math.max(100,Math.min(900,Math.round(rect.height*scale)));
+  const w=Math.max(100,Math.min(this.prepared.surveyL1?720:1360,Math.round(rect.width*scale))),h=Math.max(100,Math.min(this.prepared.surveyL1?480:900,Math.round(rect.height*scale)));
   if(this.canvas.width!==w||this.canvas.height!==h){this.canvas.width=w;this.canvas.height=h;}
-  gl.viewport(0,0,w,h);gl.useProgram(this.program);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_3D,this.texture);
+  gl.viewport(0,0,w,h);gl.disable(gl.DEPTH_TEST);gl.disable(gl.BLEND);gl.useProgram(this.program);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_3D,this.texture);
   const yaw=this.yaw,pitch=this.pitch,v=[Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),Math.cos(yaw)*Math.cos(pitch)];
   const right=[Math.cos(yaw),0,-Math.sin(yaw)];const up=cross(v,right);
   const u=this.locations;
+  gl.uniform1i(u.uHasSurvey,this.prepared.surveyL1?1:0);gl.uniform1i(u.uSurveyEstimate,this.surveyEstimate?1:0);gl.uniform1i(u.uSurveyNominal,this.surveyNominal?1:0);gl.uniform1i(u.uSurveyConfidence,this.surveyConfidence?1:0);gl.uniform1i(u.uSurveyMaskOnly,this.surveyMaskOnly?1:0);gl.uniform1i(u.uSurveyDepth,this.prepared.geo.z);gl.uniform1i(u.uSurveyOriginal,this.surveyOriginal);
+  gl.activeTexture(gl.TEXTURE3);gl.bindTexture(gl.TEXTURE_3D,this.surveySupportTexture||null);gl.uniform1i(u.uSurveySupport,3);gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,this.surveyZTexture||null);gl.uniform1i(u.uSurveyZ,4);
   gl.uniform1i(u.uHasLabels,this.maskTexture?1:0);
   gl.uniform1i(u.uLabelShow,this.labelVisibility);
   gl.uniform1f(u.uLabelOpacity,this.labelOpacity);
@@ -393,5 +426,29 @@ export class VolumeRenderer {
   }
   context.putImageData(result,0,0);
  }
- dispose(){if(this.gl){if(this.thorax5Texture)this.gl.deleteTexture(this.thorax5Texture);if(this.maskTexture)this.gl.deleteTexture(this.maskTexture);this.gl.deleteTexture(this.texture);this.gl.deleteBuffer(this.buffer);this.gl.deleteProgram(this.program);this.gl=null;}this.prepared=null;}
+ setSurveyPointCloud(cloud){
+  const gl=this.gl;ensure(gl&&this.prepared.surveyL1,'Nube sólo para SURVEY L1 WebGL2');
+  if(this.pointVao)gl.deleteVertexArray(this.pointVao);if(this.pointBuffer)gl.deleteBuffer(this.pointBuffer);
+  this.pointCloud=cloud;
+  if(!this.pointProgram){
+   const vs=`#version 300 es
+   in vec3 aPoint;in vec3 aInfo;uniform vec3 uRight,uUp,uView;uniform float uAspect,uZoom,uSize,uClip;uniform int uGroups,uEstimate;out vec3 color;out float kind;
+   void main(){float x=dot(aPoint,uRight)*uZoom/1.25/uAspect,y=dot(aPoint,uUp)*uZoom/1.25;gl_Position=vec4(x,y,-dot(aPoint,uView)*.42,1.);gl_PointSize=uSize;kind=aInfo.z;color=vec3(.15+.85*aInfo.x);if(uGroups==1)color=aInfo.y<.5?vec3(.27,.82,.95):aInfo.y<1.5?vec3(1.,.72,.22):vec3(.72,.50,.98);if(kind>2.5)color=vec3(.96,.36,.85);if(aPoint.z>uClip||(kind>2.5&&uEstimate==0))gl_Position=vec4(4.,4.,4.,1.);}`;
+   const fs=`#version 300 es
+   precision highp float;in vec3 color;in float kind;out vec4 pixel;void main(){if(kind<2.5&&distance(gl_PointCoord,vec2(.5))>.5)discard;pixel=vec4(color,1.);}`;
+   const pr=gl.createProgram(),v=compile(gl,gl.VERTEX_SHADER,vs),f=compile(gl,gl.FRAGMENT_SHADER,fs);gl.attachShader(pr,v);gl.attachShader(pr,f);gl.linkProgram(pr);gl.deleteShader(v);gl.deleteShader(f);ensure(gl.getProgramParameter(pr,gl.LINK_STATUS),'Shader de nube rechazado');this.pointProgram=pr;
+  }
+  const f=this.prepared,dx=f.pile.spacing[1],dy=f.pile.spacing[0],span=f.geo.spanMm,m=Math.max(...span);
+  const minZ=f.z[0]-Math.min(...f.pile.spacing)/2,center=[-1.5*dx+span[0]/2,-1.5*dy+span[1]/2,minZ+span[2]/2];
+  const values=new Float32Array(cloud.points.length*6);
+  cloud.points.forEach((p,k)=>{values.set(p.local.map((v,i)=>(v-center[i])/m),k*6);values.set([(p.value-f.rawRange[0])/(f.rawRange[1]-f.rawRange[0]),p.signalGroup,p.support],k*6+3);});
+  this.pointVao=gl.createVertexArray();gl.bindVertexArray(this.pointVao);this.pointBuffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,this.pointBuffer);gl.bufferData(gl.ARRAY_BUFFER,values,gl.STATIC_DRAW);
+  for(const [name,off] of [['aPoint',0],['aInfo',12]]){const loc=gl.getAttribLocation(this.pointProgram,name);gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,3,gl.FLOAT,false,24,off);}gl.bindVertexArray(null);this.pointBytes=values.byteLength;
+ }
+ drawSurveyPoints(){
+  const gl=this.gl,c=this.canvas,r=c.getBoundingClientRect(),w=Math.max(100,Math.min(1360,Math.round(r.width))),h=Math.max(100,Math.min(900,Math.round(r.height)));if(c.width!==w||c.height!==h){c.width=w;c.height=h;}gl.viewport(0,0,w,h);gl.clearColor(.06,.07,.085,1);gl.clearDepth(1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.enable(gl.DEPTH_TEST);gl.disable(gl.BLEND);gl.useProgram(this.pointProgram);
+  const v=[Math.sin(this.yaw)*Math.cos(this.pitch),Math.sin(this.pitch),Math.cos(this.yaw)*Math.cos(this.pitch)],right=[Math.cos(this.yaw),0,-Math.sin(this.yaw)],up=cross(v,right),u=n=>gl.getUniformLocation(this.pointProgram,n);
+  gl.uniform3fv(u('uView'),v);gl.uniform3fv(u('uRight'),right);gl.uniform3fv(u('uUp'),up);gl.uniform1f(u('uAspect'),w/h);gl.uniform1f(u('uZoom'),this.zoom);gl.uniform1f(u('uSize'),this.pointSize);gl.uniform1f(u('uClip'),(this.clip-.5)*this.half[2]*2);gl.uniform1i(u('uGroups'),this.surveyGroups?1:0);gl.uniform1i(u('uEstimate'),this.surveyEstimate?1:0);gl.bindVertexArray(this.pointVao);gl.drawArrays(gl.POINTS,0,this.pointCloud.points.length);gl.bindVertexArray(null);
+ }
+ dispose(){if(this.gl){for(const t of [this.surveySupportTexture,this.surveyZTexture])if(t)this.gl.deleteTexture(t);if(this.pointBuffer)this.gl.deleteBuffer(this.pointBuffer);if(this.pointVao)this.gl.deleteVertexArray(this.pointVao);if(this.pointProgram)this.gl.deleteProgram(this.pointProgram);this.pointCloud=null;if(this.thorax5Texture)this.gl.deleteTexture(this.thorax5Texture);if(this.maskTexture)this.gl.deleteTexture(this.maskTexture);this.gl.deleteTexture(this.texture);this.gl.deleteBuffer(this.buffer);this.gl.deleteProgram(this.program);this.gl=null;}this.prepared=null;}
 }

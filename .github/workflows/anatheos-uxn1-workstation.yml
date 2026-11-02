@@ -12,7 +12,7 @@ permissions:
 jobs:
   browser-ux-and-source:
     # Replaced on 0.11 by the consolidated workstation gate; see V011_QA_MIGRATION.md.
-    if: github.head_ref != 'anatheos/v011-unified-workstation' && github.head_ref != 'anatheos/v011-acceptance-hotfix' && github.head_ref != 'anatheos/survey-base-l0'
+    if: github.head_ref != 'anatheos/v011-unified-workstation' && github.head_ref != 'anatheos/v011-acceptance-hotfix' && github.head_ref != 'anatheos/survey-base-l0' && github.head_ref != 'anatheos/survey-base-l1'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -73,7 +73,7 @@ jobs:
           if-no-files-found: error
   windows-localhost:
     # Replaced on 0.11 by the consolidated workstation gate; see V011_QA_MIGRATION.md.
-    if: github.head_ref != 'anatheos/v011-unified-workstation' && github.head_ref != 'anatheos/v011-acceptance-hotfix' && github.head_ref != 'anatheos/survey-base-l0'
+    if: github.head_ref != 'anatheos/v011-unified-workstation' && github.head_ref != 'anatheos/v011-acceptance-hotfix' && github.head_ref != 'anatheos/survey-base-l0' && github.head_ref != 'anatheos/survey-base-l1'
     runs-on: windows-latest
     timeout-minutes: 8
     steps:

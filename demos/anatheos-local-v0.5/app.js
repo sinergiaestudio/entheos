@@ -1,3 +1,4 @@
+import {mprPresentation,patientDirection} from './patient-presentation.mjs';
 import {createWorkspace} from './spatial-workspace.mjs';
 import {organize} from './frame-index.mjs';
 import {session} from './study-session.mjs';
@@ -289,9 +290,9 @@ function showEligibleMpr(series){
  const draw=(force=true)=>{const key=[axis.value,slice.value,state.index,state.wlCenter,state.wlWidth,state.brightness,state.contrast].join('|');if(!force&&(!panel.open||key===displayKey))return;displayKey=key;if(!state.current||state.current.uid!==series.uid)return;
   const fixed=Number(axis.value),limits=[series.items[0].columns,series.items[0].rows,series.items.length];slice.max=limits[fixed]-1;slice.value=Math.min(Number(slice.value),limits[fixed]-1);
   const p=reformat(series,fixed,Number(slice.value));image.width=p.width;image.height=p.height;physical=[p.width*p.spacing[1],p.height*p.spacing[0]];
-  const ctx=image.getContext('2d'),pixels=ctx.createImageData(p.width,p.height);for(let i=0;i<p.values.length;i++){let v=clamp((p.values[i]-state.wlCenter+state.wlWidth/2)/Math.max(1,state.wlWidth),0,1);v=clamp((v-.5)*state.contrast/100+.5+state.brightness/100,0,1);v=(series.items[0].photo==='MONOCHROME1'?1-v:v)*255;pixels.data.set([v,v,v,255],i*4);}ctx.putImageData(pixels,0,0);
+  const display=mprPresentation([p.iop.slice(0,3),p.iop.slice(3)],[0,1],physical),raw=document.createElement('canvas');raw.width=p.width;raw.height=p.height;const ctx=raw.getContext('2d'),pixels=ctx.createImageData(p.width,p.height);for(let i=0;i<p.values.length;i++){let v=clamp((p.values[i]-state.wlCenter+state.wlWidth/2)/Math.max(1,state.wlWidth),0,1);v=clamp((v-.5)*state.contrast/100+.5+state.brightness/100,0,1);v=(series.items[0].photo==='MONOCHROME1'?1-v:v)*255;pixels.data.set([v,v,v,255],i*4);}ctx.putImageData(pixels,0,0);if(display.turn%2){image.width=p.height;image.height=p.width;}physical=display.spanMm;const screen=image.getContext('2d');screen.save();screen.translate(image.width/2,image.height/2);screen.rotate(display.turn*Math.PI/2);screen.imageSmoothingEnabled=false;screen.drawImage(raw,-p.width/2,-p.height/2);screen.restore();image.dataset.top=patientDirection(display.down.map(v=>-v));image.dataset.right=patientDirection(display.right);
   position.textContent=`MPR · ${axes[fixed]} · índice ${Number(slice.value)+1} / ${limits[fixed]}`;slice.setAttribute('aria-valuetext',position.textContent);source.textContent=`Corte 2D recordado: ${state.index+1} / ${series.items.length} · independiente del índice MPR`;
-  note.textContent=p.provenance+' · '+series.eligibility.groups[0].sourceType+' · proporción física conservada; cotejo Slicer pendiente';fit();
+  note.textContent=`Arriba ${image.dataset.top} · derecha ${image.dataset.right} · `+p.provenance+' · '+series.eligibility.groups[0].sourceType+' · proporción física conservada; cotejo Slicer pendiente';fit();
  };
  panel.redraw=()=>draw(false);panel.fit=fit;panel.step=delta=>{slice.value=clamp(Number(slice.value)+delta,0,Number(slice.max));draw();};axis.onchange=()=>{slice.value=0;draw();};slice.oninput=draw;
  toolbar.append(axis,slice,position);stage.append(image);panel.append(toolbar,stage,source,note);$('viewerRoot').append(panel);

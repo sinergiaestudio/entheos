@@ -1,3 +1,4 @@
+import {nativeCamera} from './patient-presentation.mjs';
 /** Presentation of the unchanged L1 rectilinear field. No shared inverse/registration. */
 import {fieldVoxel} from './survey-field.mjs';
 export const VT_LABEL='SURVEY L1.1 · volumen + MPR derivada · baja resolución · NO DIAGNÓSTICO';
@@ -23,6 +24,6 @@ export function mprSample(f,c,axis,u,v,{estimate=true,nominal=true,acquiredOnly=
  const s=fieldVoxel(f,...p,estimate,nominal);if(acquiredOnly&&s.support!==1)return {support:0,value:NaN,sources:[]};return {...s,index:p};
 }
 /** Invert ONE known screen displacement DOF, not world→pixel or shared #10. */
-export function dragDistanceMm(delta,normal,yaw,pitch,width,height,zoom,scale){
- const view=[Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),Math.cos(yaw)*Math.cos(pitch)],right=[Math.cos(yaw),0,-Math.sin(yaw)],up=[view[1]*right[2]-view[2]*right[1],view[2]*right[0]-view[0]*right[2],view[0]*right[1]-view[1]*right[0]],s=[dot(normal,right)*zoom/1.25/(width/height)*width/2/scale,-dot(normal,up)*zoom/1.25*height/2/scale],den=dot(s,s);return den<1e-8?null:dot(delta,s)/den;
+export function dragDistanceMm(delta,normal,yaw,pitch,width,height,zoom,scale,camera=nativeCamera(yaw,pitch)){
+ const {right,up}=camera,s=[dot(normal,right)*zoom/1.25/(width/height)*width/2/scale,-dot(normal,up)*zoom/1.25*height/2/scale],den=dot(s,s);return den<1e-8?null:dot(delta,s)/den;
 }

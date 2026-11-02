@@ -1,3 +1,4 @@
+import {presentationCamera} from './patient-presentation.mjs';
 /* ANATHEOS 3D v0.2 — genuine DESS voxel volume GPU ray casting.
  * Original DICOM spatial sorting and pixel values from v0.1. Pure local WebGL2.
  * 8-bit display texture is a visualization rescale: NOT diagnostic fidelity.
@@ -328,8 +329,7 @@ export class VolumeRenderer {
   let w=Math.max(100,Math.min(this.prepared.surveyL1?720:1360,Math.round(rect.width*scale))),h=Math.max(100,Math.min(this.prepared.surveyL1?480:900,Math.round(rect.height*scale)));if(this.visualTarget?.enabled&&rect.width>0&&rect.height>0)({w,h}=visualTargetViewport(rect.width,rect.height,devicePixelRatio||1,this.preview));
   if(this.canvas.width!==w||this.canvas.height!==h){this.canvas.width=w;this.canvas.height=h;}
   gl.viewport(0,0,w,h);gl.disable(gl.DEPTH_TEST);gl.disable(gl.BLEND);gl.useProgram(this.program);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_3D,this.texture);
-  const yaw=this.yaw,pitch=this.pitch,v=[Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),Math.cos(yaw)*Math.cos(pitch)];
-  const right=[Math.cos(yaw),0,-Math.sin(yaw)];const up=cross(v,right);
+  const {view:v,right,up}=presentationCamera(this.prepared,this.yaw,this.pitch);
   const u=this.locations,vt=this.visualTarget||{};
   gl.uniform1i(u.uVt,vt.enabled?1:0);gl.uniform1i(u.uVtCut,vt.cut?1:0);gl.uniform1i(u.uVtPlanes,vt.planes?1:0);gl.uniform1i(u.uVtFrames,vt.frames?1:0);gl.uniform1i(u.uVtCross,vt.cross?1:0);gl.uniform1i(u.uVtAcquiredOnly,vt.acquiredOnly?1:0);gl.uniform1i(u.uVtFace,vt.face?1:0);gl.uniform4fv(u.uVtEquation,vt.equation||[0,0,1,0]);gl.uniform3fv(u.uVtCursor,vt.cursor||[.5,.5,.5]);gl.uniform1f(u.uVtAlpha,vt.alpha??.2);gl.uniform1f(u.uVtGamma,vt.gamma??1);
   gl.uniform1i(u.uHasSurvey,this.prepared.surveyL1?1:0);gl.uniform1i(u.uSurveyEstimate,this.surveyEstimate?1:0);gl.uniform1i(u.uSurveyNominal,this.surveyNominal?1:0);gl.uniform1i(u.uSurveyConfidence,this.surveyConfidence?1:0);gl.uniform1i(u.uSurveyMaskOnly,this.surveyMaskOnly?1:0);gl.uniform1i(u.uSurveyDepth,this.prepared.geo.z);gl.uniform1i(u.uSurveyOriginal,this.surveyOriginal);
@@ -360,9 +360,7 @@ export class VolumeRenderer {
   const h=Math.max(120,Math.min(this.preview?230:310,Math.round(rect.height*(this.preview?.48:.65))));
   if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;}
   const {x:nx,y:ny,z:nz}=this.prepared.geo,voxels=this.prepared.output,halfs=this.half;
-  const yaw=this.yaw,pitch=this.pitch,cy=Math.cos(yaw),sy=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);
-  const dir=[-sy*cp,-sp,-cy*cp],view=dir.map(v=>-v),right=[cy,0,-sy];
-  const up=[-sp*sy,cp,-sp*cy];
+  const {view,right,up}=presentationCamera(this.prepared,this.yaw,this.pitch),dir=view.map(v=>-v);
   const result=context.createImageData(w,h),pixels=result.data;
   const steps=Math.min(this.style===0?140:100,Math.max(40,Math.round(this.steps*.6)));
   const zoom=this.zoom,threshold=this.threshold,opacity=this.opacity;
@@ -476,7 +474,7 @@ export class VolumeRenderer {
  }
  drawSurveyPoints(){
   const gl=this.gl,c=this.canvas,r=c.getBoundingClientRect(),w=Math.max(100,Math.min(1360,Math.round(r.width))),h=Math.max(100,Math.min(900,Math.round(r.height)));if(c.width!==w||c.height!==h){c.width=w;c.height=h;}gl.viewport(0,0,w,h);gl.clearColor(.06,.07,.085,1);gl.clearDepth(1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.enable(gl.DEPTH_TEST);gl.disable(gl.BLEND);gl.useProgram(this.pointProgram);
-  const v=[Math.sin(this.yaw)*Math.cos(this.pitch),Math.sin(this.pitch),Math.cos(this.yaw)*Math.cos(this.pitch)],right=[Math.cos(this.yaw),0,-Math.sin(this.yaw)],up=cross(v,right),u=n=>gl.getUniformLocation(this.pointProgram,n);
+  const {view:v,right,up}=presentationCamera(this.prepared,this.yaw,this.pitch),u=n=>gl.getUniformLocation(this.pointProgram,n);
   gl.uniform3fv(u('uView'),v);gl.uniform3fv(u('uRight'),right);gl.uniform3fv(u('uUp'),up);gl.uniform1f(u('uAspect'),w/h);gl.uniform1f(u('uZoom'),this.zoom);gl.uniform1f(u('uSize'),this.pointSize);gl.uniform1f(u('uClip'),(this.clip-.5)*this.half[2]*2);gl.uniform1i(u('uGroups'),this.surveyGroups?1:0);gl.uniform1i(u('uEstimate'),this.surveyEstimate?1:0);gl.bindVertexArray(this.pointVao);gl.drawArrays(gl.POINTS,0,this.pointCloud.points.length);gl.bindVertexArray(null);
  }
  dispose(){if(this.gl){for(const t of [this.surveySupportTexture,this.surveyZTexture])if(t)this.gl.deleteTexture(t);if(this.pointBuffer)this.gl.deleteBuffer(this.pointBuffer);if(this.pointVao)this.gl.deleteVertexArray(this.pointVao);if(this.pointProgram)this.gl.deleteProgram(this.pointProgram);this.pointCloud=null;if(this.thorax5Texture)this.gl.deleteTexture(this.thorax5Texture);if(this.maskTexture)this.gl.deleteTexture(this.maskTexture);this.gl.deleteTexture(this.texture);this.gl.deleteBuffer(this.buffer);this.gl.deleteProgram(this.program);this.gl=null;}this.prepared=null;}

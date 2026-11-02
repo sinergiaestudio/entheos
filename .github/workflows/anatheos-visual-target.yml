@@ -1,7 +1,7 @@
 name: ANATHEOS VISUAL TARGET 01 volume MPR cutaway
 on:
   pull_request:
-    branches: [anatheos/survey-base-l1]
+    branches: [anatheos/survey-base-l1, anatheos/visual-target-01]
 permissions:
   contents: read
 concurrency:
@@ -20,6 +20,8 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -45,12 +47,14 @@ jobs:
           node demos/anatheos-local-v0.5/test_original_planes.mjs
           node demos/anatheos-local-v0.5/test_survey_field.mjs
           node demos/anatheos-local-v0.5/test_survey_mpr.mjs
+          node demos/anatheos-local-v0.5/test_patient_presentation.mjs
           node demos/anatheos-local-v0.5/test_surface_camera.mjs
           node demos/anatheos-local-v0.5/test_surfaces.mjs
           node demos/anatheos-local-v0.5/test_volume_core.mjs
           node demos/anatheos-local-v0.5/test_eligible_volume.mjs
           node demos/anatheos-local-v0.5/test_spatial_reference.mjs
           python research/anatheos-cmr/r3/test_station.py
+          python research/anatheos-cmr/r3/test_new_studies.py
       - name: Real launcher and interactive render with synthetic/public fixtures only
         run: python research/anatheos-survey/test_l0.py
         env:
@@ -70,4 +74,23 @@ jobs:
             survey-public-evidence
             survey-l1-public-evidence
             vt-public-evidence
+          retention-days: 14
+
+      - name: Build isolated complete Windows application (no installer)
+        if: runner.os == 'Windows' && github.head_ref == 'anatheos/study-import-closure'
+        run: |
+          python -m pip install pyinstaller==6.16.0 scikit-image==0.25.2 scipy==1.16.3
+          powershell.exe -NoProfile -File packaging/windows/build_private.ps1
+      - name: New studies in the actual frozen Windows application
+        if: runner.os == 'Windows' && github.head_ref == 'anatheos/study-import-closure'
+        run: |
+          python packaging/windows/test_private.py
+          python packaging/windows/package_private.py
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Windows' && github.head_ref == 'anatheos/study-import-closure'
+        with:
+          name: anatheos-workstation-private-windows
+          path: |
+            dist/ANATHEOS-Workstation-Private-*.zip
+            dist/private-package.json
           retention-days: 14

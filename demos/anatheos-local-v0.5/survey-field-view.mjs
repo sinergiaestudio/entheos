@@ -36,7 +36,20 @@ export function mountSurveyFieldView(host,inspector,data,originals,{visualTarget
  for(const n of [mode,estimate,nominal,confidence,mask,opacity,clip,threshold,original,slice,groups])on(n,'input',draw);on(estimatedPoints,'input',()=>{cloud();draw();});on(originalButton,'click',originals);on(fit,'click',reset);
  on(canvas,'pointerdown',e=>{if(e.button!==0)return;drag=[e.clientX,e.clientY];if(visual&&renderer)renderer.preview=true;canvas.setPointerCapture(e.pointerId);canvas.focus();});on(canvas,'pointermove',e=>{if(!drag||!renderer)return;renderer.yaw-=(e.clientX-drag[0])*.008;renderer.pitch=Math.max(-1.45,Math.min(1.45,renderer.pitch-(e.clientY-drag[1])*.008));drag=[e.clientX,e.clientY];draw();});for(const t of ['pointerup','pointercancel','lostpointercapture'])on(canvas,t,()=>{if(drag){drag=null;if(visual&&renderer){renderer.preview=false;draw();}}});
  on(canvas,'wheel',e=>{e.preventDefault();zoom(e.deltaY<0?1.1:1/1.1);},{passive:false});on(canvas,'keydown',e=>{if(e.key==='Escape'){e.preventDefault();session.mode('2d');}else if(['+','=','-'].includes(e.key)){e.preventDefault();zoom(e.key==='-'?.8:1.25);}else if(e.key.startsWith('Arrow')&&renderer){e.preventDefault();e.stopPropagation();renderer.yaw+=e.key==='ArrowLeft'?-.12:e.key==='ArrowRight'?.12:0;renderer.pitch=Math.max(-1.45,Math.min(1.45,renderer.pitch+(e.key==='ArrowUp'?-.1:e.key==='ArrowDown'?.1:0)));draw();}});
- if(visualTarget){visual=attachVisualTarget({root,canvas,panel,draw,sourceSlice:slice});confidence.checked=false;}
+ if(visualTarget){
+  visual=attachVisualTarget({root,canvas,panel,draw,sourceSlice:slice});confidence.checked=false;
+  panel.classList.add('survey-contextual');panel.hidden=true;
+  const labels=[...panel.querySelectorAll('label')],details=[...panel.querySelectorAll('details')];
+  labels.forEach(n=>n.hidden=true);details.forEach(n=>n.hidden=true);
+  // Editors keep their live controls/listeners/state. Only the requested editor is exposed.
+  on(window,'anatheos:survey-control',e=>{const target=panel.querySelector('#'+e.detail.id);if(!target)return;
+   labels.forEach(n=>n.hidden=!n.contains(target));details.forEach(n=>{n.hidden=!n.contains(target);n.open=!n.hidden;});
+   source.hidden=!['l1Original','l1OriginalSlice','vtCompare'].includes(target.id);originalButton.hidden=true;fit.hidden=true;
+   panel.hidden=false;panel.open=true;document.body.classList.remove('hide-inspector');target.focus();target.scrollIntoView({block:'nearest'});
+  });
+  source.hidden=true;originalButton.hidden=true;fit.hidden=true;document.body.classList.add('hide-inspector');
+ }
+
  unsub=session.subscribe(s=>{if(!s.active||s.mode!=='survey')dispose();});try{build();canvas.focus();}catch(e){dispose();throw e;}
  return {dispose,zoom,fit:reset};
 }

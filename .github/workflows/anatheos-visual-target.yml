@@ -77,7 +77,7 @@ jobs:
       - name: Build isolated complete Windows application (no installer)
         if: runner.os == 'Windows' && github.head_ref == 'anatheos/study-import-closure'
         run: |
-          python -m pip install pyinstaller==6.16.0
+          python -m pip install pyinstaller==6.16.0 scikit-image==0.25.2 scipy==1.16.3
           powershell.exe -NoProfile -File packaging/windows/build_private.ps1
       - name: New studies in the actual frozen Windows application
         if: runner.os == 'Windows' && github.head_ref == 'anatheos/study-import-closure'

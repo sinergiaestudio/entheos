@@ -5,6 +5,9 @@
  * NOT certified clinical patient-facing L/R labels. No external dependencies.
  */
 function ensure(test,reason){if(!test)throw new Error(reason);}
+export function visualTargetViewport(width,height,dpr=1,preview=false){
+ ensure([width,height,dpr].every(v=>Number.isFinite(v)&&v>0),'Viewport VISUAL-TARGET inválido');const scale=Math.min(dpr,1.25)*(preview?.58:1),fit=Math.min(1,720/(width*scale),480/(height*scale));return {w:Math.max(1,Math.round(width*scale*fit)),h:Math.max(1,Math.round(height*scale*fit))};
+}
 export const VOLUME_STYLES=Object.freeze({
  original:0, relief:1, amber:2
 });
@@ -96,6 +99,10 @@ uniform float uZoom;
 uniform float uThreshold;
 uniform float uOpacity;
 uniform float uClip;
+uniform int uVt,uVtCut,uVtPlanes,uVtFrames,uVtCross,uVtAcquiredOnly,uVtFace;
+uniform vec4 uVtEquation;
+uniform vec3 uVtCursor;
+uniform float uVtAlpha,uVtGamma;
 uniform int uPalette;
 uniform int uStyle;
 uniform vec3 uTexel;
@@ -112,6 +119,8 @@ vec2 hitBox(vec3 o,vec3 d,vec3 halfs){
 float surveyZ(int k){return texelFetch(uSurveyZ,ivec2(k,0),0).r;}
 int surveyLayer(float z){int lo=0,hi=uSurveyDepth-1;for(int j=0;j<9;j++){if(hi-lo<=1)break;int m=(lo+hi)/2;if(surveyZ(m)<=z)lo=m;else hi=m;}return abs(z-surveyZ(lo))<=abs(z-surveyZ(hi))?lo:hi;}
 vec3 supportColor(int state){return state==1?vec3(.25,.86,.95):state==2?vec3(1.,.72,.22):vec3(.93,.36,.86);}
+bool vtAllowed(int state){return state>0&&!(state==3&&uSurveyEstimate==0)&&!(state==2&&uSurveyNominal==0)&&!(uVtAcquiredOnly==1&&state!=1);}
+vec3 vtColor(float value,int state){if(uSurveyMaskOnly==1)return supportColor(state);float v=pow(clamp((value-uWindowLow)/max(uWindowHigh-uWindowLow,.005),0.,1.),uVtGamma);vec3 c=uPalette==0?vec3(v):mix(vec3(.2,.25,.3),vec3(1.,.88,.7),v)*v;if(uSurveyConfidence==1)c=mix(c,supportColor(state)*(.3+.7*v),.60);return c;}
 void main(){
  vec3 rd=-normalize(uView);
  vec3 origin=uView*2.2+(uRight*uv.x*uAspect+uUp*uv.y)*1.25/uZoom;
@@ -121,11 +130,29 @@ void main(){
  float rayLength=interval.y-t;
  vec3 rgb=vec3(0.);
  float accumulated=0.;
+ vec4 sectionT=vec4(-999.);
+ if(uVt==1){for(int a=0;a<3;a++)if(abs(rd[a])>1e-8)sectionT[a]=((uVtCursor[a]-.5)*2.*uHalf[a]-origin[a])/rd[a];float d=dot(uVtEquation.xyz,rd);if(abs(d)>1e-8)sectionT.w=(uVtEquation.w-dot(uVtEquation.xyz,origin))/d;}
  int steps=clamp(uSteps,30,360);
  for(int i=0;i<360;i++){
   if(i>=steps)break;
   vec3 p=origin+rd*(t+(float(i)+.5)*rayLength/float(steps));
   vec3 coords=p/(2.*uHalf)+vec3(.5);
+  if(uVt==1){
+   float ta=t+float(i)*rayLength/float(steps),tb=t+float(i+1)*rayLength/float(steps);
+   for(int a=0;a<4;a++){
+    bool face=a==3;if((face&&(uVtCut==0||uVtFace==0))||(!face&&uVtPlanes==0))continue;
+    float pt=sectionT[a];if(pt<ta||pt>=tb)continue;vec3 pp=origin+rd*pt,q=pp/(2.*uHalf)+vec3(.5);
+    if(any(lessThan(q,vec3(0.)))||any(greaterThan(q,vec3(1.)))||(!face&&uVtCut==1&&dot(uVtEquation.xyz,pp)>uVtEquation.w+1e-5))continue;
+    vec3 sq=q;sq.z=(float(surveyLayer(q.z))+.5)/float(uSurveyDepth);int st=int(texture(uSurveySupport,sq).r*255.+.5);if(!vtAllowed(st))continue;
+    float signal=texture(uVolume,sq).r;vec3 col=vtColor(signal,st);float response=clamp((pow(clamp((signal-uWindowLow)/max(uWindowHigh-uWindowLow,.005),0.,1.),uVtGamma)-uThreshold)/max(1.-uThreshold,.04),0.,1.);float alpha=face?.88*(uSurveyMaskOnly==1?1.:response):uVtAlpha;
+    if(!face){vec2 uvp=a==0?q.yz:a==1?q.xz:q.xy,center=a==0?uVtCursor.yz:a==1?uVtCursor.xz:uVtCursor.xy;
+     bool edge=min(min(uvp.x,1.-uvp.x),min(uvp.y,1.-uvp.y))<.014;
+     bool crosshair=min(abs(uvp.x-center.x),abs(uvp.y-center.y))<.003;
+     if((uVtFrames==1&&edge)||(uVtCross==1&&crosshair)){col=a==0?vec3(.35,.82,1.):a==1?vec3(1.,.73,.31):vec3(.82,.59,1.);alpha=.92;}}
+    rgb+=(1.-accumulated)*alpha*col;accumulated+=(1.-accumulated)*alpha;
+   }
+   if(uVtCut==1&&dot(uVtEquation.xyz,p)>uVtEquation.w)continue;
+  }
   if(coords.z > uClip) continue;
   vec3 sampled=coords;int state=1;
   if(uHasSurvey==1){
@@ -138,11 +165,12 @@ void main(){
      if(q.x>=0.&&q.x<=1.&&q.y>=0.&&q.y<=1.&&int(texture(uSurveySupport,q).r*255.+.5)==1){float original=texture(uVolume,q).r;rgb+=(1.-accumulated)*.75*vec3(original);accumulated+=(1.-accumulated)*.75;}}
    }
    state=int(texture(uSurveySupport,sampled).r*255.+.5);
-   if(state==0||(state==3&&uSurveyEstimate==0)||(state==2&&uSurveyNominal==0))continue;
+   if(state==0||(state==3&&uSurveyEstimate==0)||(state==2&&uSurveyNominal==0)||(uVt==1&&uVtAcquiredOnly==1&&state!=1))continue;
   }
   float value=texture(uVolume,sampled).r;
   // Window/Level operate on the fixed display-intensity mapping (0..1).
   float visible=clamp((value-uWindowLow)/max(uWindowHigh-uWindowLow,.005),0.,1.);
+  if(uVt==1)visible=pow(visible,uVtGamma);
   float response=clamp((visible-uThreshold)/max(1.-uThreshold,.04),0.,1.);
   if(uHasSurvey==1&&uSurveyMaskOnly==1)response=1.;
   float a=clamp(response*uOpacity*10.0/float(steps),0.,.09);
@@ -231,7 +259,7 @@ export class VolumeRenderer {
   gl.texParameteri(gl.TEXTURE_3D,gl.TEXTURE_WRAP_R,gl.CLAMP_TO_EDGE);
   gl.texImage3D(gl.TEXTURE_3D,0,gl.R8,geo.x,geo.y,geo.z,0,gl.RED,gl.UNSIGNED_BYTE,output);
   ensure(gl.getError()===gl.NO_ERROR,'No se pudo transferir el volumen a la GPU.');
-  this.locations={};for(const name of ['uHasSurvey','uSurveyEstimate','uSurveyNominal','uSurveyConfidence','uSurveyMaskOnly','uSurveyDepth','uSurveyOriginal','uSurveySupport','uSurveyZ','uLabels','uHasLabels','uLabelShow','uLabelOpacity','uThorax5','uHasThorax5','uThorax5Show','uThorax5Opacity','uThorax5Isolate','uThorax5Colors','uThorax5Alpha','uVolume','uHalf','uView','uRight','uUp','uAspect','uZoom','uThreshold','uOpacity','uWindowLow','uWindowHigh','uSteps' ,'uClip','uPalette','uStyle','uTexel','uLighting'])this.locations[name]=gl.getUniformLocation(this.program,name);
+  this.locations={};for(const name of ['uVt','uVtCut','uVtPlanes','uVtFrames','uVtCross','uVtAcquiredOnly','uVtFace','uVtEquation','uVtCursor','uVtAlpha','uVtGamma','uHasSurvey','uSurveyEstimate','uSurveyNominal','uSurveyConfidence','uSurveyMaskOnly','uSurveyDepth','uSurveyOriginal','uSurveySupport','uSurveyZ','uLabels','uHasLabels','uLabelShow','uLabelOpacity','uThorax5','uHasThorax5','uThorax5Show','uThorax5Opacity','uThorax5Isolate','uThorax5Colors','uThorax5Alpha','uVolume','uHalf','uView','uRight','uUp','uAspect','uZoom','uThreshold','uOpacity','uWindowLow','uWindowHigh','uSteps' ,'uClip','uPalette','uStyle','uTexel','uLighting'])this.locations[name]=gl.getUniformLocation(this.program,name);
   if(prepared.surveyL1){
    const t=gl.createTexture();this.surveySupportTexture=t;gl.activeTexture(gl.TEXTURE3);gl.bindTexture(gl.TEXTURE_3D,t);gl.pixelStorei(gl.UNPACK_ALIGNMENT,1);
    for(const a of [gl.TEXTURE_MIN_FILTER,gl.TEXTURE_MAG_FILTER])gl.texParameteri(gl.TEXTURE_3D,a,gl.NEAREST);for(const a of [gl.TEXTURE_WRAP_S,gl.TEXTURE_WRAP_T,gl.TEXTURE_WRAP_R])gl.texParameteri(gl.TEXTURE_3D,a,gl.CLAMP_TO_EDGE);
@@ -297,12 +325,13 @@ export class VolumeRenderer {
  }
  draw(){if(this.surveyMode==='points'&&this.pointCloud){this.drawSurveyPoints();return;}const gl=this.gl;if(!gl){this.drawSoftware();return;}if(gl.isContextLost())return;
   const rect=this.canvas.getBoundingClientRect(),scale=Math.min(devicePixelRatio||1,1.25)*(this.preview?.58:1);
-  const w=Math.max(100,Math.min(this.prepared.surveyL1?720:1360,Math.round(rect.width*scale))),h=Math.max(100,Math.min(this.prepared.surveyL1?480:900,Math.round(rect.height*scale)));
+  let w=Math.max(100,Math.min(this.prepared.surveyL1?720:1360,Math.round(rect.width*scale))),h=Math.max(100,Math.min(this.prepared.surveyL1?480:900,Math.round(rect.height*scale)));if(this.visualTarget?.enabled&&rect.width>0&&rect.height>0)({w,h}=visualTargetViewport(rect.width,rect.height,devicePixelRatio||1,this.preview));
   if(this.canvas.width!==w||this.canvas.height!==h){this.canvas.width=w;this.canvas.height=h;}
   gl.viewport(0,0,w,h);gl.disable(gl.DEPTH_TEST);gl.disable(gl.BLEND);gl.useProgram(this.program);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_3D,this.texture);
   const yaw=this.yaw,pitch=this.pitch,v=[Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),Math.cos(yaw)*Math.cos(pitch)];
   const right=[Math.cos(yaw),0,-Math.sin(yaw)];const up=cross(v,right);
-  const u=this.locations;
+  const u=this.locations,vt=this.visualTarget||{};
+  gl.uniform1i(u.uVt,vt.enabled?1:0);gl.uniform1i(u.uVtCut,vt.cut?1:0);gl.uniform1i(u.uVtPlanes,vt.planes?1:0);gl.uniform1i(u.uVtFrames,vt.frames?1:0);gl.uniform1i(u.uVtCross,vt.cross?1:0);gl.uniform1i(u.uVtAcquiredOnly,vt.acquiredOnly?1:0);gl.uniform1i(u.uVtFace,vt.face?1:0);gl.uniform4fv(u.uVtEquation,vt.equation||[0,0,1,0]);gl.uniform3fv(u.uVtCursor,vt.cursor||[.5,.5,.5]);gl.uniform1f(u.uVtAlpha,vt.alpha??.2);gl.uniform1f(u.uVtGamma,vt.gamma??1);
   gl.uniform1i(u.uHasSurvey,this.prepared.surveyL1?1:0);gl.uniform1i(u.uSurveyEstimate,this.surveyEstimate?1:0);gl.uniform1i(u.uSurveyNominal,this.surveyNominal?1:0);gl.uniform1i(u.uSurveyConfidence,this.surveyConfidence?1:0);gl.uniform1i(u.uSurveyMaskOnly,this.surveyMaskOnly?1:0);gl.uniform1i(u.uSurveyDepth,this.prepared.geo.z);gl.uniform1i(u.uSurveyOriginal,this.surveyOriginal);
   gl.activeTexture(gl.TEXTURE3);gl.bindTexture(gl.TEXTURE_3D,this.surveySupportTexture||null);gl.uniform1i(u.uSurveySupport,3);gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,this.surveyZTexture||null);gl.uniform1i(u.uSurveyZ,4);
   gl.uniform1i(u.uHasLabels,this.maskTexture?1:0);

@@ -97,3 +97,14 @@ body[data-station-mode=survey] #cmrNativePanel{visibility:hidden;pointer-events:
 body[data-station-mode=survey] #stationViewControls{display:none}
 .l1-legend{position:absolute;top:50px;left:14px;right:14px;padding:5px;margin:0;background:#071118df;color:#c8e6ec;font-size:11px;pointer-events:none}
 #surveyFieldInspector label{display:block;margin:7px 0;font-size:12px}#surveyFieldInspector input[type=range],#surveyFieldInspector select{width:100%}#surveyFieldInspector p{font-size:11px;overflow-wrap:anywhere}#surveyFieldInspector button{margin:5px}
+
+/* VISUAL-TARGET uses the same volume canvas, with subordinate MPR panels. */
+#surveyFieldScene.visual-target #surveyFieldCanvas{height:calc(100% - 178px)}
+#surveyFieldScene.visual-target .l0-status{bottom:181px;font-size:10px;padding:4px 8px}
+#vtMprStrip{position:absolute;bottom:0;left:0;right:0;height:174px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;background:#071019;padding:3px}
+#vtMprStrip.vt-compare{grid-template-columns:repeat(4,minmax(0,1fr))}
+.vt-card{min-width:0;min-height:0;display:flex;flex-direction:column;overflow:hidden;border:1px solid #385260;background:#030b10}.vt-card:nth-child(1){border-color:#62c7ff}.vt-card:nth-child(2){border-color:#ffcc75}.vt-card:nth-child(3){border-color:#c1a1ff}
+.vt-card>button,.vt-card>strong{font-size:10px;text-align:left;line-height:1.3;border:0;color:#dbedf1;background:#14212c;padding:3px;flex:none}.vt-card>canvas{min-height:0;min-width:0;width:100%;height:0;flex:1;display:block;object-fit:contain;touch-action:none}.vt-card>output{font-size:9px;line-height:1.25;padding:2px 3px;color:#b8cfdd;overflow-wrap:anywhere;flex:none;min-height:25px}.vt-card[hidden]{display:none!important}
+.visual-target.vt-expanded-mpr #vtMprStrip{height:300px;grid-template-columns:1fr}.visual-target.vt-expanded-mpr #surveyFieldCanvas{height:calc(100% - 304px)}.visual-target.vt-expanded-mpr .l0-status{bottom:307px}.vt-expanded-mpr .vt-card:not(.vt-expanded){display:none}
+.visual-target.vt-cloud #vtMprStrip{display:none}.visual-target.vt-cloud #surveyFieldCanvas{height:100%}.visual-target.vt-cloud .l0-status{bottom:8px}
+#vtDisplayOptions{padding:6px!important}#vtPhysicalInfo{font-size:10px!important}#vtHistogram{width:100%;height:42px;background:#08131a}#surveyFieldInspector .vt-card{height:180px}

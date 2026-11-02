@@ -141,7 +141,7 @@ void main(){
     float pt=sectionT[a];if(pt<ta||pt>=tb)continue;vec3 pp=origin+rd*pt,q=pp/(2.*uHalf)+vec3(.5);
     if(any(lessThan(q,vec3(0.)))||any(greaterThan(q,vec3(1.)))||(!face&&uVtCut==1&&dot(uVtEquation.xyz,pp)>uVtEquation.w+1e-5))continue;
     vec3 sq=q;sq.z=(float(surveyLayer(q.z))+.5)/float(uSurveyDepth);int st=int(texture(uSurveySupport,sq).r*255.+.5);if(!vtAllowed(st))continue;
-    vec3 col=vtColor(texture(uVolume,sq).r,st);float alpha=face?.88:uVtAlpha;
+    float signal=texture(uVolume,sq).r;vec3 col=vtColor(signal,st);float response=clamp((pow(clamp((signal-uWindowLow)/max(uWindowHigh-uWindowLow,.005),0.,1.),uVtGamma)-uThreshold)/max(1.-uThreshold,.04),0.,1.);float alpha=face?.88*(uSurveyMaskOnly==1?1.:response):uVtAlpha;
     if(!face){vec2 uvp=a==0?q.yz:a==1?q.xz:q.xy,center=a==0?uVtCursor.yz:a==1?uVtCursor.xz:uVtCursor.xy;
      bool edge=min(min(uvp.x,1.-uvp.x),min(uvp.y,1.-uvp.y))<.014;
      bool crosshair=min(abs(uvp.x-center.x),abs(uvp.y-center.y))<.003;
